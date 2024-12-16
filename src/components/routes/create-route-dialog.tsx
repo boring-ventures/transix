@@ -1,3 +1,6 @@
+'use client'
+
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -19,40 +22,61 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
 import { Plus } from "lucide-react"
+import { useState } from "react"
 
 const formSchema = z.object({
-  name: z.string().min(2, {
-    message: "Route name must be at least 2 characters.",
-  }),
-  origin: z.string().min(2, {
-    message: "Origin must be at least 2 characters.",
-  }),
-  destination: z.string().min(2, {
-    message: "Destination must be at least 2 characters.",
-  }),
-  basePrice: z.string().refine((val) => !isNaN(Number(val)), {
-    message: "Base price must be a valid number.",
-  }),
+  name: z.string().min(2),
+  origin: z.string().min(2),
+  destination: z.string().min(2),
+  price: z.string().refine((val) => !isNaN(Number(val))),
+  departure_date: z.string(),
+  departure_time: z.string()
 })
 
 export function CreateRouteDialog() {
+  const [open, setOpen] = useState(false)
+  const supabase = createClientComponentClient()
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       origin: "",
       destination: "",
-      basePrice: "",
+      price: "",
+      departure_date: "",
+      departure_time: ""
     },
   })
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    // TODO: Implement route creation logic
-    console.log(values)
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    try {
+      const { data, error } = await supabase
+        .from('routes')
+        .insert([{
+          name: values.name,
+          origin: values.origin,
+          destination: values.destination,
+          price: parseFloat(values.price),
+          departure_date: values.departure_date,
+          departure_time: values.departure_time
+        }])
+        .select()
+
+      if (error) {
+        console.error('Error creating route:', error.message)
+        return
+      }
+
+      form.reset()
+      setOpen(false)
+      window.location.reload()
+    } catch (err) {
+      console.error('Error creating route:', err)
+    }
   }
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button>
           <Plus className="mr-2 h-4 w-4" />
@@ -106,12 +130,38 @@ export function CreateRouteDialog() {
             />
             <FormField
               control={form.control}
-              name="basePrice"
+              name="price"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Base Price</FormLabel>
+                  <FormLabel>Price</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="Enter base price" {...field} />
+                    <Input type="number" placeholder="Enter price" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="departure_date"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Departure Date</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="departure_time"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Departure Time</FormLabel>
+                  <FormControl>
+                    <Input type="time" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -20,29 +20,35 @@ import type { Database } from '@/types/database.types'
 type Route = Database['public']['Tables']['routes']['Row']
 
 export function RouteTable() {
+  const [mounted, setMounted] = useState(false)
   const [routes, setRoutes] = useState<Route[]>([])
   const [editingRoute, setEditingRoute] = useState<Route | null>(null)
   const [updatingPriceRoute, setUpdatingPriceRoute] = useState<Route | null>(null)
   const supabase = createClientComponentClient()
 
-  useEffect(() => {
-    fetchRoutes()
-  }, [])
-
   const fetchRoutes = async () => {
-    let query = supabase
+    const { data, error } = await supabase
       .from('routes')
       .select('*')
-      .order('departure_date', { ascending: true })
-
-    const { data, error } = await query
+      .order('created_at', { ascending: false })
 
     if (error) {
       console.error('Error fetching routes:', error)
       return
     }
 
-    setRoutes(data || [])
+    if (data) {
+      setRoutes(data)
+    }
+  }
+
+  useEffect(() => {
+    setMounted(true)
+    fetchRoutes()
+  }, [])
+
+  if (!mounted) {
+    return null
   }
 
   const handleDelete = async (id: string) => {
@@ -90,7 +96,7 @@ export function RouteTable() {
                 <td className="p-4">{route.name}</td>
                 <td className="p-4">{route.origin}</td>
                 <td className="p-4">{route.destination}</td>
-                <td className="p-4">${route.basePrice.toFixed(2)}</td>
+                <td className="p-4">${route.price.toFixed(2)}</td>
                 <td className="p-4">
                   <div className="flex justify-end gap-2">
                     <EditRouteDialog route={route} open={false} onOpenChange={() => {}} onSave={() => {}} />

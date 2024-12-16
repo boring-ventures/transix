@@ -20,7 +20,7 @@ export function EditRouteDialog({ route, open, onOpenChange, onSave }: EditRoute
     destination: route?.destination || '',
     departure_date: route?.departure_date || '',
     departure_time: route?.departure_time || '',
-    basePrice: route?.basePrice.toString() || ''
+    price: route?.price.toString() || ''
   })
   const supabase = createClientComponentClient()
 
@@ -32,7 +32,7 @@ export function EditRouteDialog({ route, open, onOpenChange, onSave }: EditRoute
       .from('routes')
       .update({
         ...formData,
-        basePrice: parseFloat(formData.basePrice)
+        price: parseFloat(formData.price)
       })
       .eq('id', route.id)
 
@@ -68,8 +68,8 @@ export function EditRouteDialog({ route, open, onOpenChange, onSave }: EditRoute
           <Input
             type="number"
             step="0.01"
-            value={formData.basePrice}
-            onChange={(e) => setFormData({ ...formData, basePrice: e.target.value })}
+            value={formData.price}
+            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
           />
           <Button type="submit">Save Changes</Button>
         </form>

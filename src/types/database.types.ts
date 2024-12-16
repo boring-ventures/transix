@@ -30,7 +30,7 @@ export type Database = {
           name: string
           origin: string
           destination: string
-          basePrice: number
+          price: number
           departure_date: string
           departure_time: string
           created_at?: string

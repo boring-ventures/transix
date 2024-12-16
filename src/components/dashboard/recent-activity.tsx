@@ -18,12 +18,11 @@ type Activity = {
 
 export function RecentActivity() {
   const [activities, setActivities] = useState<Activity[]>([])
-  const supabase = createClientComponentClient()
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    // TODO: Replace with actual activity fetch
-    // For now, using mock data
-    setActivities([
+    setMounted(true)
+    const mockActivities: Activity[] = [
       {
         id: '1',
         description: 'New ticket issued for Route A',
@@ -42,8 +41,11 @@ export function RecentActivity() {
         created_at: new Date().toISOString(),
         type: 'route'
       }
-    ])
+    ]
+    setActivities(mockActivities)
   }, [])
+
+  if (!mounted) return null
 
   return (
     <div className="space-y-4">
@@ -57,7 +59,7 @@ export function RecentActivity() {
                     {activity.description}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {new Date(activity.created_at).toLocaleString()}
+                    {mounted ? new Date(activity.created_at).toLocaleString() : ''}
                   </span>
                 </div>
               </TableCell>

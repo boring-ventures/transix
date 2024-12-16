@@ -22,7 +22,7 @@ interface UpdatePriceDialogProps {
 }
 
 export function UpdatePriceDialog({ route, open, onOpenChange, onSave }: UpdatePriceDialogProps) {
-  const [price, setPrice] = useState(route?.basePrice.toString() || '')
+  const [price, setPrice] = useState(route?.price.toString() || '')
   const supabase = createClientComponentClient()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -31,7 +31,7 @@ export function UpdatePriceDialog({ route, open, onOpenChange, onSave }: UpdateP
 
     const { error } = await supabase
       .from('routes')
-      .update({ basePrice: parseFloat(price) })
+      .update({ price: parseFloat(price) })
       .eq('id', route.id)
 
     if (!error) {
