@@ -347,9 +347,9 @@ export const buses = pgTable("buses", {
 export const busSeats = pgTable("bus_seats", {
   id: uuid("id").primaryKey().defaultRandom(),
   busId: uuid("bus_id").references(() => buses.id),
-  seatNumber: text("seat_number").notNull(), // e.g., "A1", "B3", "U12" (U for upper deck)
+  seatNumber: text("seat_number").notNull(),
   tier: seatTierEnum("tier").notNull(),
-  deck: integer("deck").default(1), // 1 for lower, 2 for upper deck
+  deck: integer("deck").default(1),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
