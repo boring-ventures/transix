@@ -59,6 +59,20 @@ export const incidentTypeEnum = pgEnum("incident_type_enum", [
   "accident",
 ]);
 
+// Add new ENUMs
+export const busTypeEnum = pgEnum("bus_type_enum", [
+  "standard",    // Regular bus
+  "double_decker", // Two floors
+  "luxury",      // Premium seating
+  "mini"         // Smaller capacity
+]);
+
+export const seatTierEnum = pgEnum("seat_tier_enum", [
+  "economy",
+  "business",
+  "premium"
+]);
+
 // ============================================================================
 // CORE TABLES
 // ============================================================================
@@ -66,6 +80,7 @@ export const incidentTypeEnum = pgEnum("incident_type_enum", [
 // Branch Management
 export const branches = pgTable("branches", {
   id: uuid("id").primaryKey().defaultRandom(),
+  companyId: uuid("company_id").references(() => companies.id).notNull(),
   name: text("name").notNull(),
   address: text("address"),
   city: text("city"),
@@ -91,9 +106,8 @@ export const users = authSchema.table("users", {
 
 export const profiles = pgTable("profiles", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  companyId: uuid("company_id").references(() => companies.id),
   fullName: text("full_name"),
   role: roleEnum("role").notNull(),
   branchId: uuid("branch_id").references(() => branches.id),
@@ -157,6 +171,7 @@ export const routes = pgTable("routes", {
 export const schedules = pgTable("schedules", {
   id: uuid("id").primaryKey().defaultRandom(),
   routeId: uuid("route_id").references(() => routes.id),
+  busId: uuid("bus_id").references(() => buses.id),
   departureDate: date("departure_date").notNull(),
   departureTime: time("departure_time").notNull(),
   price: numeric("price").notNull(),
@@ -177,7 +192,7 @@ export const tickets = pgTable("tickets", {
   id: uuid("id").primaryKey().defaultRandom(),
   scheduleId: uuid("schedule_id").references(() => schedules.id),
   customerId: uuid("customer_id").references(() => customers.id),
-  seatNumber: integer("seat_number").notNull(),
+  busSeatId: uuid("bus_seat_id").references(() => busSeats.id),
   status: ticketStatusEnum("status").default("active"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
@@ -313,4 +328,37 @@ export const incidents = pgTable("incidents", {
     .defaultNow()
     .notNull(),
   reportedBy: uuid("reported_by").references(() => profiles.id),
+});
+
+// Bus Fleet Management
+export const buses = pgTable("buses", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  companyId: uuid("company_id").references(() => companies.id),
+  plateNumber: text("plate_number").unique().notNull(),
+  busType: busTypeEnum("bus_type").notNull(),
+  totalCapacity: integer("total_capacity").notNull(),
+  isActive: boolean("is_active").default(true),
+  maintenanceStatus: text("maintenance_status"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Bus Seat Configuration
+export const busSeats = pgTable("bus_seats", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  busId: uuid("bus_id").references(() => buses.id),
+  seatNumber: text("seat_number").notNull(), // e.g., "A1", "B3", "U12" (U for upper deck)
+  tier: seatTierEnum("tier").notNull(),
+  deck: integer("deck").default(1), // 1 for lower, 2 for upper deck
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Organizational Structure
+export const companies = pgTable("companies", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").unique().notNull(),
+  active: boolean("active").default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
