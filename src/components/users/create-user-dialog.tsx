@@ -17,8 +17,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import type { UserRole } from '@/types/database.types'
+} from "@/components/ui/select";
+import type { UserRole } from "@/types/database.types";
 
 const createUserSchema = z.object({
   email: z.string().email(),
