@@ -1,0 +1,1 @@
+ALTER TYPE "public"."role_enum" ADD VALUE 'company_admin' BEFORE 'branch_admin';

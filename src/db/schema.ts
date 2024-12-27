@@ -19,9 +19,10 @@ import {
 
 // User and Access Control
 export const roleEnum = pgEnum("role_enum", [
-  "superadmin",
-  "branch_admin",
-  "seller",
+  "superadmin", // Superadmin
+  "company_admin", // Company Admin
+  "branch_admin", // Branch Admin
+  "seller", // Seller
 ]);
 
 // Parcel Management
