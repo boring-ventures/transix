@@ -9,6 +9,8 @@ import {
   BarChart,
   CreditCard,
   FileText,
+  UserPlus,
+  User2,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -38,6 +40,23 @@ const data = {
       url: "/dashboard",
       icon: LayoutDashboard,
       isActive: true,
+    },
+    {
+      title: "Gestión de Usuarios",
+      url: "/dashboard/users",
+      icon: Users,
+      items: [
+        {
+          title: "Lista de Usuarios",
+          url: "/dashboard/users",
+          icon: User2,
+        },
+        {
+          title: "Agregar Usuario",
+          url: "/dashboard/users?create=true",
+          icon: UserPlus,
+        },
+      ],
     },
     {
       title: "Gestión de Pasajeros",
