@@ -1,0 +1,80 @@
+import { NextResponse } from "next/server";
+import { db } from "@/db";
+import { users, profiles } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { insertUserSchema, insertProfileSchema } from "@/types/user.types";
+import { createClient } from '@supabase/supabase-js';
+
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get("userId");
+
+    if (userId) {
+      const result = await db.query.users.findFirst({
+        where: eq(users.id, userId),
+        with: {
+          profile: true,
+        },
+      });
+      return NextResponse.json(result);
+    }
+
+    const results = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        created_at: users.created_at,
+        updated_at: users.updated_at,
+        profile: {
+          id: profiles.id,
+          fullName: profiles.fullName,
+          role: profiles.role,
+          active: profiles.active,
+          companyId: profiles.companyId,
+          branchId: profiles.branchId,
+        },
+      })
+      .from(users)
+      .leftJoin(profiles, eq(profiles.userId, users.id));
+
+    return NextResponse.json(results);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Failed to fetch users";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    const body = await request.json();
+    const userData = insertUserSchema.parse(body.user);
+    const profileData = insertProfileSchema.parse(body.profile);
+
+    const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+      email: userData.email,
+      password: userData.password,
+      email_confirm: true,
+    });
+
+    if (authError) throw authError;
+
+    const [profile] = await db
+      .insert(profiles)
+      .values({
+        userId: authUser.user.id,
+        fullName: profileData.fullName,
+        role: profileData.role,
+        companyId: profileData.companyId,
+        branchId: profileData.branchId,
+        active: profileData.active,
+      })
+      .returning();
+
+    return NextResponse.json({ user: authUser.user, profile }, { status: 201 });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Failed to create user";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
+  }
+}
