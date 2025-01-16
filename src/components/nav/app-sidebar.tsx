@@ -7,9 +7,10 @@ import {
   Package,
   Bus,
   CreditCard,
-  FileText,
   Ticket,
   Map,
+  ChevronDown,
+  List,
 } from "lucide-react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -41,9 +42,20 @@ const data = {
       icon: LayoutDashboard,
     },
     {
-      title: "Venta de Tickets",
-      url: "/dashboard/tickets",
+      title: "Tickets",
       icon: Ticket,
+      items: [
+        {
+          title: "Vender Tickets",
+          url: "/dashboard/tickets/sales",
+          icon: Ticket,
+        },
+        {
+          title: "Lista de Tickets",
+          url: "/dashboard/tickets",
+          icon: List,
+        },
+      ],
     },
     {
       title: "Encomiendas",
@@ -70,16 +82,20 @@ const data = {
       url: "/dashboard/finances",
       icon: CreditCard,
     },
-    {
-      title: "Informes",
-      url: "/dashboard/reports",
-      icon: FileText,
-    },
   ],
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
+  const [openMenus, setOpenMenus] = React.useState<string[]>([]);
+
+  const toggleMenu = (title: string) => {
+    setOpenMenus((prev) =>
+      prev.includes(title)
+        ? prev.filter((item) => item !== title)
+        : [...prev, title]
+    );
+  };
 
   return (
     <>
@@ -113,23 +129,77 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
-            {data.navMain.map((item) => {
-              const isActive = pathname === item.url;
+            {data.navMain.map((item, index) => {
+              const isActive = item.url
+                ? pathname === item.url
+                : item.items?.some((subItem) => pathname === subItem.url);
+              const isOpen = openMenus.includes(item.title);
+
               return (
-                <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton
-                    asChild
-                    className={cn(
-                      "w-full justify-start gap-2",
-                      isActive && "font-bold bg-card"
+                <React.Fragment key={item.title + index}>
+                  <SidebarMenuItem>
+                    {item.items ? (
+                      <SidebarMenuButton
+                        onClick={() => toggleMenu(item.title)}
+                        className={cn(
+                          "w-full justify-start gap-2",
+                          isActive && "font-bold bg-card"
+                        )}
+                      >
+                        <div className="flex items-center gap-2 w-full">
+                          <item.icon className="h-4 w-4" />
+                          <span>{item.title}</span>
+                          <ChevronDown
+                            className={cn(
+                              "h-4 w-4 ml-auto transition-transform",
+                              isOpen && "transform rotate-180"
+                            )}
+                          />
+                        </div>
+                      </SidebarMenuButton>
+                    ) : (
+                      <SidebarMenuButton
+                        asChild
+                        className={cn(
+                          "w-full justify-start gap-2",
+                          isActive && "font-bold bg-card"
+                        )}
+                      >
+                        <a href={item.url} className="flex items-center gap-2">
+                          <item.icon className="h-4 w-4" />
+                          <span>{item.title}</span>
+                        </a>
+                      </SidebarMenuButton>
                     )}
-                  >
-                    <a href={item.url} className="flex items-center gap-2">
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </a>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                  </SidebarMenuItem>
+
+                  {item.items && isOpen && (
+                    <div className="pl-6 space-y-1">
+                      {item.items.map((subItem, subIndex) => {
+                        const isSubActive = pathname === subItem.url;
+                        return (
+                          <SidebarMenuItem key={subItem.title + subIndex}>
+                            <SidebarMenuButton
+                              asChild
+                              className={cn(
+                                "w-full justify-start gap-2",
+                                isSubActive && "font-bold bg-card"
+                              )}
+                            >
+                              <a
+                                href={subItem.url}
+                                className="flex items-center gap-2"
+                              >
+                                <subItem.icon className="h-4 w-4" />
+                                <span>{subItem.title}</span>
+                              </a>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        );
+                      })}
+                    </div>
+                  )}
+                </React.Fragment>
               );
             })}
           </SidebarMenu>
