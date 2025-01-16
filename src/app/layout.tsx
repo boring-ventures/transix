@@ -5,6 +5,7 @@ import { Providers } from "@/components/providers";
 import localFont from "next/font/local";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { QueryProvider } from "@/providers/QueryProvider";
+import { Toaster } from "@/components/ui/toaster";
 
 const APP_NAME = "TRANSIX";
 const APP_DESCRIPTION = "Transportation Management System";
@@ -75,6 +76,7 @@ export default function RootLayout({
             <Providers>{children}</Providers>
           </QueryProvider>
         </AuthProvider>
+        <Toaster />
       </body>
     </html>
   );
