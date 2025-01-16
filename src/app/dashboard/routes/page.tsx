@@ -19,7 +19,6 @@ import {
   Route,
   Schedule,
   CreateRouteInput,
-  CreateScheduleInput,
 } from "@/types/route.types";
 
 export default function Routes() {
@@ -64,6 +63,7 @@ export default function Routes() {
     },
   ]);
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [schedules, setSchedules] = useState<Schedule[]>([
     {
       id: "1",

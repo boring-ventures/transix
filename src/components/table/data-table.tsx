@@ -101,7 +101,7 @@ export function DataTable<T extends Record<string, unknown>>({
     );
 
     return { data: paginatedData, totalCount };
-  }, [data, searchValue, sortConfig, pagination]);
+  }, [data, searchValue, sortConfig, pagination, searchField]);
 
   // Handle row selection
   const handleSelectAll = () => {
