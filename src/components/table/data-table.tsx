@@ -131,7 +131,7 @@ export function DataTable<T extends Record<string, unknown>>({
         {onAdd && (
           <Button onClick={onAdd} size="sm">
             <Plus className="mr-2 h-4 w-4" />
-            Add New
+            Agregar Nuevo
           </Button>
         )}
       </CardHeader>
@@ -140,7 +140,7 @@ export function DataTable<T extends Record<string, unknown>>({
           <div className="flex items-center justify-between py-4">
             {searchable && (
               <Input
-                placeholder="Filter items..."
+                placeholder="Buscar..."
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
                 className="max-w-sm"
@@ -193,7 +193,7 @@ export function DataTable<T extends Record<string, unknown>>({
                     </TableHead>
                   ))}
                   {(onEdit || onDelete) && (
-                    <TableHead className="w-[100px]">Actions</TableHead>
+                    <TableHead className="w-[100px]">Acciones</TableHead>
                   )}
                 </TableRow>
               </TableHeader>
@@ -227,6 +227,7 @@ export function DataTable<T extends Record<string, unknown>>({
                               variant="ghost"
                               size="icon"
                               onClick={() => onEdit(row)}
+                              title="Editar"
                             >
                               <Pencil className="h-4 w-4" />
                             </Button>
@@ -236,6 +237,7 @@ export function DataTable<T extends Record<string, unknown>>({
                               variant="ghost"
                               size="icon"
                               onClick={() => onDelete(row)}
+                              title="Eliminar"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -252,8 +254,8 @@ export function DataTable<T extends Record<string, unknown>>({
           <div className="flex items-center justify-between py-4">
             <div className="flex items-center space-x-2">
               <p className="text-sm text-muted-foreground">
-                {selectedRows.size} of {processedData.totalCount} row(s)
-                selected.
+                {selectedRows.size} de {processedData.totalCount} fila(s)
+                seleccionada(s).
               </p>
               <Select
                 value={String(pagination.pageSize)}
@@ -276,7 +278,7 @@ export function DataTable<T extends Record<string, unknown>>({
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-sm text-muted-foreground">rows per page</p>
+              <p className="text-sm text-muted-foreground">filas por página</p>
             </div>
 
             <div className="flex items-center space-x-2">
@@ -304,7 +306,7 @@ export function DataTable<T extends Record<string, unknown>>({
                 {"<"}
               </Button>
               <p className="text-sm text-muted-foreground">
-                Page {pagination.pageIndex + 1} of {totalPages}
+                Página {pagination.pageIndex + 1} de {totalPages}
               </p>
               <Button
                 variant="outline"
