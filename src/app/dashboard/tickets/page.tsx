@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/table/data-table";
-import { Column } from "@tanstack/react-table";
+import { Column } from "@/components/table/types";
 import { Badge } from "@/components/ui/badge";
 
 type TicketWithDetails = {
@@ -79,36 +79,53 @@ export default function TicketList() {
   ]);
 
   const columns: Column<TicketWithDetails>[] = [
-    { id: "passengerName", accessorKey: "passengerName", header: "Pasajero" },
+    {
+      id: "passengerName",
+      accessorKey: "passengerName",
+      header: "Pasajero",
+      sortable: true,
+    },
     {
       id: "route",
-      accessorKey: "route",
+      accessorKey: "route" as keyof TicketWithDetails,
       header: "Ruta",
       cell: ({ row }) => row.route.name,
+      sortable: true,
     },
-    { id: "seatNumber", accessorKey: "seatNumber", header: "Asiento" },
+    {
+      id: "seatNumber",
+      accessorKey: "seatNumber",
+      header: "Asiento",
+      sortable: true,
+    },
     {
       id: "departureDate",
-      accessorKey: "schedule.departureDate",
+      accessorKey: "schedule" as keyof TicketWithDetails,
       header: "Fecha",
+      cell: ({ row }) => row.schedule.departureDate,
+      sortable: true,
     },
     {
       id: "departureTime",
-      accessorKey: "schedule.departureTime",
+      accessorKey: "schedule" as keyof TicketWithDetails,
       header: "Hora",
+      cell: ({ row }) => row.schedule.departureTime,
+      sortable: true,
     },
     {
       id: "price",
       accessorKey: "price",
       header: "Precio",
       cell: ({ row }) => `Bs. ${row.price}`,
+      sortable: true,
     },
     {
       id: "status",
       accessorKey: "status",
       header: "Estado",
+      sortable: true,
       cell: ({ row }) => {
-        const status = row.status as TicketWithDetails["status"];
+        const status = row.status;
         return (
           <Badge
             variant={
@@ -180,14 +197,13 @@ export default function TicketList() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Tickets Vendidos</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <DataTable columns={columns} data={tickets} />
-        </CardContent>
-      </Card>
+      <DataTable
+        title="Tickets Vendidos"
+        data={tickets}
+        columns={columns}
+        searchable={true}
+        searchField="passengerName"
+      />
     </div>
   );
 }

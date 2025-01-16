@@ -3,15 +3,9 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DataTable } from "@/components/table/data-table";
+import { Column } from "@/components/table/types";
 import { Transaction, KPI, TransactionFilters } from "@/types/finance.types";
 
 export default function Finance() {
@@ -73,6 +67,57 @@ export default function Finance() {
       referenceId: "TK002",
       createdAt: new Date(),
       updatedAt: new Date(),
+    },
+  ];
+
+  const columns: Column<Transaction>[] = [
+    {
+      id: "date",
+      accessorKey: "date",
+      header: "Fecha",
+      sortable: true,
+    },
+    {
+      id: "description",
+      accessorKey: "description",
+      header: "Descripción",
+      sortable: true,
+    },
+    {
+      id: "type",
+      accessorKey: "type",
+      header: "Tipo",
+      sortable: true,
+      cell: ({ row }) => (
+        <span
+          className={`px-2 py-1 rounded-full text-xs ${
+            row.type === "ticket"
+              ? "bg-blue-100 text-blue-800"
+              : row.type === "parcel"
+              ? "bg-green-100 text-green-800"
+              : "bg-gray-100 text-gray-800"
+          }`}
+        >
+          {row.type === "ticket"
+            ? "Ticket"
+            : row.type === "parcel"
+            ? "Encomienda"
+            : "Otro"}
+        </span>
+      ),
+    },
+    {
+      id: "referenceId",
+      accessorKey: "referenceId",
+      header: "Referencia",
+      sortable: true,
+    },
+    {
+      id: "amount",
+      accessorKey: "amount",
+      header: "Monto",
+      sortable: true,
+      cell: ({ row }) => `Bs. ${row.amount.toFixed(2)}`,
     },
   ];
 
@@ -149,51 +194,14 @@ export default function Finance() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Transacciones</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Fecha</TableHead>
-                <TableHead>Descripción</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Referencia</TableHead>
-                <TableHead>Monto</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredTransactions.map((transaction) => (
-                <TableRow key={transaction.id}>
-                  <TableCell>{transaction.date}</TableCell>
-                  <TableCell>{transaction.description}</TableCell>
-                  <TableCell>
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs ${
-                        transaction.type === "ticket"
-                          ? "bg-blue-100 text-blue-800"
-                          : transaction.type === "parcel"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-gray-100 text-gray-800"
-                      }`}
-                    >
-                      {transaction.type === "ticket"
-                        ? "Ticket"
-                        : transaction.type === "parcel"
-                        ? "Encomienda"
-                        : "Otro"}
-                    </span>
-                  </TableCell>
-                  <TableCell>{transaction.referenceId}</TableCell>
-                  <TableCell>Bs. {transaction.amount.toFixed(2)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <DataTable
+        title="Transacciones"
+        data={filteredTransactions}
+        columns={columns}
+        searchable={true}
+        searchField="description"
+        defaultSort={{ field: "date", direction: "desc" }}
+      />
     </div>
   );
 }

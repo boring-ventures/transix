@@ -4,15 +4,9 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DataTable } from "@/components/table/data-table";
+import { Column } from "@/components/table/types";
 import {
   Dialog,
   DialogContent,
@@ -100,6 +94,61 @@ export default function BusManagement() {
     luxury: "Lujo",
     mini: "Mini Bus",
   };
+
+  const columns: Column<Bus>[] = [
+    {
+      id: "plateNumber",
+      accessorKey: "plateNumber",
+      header: "Placa",
+      sortable: true,
+    },
+    {
+      id: "busType",
+      accessorKey: "busType",
+      header: "Tipo",
+      cell: ({ row }) => busTypeLabels[row.busType],
+      sortable: true,
+    },
+    {
+      id: "totalCapacity",
+      accessorKey: "totalCapacity",
+      header: "Capacidad",
+      sortable: true,
+    },
+    {
+      id: "status",
+      accessorKey: "isActive",
+      header: "Estado",
+      sortable: true,
+      cell: ({ row }) => (
+        <span
+          className={`px-2 py-1 rounded-full text-xs ${
+            row.isActive
+              ? "bg-green-100 text-green-800"
+              : "bg-red-100 text-red-800"
+          }`}
+        >
+          {row.isActive ? "Activo" : "Inactivo"}
+        </span>
+      ),
+    },
+    {
+      id: "maintenance",
+      accessorKey: "maintenanceStatus",
+      header: "Mantenimiento",
+      sortable: true,
+      cell: ({ row }) =>
+        row.maintenanceStatus ? (
+          <span className="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">
+            {row.maintenanceStatus}
+          </span>
+        ) : (
+          <span className="text-muted-foreground text-sm">
+            Sin mantenimiento
+          </span>
+        ),
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -213,61 +262,18 @@ export default function BusManagement() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Lista de Buses</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Placa</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Capacidad</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead>Mantenimiento</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {buses.map((bus) => (
-                <TableRow key={bus.id}>
-                  <TableCell>{bus.plateNumber}</TableCell>
-                  <TableCell>{busTypeLabels[bus.busType]}</TableCell>
-                  <TableCell>{bus.totalCapacity}</TableCell>
-                  <TableCell>
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs ${
-                        bus.isActive
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
-                    >
-                      {bus.isActive ? "Activo" : "Inactivo"}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    {bus.maintenanceStatus ? (
-                      <span className="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">
-                        {bus.maintenanceStatus}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground text-sm">
-                        Sin mantenimiento
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm">
-                      Editar
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <DataTable
+        title="Lista de Buses"
+        data={buses}
+        columns={columns}
+        searchable={true}
+        searchField="plateNumber"
+        onAdd={() =>
+          document
+            .querySelector<HTMLButtonElement>('button[type="submit"]')
+            ?.click()
+        }
+      />
     </div>
   );
 }

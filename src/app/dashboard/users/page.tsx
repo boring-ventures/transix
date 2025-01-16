@@ -213,7 +213,7 @@ export default function UsersPage() {
       </Dialog>
 
       <DataTable
-        title="Users"
+        title="Usuarios"
         data={users || []}
         columns={columns}
         searchable

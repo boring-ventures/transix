@@ -3,15 +3,9 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DataTable } from "@/components/table/data-table";
+import { Column } from "@/components/table/types";
 import {
   Select,
   SelectContent,
@@ -102,15 +96,6 @@ export default function Routes() {
     capacity: 0,
   });
 
-  const [newSchedule, setNewSchedule] = useState<CreateScheduleInput>({
-    routeId: "",
-    busId: "",
-    departureDate: "",
-    departureTime: "",
-    price: 0,
-    capacity: 0,
-  });
-
   const handleRouteSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setRoutes((prev) => [
@@ -129,6 +114,76 @@ export default function Routes() {
   const getLocationName = (id: string) => {
     return locations.find((loc) => loc.id === id)?.name || "";
   };
+
+  const routeColumns: Column<Route>[] = [
+    {
+      id: "name",
+      accessorKey: "name",
+      header: "Nombre",
+      sortable: true,
+    },
+    {
+      id: "origin",
+      accessorKey: "originId",
+      header: "Origen",
+      cell: ({ row }) => getLocationName(row.originId),
+      sortable: true,
+    },
+    {
+      id: "destination",
+      accessorKey: "destinationId",
+      header: "Destino",
+      cell: ({ row }) => getLocationName(row.destinationId),
+      sortable: true,
+    },
+    {
+      id: "capacity",
+      accessorKey: "capacity",
+      header: "Capacidad",
+      sortable: true,
+    },
+    {
+      id: "seatsTaken",
+      accessorKey: "seatsTaken",
+      header: "Asientos Ocupados",
+      sortable: true,
+    },
+  ];
+
+  const scheduleColumns: Column<Schedule>[] = [
+    {
+      id: "route",
+      accessorKey: "routeId",
+      header: "Ruta",
+      cell: ({ row }) => routes.find((r) => r.id === row.routeId)?.name || "",
+      sortable: true,
+    },
+    {
+      id: "departureDate",
+      accessorKey: "departureDate",
+      header: "Fecha",
+      sortable: true,
+    },
+    {
+      id: "departureTime",
+      accessorKey: "departureTime",
+      header: "Hora",
+      sortable: true,
+    },
+    {
+      id: "price",
+      accessorKey: "price",
+      header: "Precio",
+      cell: ({ row }) => `Bs. ${row.price}`,
+      sortable: true,
+    },
+    {
+      id: "capacity",
+      accessorKey: "capacity",
+      header: "Capacidad",
+      sortable: true,
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -258,79 +313,21 @@ export default function Routes() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Rutas Disponibles</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Origen</TableHead>
-                <TableHead>Destino</TableHead>
-                <TableHead>Capacidad</TableHead>
-                <TableHead>Asientos Ocupados</TableHead>
-                <TableHead>Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {routes.map((route) => (
-                <TableRow key={route.id}>
-                  <TableCell>{route.name}</TableCell>
-                  <TableCell>{getLocationName(route.originId)}</TableCell>
-                  <TableCell>{getLocationName(route.destinationId)}</TableCell>
-                  <TableCell>{route.capacity}</TableCell>
-                  <TableCell>{route.seatsTaken}</TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="sm">
-                      Editar
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <DataTable
+        title="Rutas Disponibles"
+        data={routes}
+        columns={routeColumns}
+        searchable={true}
+        searchField="name"
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Horarios</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Ruta</TableHead>
-                <TableHead>Fecha</TableHead>
-                <TableHead>Hora</TableHead>
-                <TableHead>Precio</TableHead>
-                <TableHead>Capacidad</TableHead>
-                <TableHead>Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {schedules.map((schedule) => (
-                <TableRow key={schedule.id}>
-                  <TableCell>
-                    {routes.find((r) => r.id === schedule.routeId)?.name}
-                  </TableCell>
-                  <TableCell>{schedule.departureDate}</TableCell>
-                  <TableCell>{schedule.departureTime}</TableCell>
-                  <TableCell>Bs. {schedule.price}</TableCell>
-                  <TableCell>{schedule.capacity}</TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="sm">
-                      Editar
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <DataTable
+        title="Horarios"
+        data={schedules}
+        columns={scheduleColumns}
+        searchable={true}
+        searchField="routeId"
+      />
     </div>
   );
 }

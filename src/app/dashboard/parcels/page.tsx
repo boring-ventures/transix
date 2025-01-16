@@ -3,25 +3,11 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DataTable } from "@/components/table/data-table";
+import { Column } from "@/components/table/types";
 import { Parcel, CreateParcelInput } from "@/types/parcel.types";
-import { parcelStatusEnum } from "@/db/schema";
 
 export default function Parcels() {
   const [parcels, setParcels] = useState<Parcel[]>([
@@ -34,7 +20,7 @@ export default function Parcels() {
       toCity: "Santa Cruz",
       weight: 2.5,
       price: 50,
-      status: "en_transito",
+      status: "in_transit",
       createdAt: new Date(),
       updatedAt: new Date(),
     },
@@ -47,7 +33,7 @@ export default function Parcels() {
       toCity: "Sucre",
       weight: 1.8,
       price: 35,
-      status: "entregado",
+      status: "delivered",
       createdAt: new Date(),
       updatedAt: new Date(),
     },
@@ -78,7 +64,7 @@ export default function Parcels() {
         id: (prev.length + 1).toString(),
         trackingNumber: `TRX-${(prev.length + 1).toString().padStart(3, "0")}`,
         ...newParcel,
-        status: "pendiente",
+        status: "received",
         createdAt: new Date(),
         updatedAt: new Date(),
       },
@@ -93,31 +79,129 @@ export default function Parcels() {
     });
   };
 
-  const getStatusColor = (
-    status: (typeof parcelStatusEnum.enumValues)[number]
-  ) => {
+  const getStatusColor = (status: Parcel["status"]) => {
     switch (status) {
-      case "entregado":
+      case "delivered":
         return "bg-green-100 text-green-800";
-      case "en_transito":
+      case "in_transit":
         return "bg-yellow-100 text-yellow-800";
-      default:
+      case "received":
         return "bg-blue-100 text-blue-800";
+      case "cancelled":
+        return "bg-red-100 text-red-800";
+      case "ready_for_pickup":
+        return "bg-purple-100 text-purple-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
-  const getStatusText = (
-    status: (typeof parcelStatusEnum.enumValues)[number]
-  ) => {
+  const getStatusText = (status: Parcel["status"]) => {
     switch (status) {
-      case "entregado":
+      case "delivered":
         return "Entregado";
-      case "en_transito":
+      case "in_transit":
         return "En Tránsito";
-      case "pendiente":
-        return "Pendiente";
-      case "cancelado":
+      case "received":
+        return "Recibido";
+      case "cancelled":
         return "Cancelado";
+      case "ready_for_pickup":
+        return "Listo para Recoger";
+      default:
+        return status;
+    }
+  };
+
+  const columns: Column<Parcel>[] = [
+    {
+      id: "trackingNumber",
+      accessorKey: "trackingNumber",
+      header: "Tracking",
+      sortable: true,
+    },
+    {
+      id: "sender",
+      accessorKey: "sender",
+      header: "Remitente",
+      sortable: true,
+    },
+    {
+      id: "recipient",
+      accessorKey: "recipient",
+      header: "Destinatario",
+      sortable: true,
+    },
+    {
+      id: "fromCity",
+      accessorKey: "fromCity",
+      header: "Origen",
+      sortable: true,
+    },
+    {
+      id: "toCity",
+      accessorKey: "toCity",
+      header: "Destino",
+      sortable: true,
+    },
+    {
+      id: "weight",
+      accessorKey: "weight",
+      header: "Peso",
+      cell: ({ row }) => `${row.weight.toFixed(2)} kg`,
+      sortable: true,
+    },
+    {
+      id: "price",
+      accessorKey: "price",
+      header: "Precio",
+      cell: ({ row }) => `Bs. ${row.price.toFixed(2)}`,
+      sortable: true,
+    },
+    {
+      id: "status",
+      accessorKey: "status",
+      header: "Estado",
+      sortable: true,
+      cell: ({ row }) => (
+        <span
+          className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
+            row.status
+          )}`}
+        >
+          {getStatusText(row.status)}
+        </span>
+      ),
+    },
+  ];
+
+  const handleUpdateStatus = (parcel: Parcel) => {
+    setParcels((prev) =>
+      prev.map((p) =>
+        p.id === parcel.id
+          ? {
+              ...p,
+              status: getNextStatus(p.status),
+            }
+          : p
+      )
+    );
+  };
+
+  const getNextStatus = (currentStatus: Parcel["status"]): Parcel["status"] => {
+    switch (currentStatus) {
+      case "received":
+        return "in_transit";
+      case "in_transit":
+        return "ready_for_pickup";
+      case "ready_for_pickup":
+        return "delivered";
+      case "delivered":
+        return "delivered"; // Terminal state
+      case "cancelled":
+        return "cancelled"; // Terminal state
+      default:
+        return "received";
     }
   };
 
@@ -147,7 +231,7 @@ export default function Parcels() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {parcels.filter((p) => p.status === "en_transito").length}
+              {parcels.filter((p) => p.status === "in_transit").length}
             </div>
           </CardContent>
         </Card>
@@ -157,7 +241,7 @@ export default function Parcels() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {parcels.filter((p) => p.status === "entregado").length}
+              {parcels.filter((p) => p.status === "delivered").length}
             </div>
           </CardContent>
         </Card>
@@ -246,77 +330,14 @@ export default function Parcels() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Encomiendas Registradas</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Tracking</TableHead>
-                <TableHead>Remitente</TableHead>
-                <TableHead>Destinatario</TableHead>
-                <TableHead>Origen</TableHead>
-                <TableHead>Destino</TableHead>
-                <TableHead>Peso</TableHead>
-                <TableHead>Precio</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead>Acción</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {parcels.map((parcel) => (
-                <TableRow key={parcel.id}>
-                  <TableCell>{parcel.trackingNumber}</TableCell>
-                  <TableCell>{parcel.sender}</TableCell>
-                  <TableCell>{parcel.recipient}</TableCell>
-                  <TableCell>{parcel.fromCity}</TableCell>
-                  <TableCell>{parcel.toCity}</TableCell>
-                  <TableCell>{parcel.weight.toFixed(2)} kg</TableCell>
-                  <TableCell>Bs. {parcel.price.toFixed(2)}</TableCell>
-                  <TableCell>
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
-                        parcel.status
-                      )}`}
-                    >
-                      {getStatusText(parcel.status)}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Select
-                      onValueChange={(value) => {
-                        setParcels((prev) =>
-                          prev.map((p) =>
-                            p.id === parcel.id
-                              ? {
-                                  ...p,
-                                  status:
-                                    value as (typeof parcelStatusEnum.enumValues)[number],
-                                }
-                              : p
-                          )
-                        );
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Actualizar Estado" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pendiente">Pendiente</SelectItem>
-                        <SelectItem value="en_transito">En Tránsito</SelectItem>
-                        <SelectItem value="entregado">Entregado</SelectItem>
-                        <SelectItem value="cancelado">Cancelado</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <DataTable
+        title="Encomiendas Registradas"
+        data={parcels}
+        columns={columns}
+        searchable={true}
+        searchField="trackingNumber"
+        onEdit={handleUpdateStatus}
+      />
     </div>
   );
 }
