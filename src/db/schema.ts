@@ -129,7 +129,7 @@ export const customers = pgTable("customers", {
   email: text("email"),
   documentId: text("document_id"),
   createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
+  .defaultNow()
     .notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .defaultNow()
