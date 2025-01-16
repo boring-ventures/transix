@@ -9,10 +9,12 @@ import {
   BarChart,
   CreditCard,
   FileText,
-  UserPlus,
-  User2,
+  Ticket,
+  Map,
 } from "lucide-react";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
 
 import {
   Sidebar,
@@ -25,7 +27,6 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { NavUser } from "@/components/nav/nav-user";
-import { NavMain } from "@/components/nav/nav-main";
 import { Header } from "../dashboard/Header";
 
 const data = {
@@ -39,73 +40,31 @@ const data = {
       title: "Panel Principal",
       url: "/dashboard",
       icon: LayoutDashboard,
-      isActive: true,
     },
     {
-      title: "Gestión de Usuarios",
-      url: "/dashboard/users",
-      icon: Users,
-      items: [
-        {
-          title: "Lista de Usuarios",
-          url: "/dashboard/users",
-          icon: User2,
-        },
-        {
-          title: "Agregar Usuario",
-          url: "/dashboard/users?create=true",
-          icon: UserPlus,
-        },
-      ],
+      title: "Venta de Tickets",
+      url: "/dashboard/tickets",
+      icon: Ticket,
     },
     {
-      title: "Gestión de Pasajeros",
-      url: "/dashboard/passengers",
-      icon: Users,
-      items: [
-        {
-          title: "Lista de Pasajeros",
-          url: "/dashboard/passengers",
-        },
-        {
-          title: "Reservaciones",
-          url: "/dashboard/passengers/bookings",
-        },
-        {
-          title: "Historial",
-          url: "/dashboard/passengers/history",
-        },
-      ],
-    },
-    {
-      title: "Gestión de Paquetes",
+      title: "Encomiendas",
       url: "/dashboard/parcels",
       icon: Package,
-      items: [
-        {
-          title: "Envíos",
-          url: "/dashboard/parcels/shipments",
-        },
-        {
-          title: "Seguimiento",
-          url: "/dashboard/parcels/tracking",
-        },
-      ],
+    },
+    {
+      title: "Rutas",
+      url: "/dashboard/routes",
+      icon: Map,
     },
     {
       title: "Operaciones",
       url: "/dashboard/operations",
       icon: Calendar,
-      items: [
-        {
-          title: "Horarios",
-          url: "/dashboard/operations/schedules",
-        },
-        {
-          title: "Rutas",
-          url: "/dashboard/operations/routes",
-        },
-      ],
+    },
+    {
+      title: "Usuarios",
+      url: "/dashboard/users",
+      icon: Users,
     },
     {
       title: "Análisis",
@@ -126,6 +85,8 @@ const data = {
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const pathname = usePathname();
+
   return (
     <>
       <Sidebar variant="inset" {...props}>
@@ -157,7 +118,27 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarMenu>
         </SidebarHeader>
         <SidebarContent>
-          <NavMain items={data.navMain} />
+          <SidebarMenu>
+            {data.navMain.map((item) => {
+              const isActive = pathname === item.url;
+              return (
+                <SidebarMenuItem key={item.url}>
+                  <SidebarMenuButton
+                    asChild
+                    className={cn(
+                      "w-full justify-start gap-2",
+                      isActive && "font-bold bg-card"
+                    )}
+                  >
+                    <a href={item.url} className="flex items-center gap-2">
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </a>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            })}
+          </SidebarMenu>
         </SidebarContent>
         <SidebarFooter>
           <NavUser user={data.user} />
