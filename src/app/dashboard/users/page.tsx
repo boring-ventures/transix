@@ -70,8 +70,6 @@ export default function UsersPage() {
     form.reset();
   };
 
-  console.log(users);
-
   const columns: Column<UserWithProfile>[] = [
     { id: "email", accessorKey: "email", header: "Email" },
     {

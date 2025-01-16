@@ -5,8 +5,7 @@ import {
   LayoutDashboard,
   Users,
   Package,
-  Calendar,
-  BarChart,
+  Bus,
   CreditCard,
   FileText,
   Ticket,
@@ -57,9 +56,9 @@ const data = {
       icon: Map,
     },
     {
-      title: "Operaciones",
-      url: "/dashboard/operations",
-      icon: Calendar,
+      title: "Buses",
+      url: "/dashboard/buses",
+      icon: Bus,
     },
     {
       title: "Usuarios",
@@ -67,13 +66,8 @@ const data = {
       icon: Users,
     },
     {
-      title: "Análisis",
-      url: "/dashboard/analytics",
-      icon: BarChart,
-    },
-    {
-      title: "Facturación",
-      url: "/dashboard/billing",
+      title: "Finanzas",
+      url: "/dashboard/finances",
       icon: CreditCard,
     },
     {
