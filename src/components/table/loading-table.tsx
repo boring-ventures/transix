@@ -41,7 +41,7 @@ export function LoadingTable({
           <TableHeader>
             <TableRow>
               {Array.from({ length: columnCount }).map((_, index) => (
-                <TableHead key={index}>
+                <TableHead key={index} className="h-10">
                   <Skeleton className="h-4 w-[100px]" />
                 </TableHead>
               ))}
@@ -49,7 +49,7 @@ export function LoadingTable({
           </TableHeader>
           <TableBody>
             {Array.from({ length: rowCount }).map((_, rowIndex) => (
-              <TableRow key={rowIndex}>
+              <TableRow key={rowIndex} className="h-16">
                 {Array.from({ length: columnCount }).map((_, colIndex) => (
                   <TableCell key={colIndex}>
                     <Skeleton className="h-4 w-[100px]" />
