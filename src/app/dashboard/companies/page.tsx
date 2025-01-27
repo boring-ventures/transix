@@ -248,15 +248,6 @@ export default function CompaniesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Empresas</h1>
-          <p className="text-muted-foreground">
-            Gestión de empresas del sistema
-          </p>
-        </div>
-      </div>
-
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent>
           <DialogHeader>
@@ -292,8 +283,9 @@ export default function CompaniesPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Editar Empresa</DialogTitle>
-            <DialogDescription className="font-mono text-xs">
-              ID: {editingCompany?.id}
+            <DialogDescription>
+              Editando empresa:{" "}
+              <span className="font-mono">{editingCompany?.id}</span>
             </DialogDescription>
           </DialogHeader>
           <Form {...editForm}>
@@ -348,7 +340,8 @@ export default function CompaniesPage() {
       </Dialog>
 
       <DataTable
-        title="Lista de Empresas Activas"
+        title="Empresas"
+        description="Gestiona las empresas del sistema."
         data={tableData}
         columns={columns}
         searchable={true}

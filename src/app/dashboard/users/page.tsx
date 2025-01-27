@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useUsers, useCreateUser, useUpdateProfile } from "@/hooks/useUsers";
+import {
+  useUsers,
+  useCreateUser,
+  useUpdateProfile,
+  useDeleteUser,
+} from "@/hooks/useUsers";
 import { useCompanies } from "@/hooks/useCompanies";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +53,7 @@ export default function UsersPage() {
   const { data: companies, isLoading: companiesLoading } = useCompanies();
   const createUser = useCreateUser();
   const updateProfile = useUpdateProfile();
+  const deleteUser = useDeleteUser();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -84,10 +90,10 @@ export default function UsersPage() {
   const createRole = createForm.watch("role");
   const editRole = editForm.watch("role");
 
-  // Handle role changes for create form
+  // Reset company field when role changes to superadmin
   useEffect(() => {
     if (createRole === "superadmin") {
-      createForm.setValue("companyId", null);
+      createForm.setValue("companyId", "");
       createForm.clearErrors("companyId");
     } else if (!createForm.getValues("companyId")) {
       createForm.setError("companyId", {
@@ -97,16 +103,10 @@ export default function UsersPage() {
     }
   }, [createRole, createForm]);
 
-  // Handle role changes for edit form
   useEffect(() => {
     if (editRole === "superadmin") {
-      editForm.setValue("companyId", null);
+      editForm.setValue("companyId", "");
       editForm.clearErrors("companyId");
-    } else if (!editForm.getValues("companyId")) {
-      editForm.setError("companyId", {
-        type: "required",
-        message: "La empresa es requerida para roles que no son superadmin",
-      });
     }
   }, [editRole, editForm]);
 
@@ -120,10 +120,7 @@ export default function UsersPage() {
         profile: {
           fullName: data.fullName,
           role: data.role,
-          companyId:
-            data.role === "superadmin"
-              ? null
-              : data.companyId || null,
+          companyId: data.role === "superadmin" ? null : data.companyId || null,
           active: true,
           branchId: null,
         },
@@ -157,10 +154,7 @@ export default function UsersPage() {
         data: {
           fullName: data.fullName,
           role: data.role,
-          companyId:
-            data.role === "superadmin"
-              ? null
-              : data.companyId || null,
+          companyId: data.role === "superadmin" ? null : data.companyId || null,
         },
       });
       setIsEditOpen(false);
@@ -193,8 +187,14 @@ export default function UsersPage() {
   };
 
   const handleDelete = (user: UserWithProfile) => {
-    if (!user.profile || user.profile.role === "superadmin") return;
-
+    if (user.profile?.role === "superadmin") {
+      toast({
+        title: "Operación no permitida",
+        description: "No se pueden desactivar usuarios Superadmin.",
+        variant: "destructive",
+      });
+      return;
+    }
     setDeletingUser(user);
     setIsDeleteOpen(true);
   };
@@ -203,20 +203,21 @@ export default function UsersPage() {
     if (!deletingUser?.profile) return;
 
     try {
-      await updateProfile.mutateAsync({
-        profileId: deletingUser.profile.id,
-        data: { active: false },
-      });
+      await deleteUser.mutateAsync(deletingUser.id);
       setIsDeleteOpen(false);
       setDeletingUser(null);
       toast({
         title: "Usuario desactivado",
         description: "El usuario ha sido desactivado exitosamente.",
       });
-    } catch {
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Hubo un error al desactivar el usuario.";
       toast({
         title: "Error",
-        description: "Hubo un error al desactivar el usuario.",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -529,18 +530,35 @@ export default function UsersPage() {
       <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete User</DialogTitle>
+            <DialogTitle>Desactivar Usuario</DialogTitle>
+            <DialogDescription>
+              {deletingUser?.profile?.role === "superadmin" ? (
+                <span className="text-red-500">
+                  No se puede desactivar un usuario Superadmin
+                </span>
+              ) : (
+                <>
+                  Desactivando usuario:{" "}
+                  <span className="font-mono">{deletingUser?.id}</span>
+                </>
+              )}
+            </DialogDescription>
           </DialogHeader>
-          <DialogDescription>
-            Are you sure you want to delete this user?
-          </DialogDescription>
+          <p className="text-muted-foreground">
+            {deletingUser?.profile?.role === "superadmin"
+              ? "Los usuarios Superadmin no pueden ser desactivados por seguridad."
+              : "¿Está seguro que desea desactivar este usuario?"}
+          </p>
           <DialogFooter>
             <Button
               type="submit"
-              disabled={updateProfile.isPending}
+              disabled={
+                deleteUser.isPending ||
+                deletingUser?.profile?.role === "superadmin"
+              }
               onClick={confirmDelete}
             >
-              Delete User
+              Desactivar Usuario
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -548,6 +566,7 @@ export default function UsersPage() {
 
       <DataTable
         title="Usuarios"
+        description="Gestiona los usuarios del sistema."
         data={users || []}
         columns={columns}
         searchable
