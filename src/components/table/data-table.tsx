@@ -27,12 +27,12 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TableProps, SortDirection, PaginationState } from "./types";
 import { sortData, filterData, paginateData } from "./table-utils";
 
 export function DataTable<T extends Record<string, unknown>>({
   title,
+  description,
   data,
   columns,
   searchable = true,
@@ -125,219 +125,223 @@ export function DataTable<T extends Record<string, unknown>>({
   const totalPages = Math.ceil(processedData.totalCount / pagination.pageSize);
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <CardTitle>{title}</CardTitle>
+    <div className="space-y-4 w-full">
+      <div className="flex flex-row items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">{title}</h2>
+          {description && (
+            <p className="text-muted-foreground mt-1">{description}</p>
+          )}
+        </div>
         {onAdd && (
           <Button onClick={onAdd} size="sm">
             <Plus className="mr-2 h-4 w-4" />
             Agregar Nuevo
           </Button>
         )}
-      </CardHeader>
-      <CardContent>
-        <div className="w-full">
-          <div className="flex items-center justify-between py-4">
-            {searchable && (
-              <Input
-                placeholder="Buscar..."
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                className="max-w-sm"
-              />
-            )}
-          </div>
+      </div>
 
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  {rowSelection && (
-                    <TableHead className="w-[40px]">
-                      <Checkbox
-                        checked={
-                          selectedRows.size === processedData.data.length
-                        }
-                        onCheckedChange={handleSelectAll}
-                      />
-                    </TableHead>
-                  )}
-                  {columns.map((column) => (
-                    <TableHead
-                      key={column.id}
-                      className={
-                        column.sortable ? "cursor-pointer select-none" : ""
+      <div className="w-full">
+        <div className="flex items-center justify-between py-4">
+          {searchable && (
+            <Input
+              placeholder="Buscar..."
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              className="max-w-sm"
+            />
+          )}
+        </div>
+
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {rowSelection && (
+                  <TableHead className="w-[40px]">
+                    <Checkbox
+                      checked={
+                        selectedRows.size === processedData.data.length
                       }
-                      onClick={() =>
-                        column.sortable && handleSort(column.accessorKey)
-                      }
-                    >
-                      <div className="flex items-center space-x-2">
-                        <span>{column.header}</span>
-                        {column.sortable && (
-                          <div className="w-4">
-                            {sortConfig.field === column.accessorKey ? (
-                              sortConfig.direction === "asc" ? (
-                                <ChevronUp className="h-4 w-4" />
-                              ) : sortConfig.direction === "desc" ? (
-                                <ChevronDown className="h-4 w-4" />
-                              ) : (
-                                <ChevronsUpDown className="h-4 w-4" />
-                              )
+                      onCheckedChange={handleSelectAll}
+                    />
+                  </TableHead>
+                )}
+                {columns.map((column) => (
+                  <TableHead
+                    key={column.id}
+                    className={
+                      column.sortable ? "cursor-pointer select-none" : ""
+                    }
+                    onClick={() =>
+                      column.sortable && handleSort(column.accessorKey)
+                    }
+                  >
+                    <div className="flex items-center space-x-2">
+                      <span>{column.header}</span>
+                      {column.sortable && (
+                        <div className="w-4">
+                          {sortConfig.field === column.accessorKey ? (
+                            sortConfig.direction === "asc" ? (
+                              <ChevronUp className="h-4 w-4" />
+                            ) : sortConfig.direction === "desc" ? (
+                              <ChevronDown className="h-4 w-4" />
                             ) : (
                               <ChevronsUpDown className="h-4 w-4" />
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </TableHead>
-                  ))}
-                  {(onEdit || onDelete) && (
-                    <TableHead className="w-[100px]">Acciones</TableHead>
-                  )}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {processedData.data.map((row, rowIndex) => (
-                  <TableRow
-                    key={rowIndex}
-                    className={onRowClick ? "cursor-pointer" : ""}
-                    onClick={() => onRowClick && onRowClick(row)}
-                  >
-                    {rowSelection && (
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <Checkbox
-                          checked={selectedRows.has(rowIndex)}
-                          onCheckedChange={() => handleSelectRow(rowIndex)}
-                        />
-                      </TableCell>
-                    )}
-                    {columns.map((column) => (
-                      <TableCell key={column.id}>
-                        {column.cell
-                          ? column.cell({ row })
-                          : String(row[column.accessorKey])}
-                      </TableCell>
-                    ))}
-                    {(onEdit || onDelete) && (
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center gap-2">
-                          {onEdit && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => onEdit(row)}
-                              title="Editar"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {onDelete && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => onDelete(row)}
-                              title="Eliminar"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            )
+                          ) : (
+                            <ChevronsUpDown className="h-4 w-4" />
                           )}
                         </div>
-                      </TableCell>
-                    )}
-                  </TableRow>
+                      )}
+                    </div>
+                  </TableHead>
                 ))}
-              </TableBody>
-            </Table>
+                {(onEdit || onDelete) && (
+                  <TableHead className="w-[100px]">Acciones</TableHead>
+                )}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {processedData.data.map((row, rowIndex) => (
+                <TableRow
+                  key={rowIndex}
+                  className={onRowClick ? "cursor-pointer" : ""}
+                  onClick={() => onRowClick && onRowClick(row)}
+                >
+                  {rowSelection && (
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selectedRows.has(rowIndex)}
+                        onCheckedChange={() => handleSelectRow(rowIndex)}
+                      />
+                    </TableCell>
+                  )}
+                  {columns.map((column) => (
+                    <TableCell key={column.id}>
+                      {column.cell
+                        ? column.cell({ row })
+                        : String(row[column.accessorKey])}
+                    </TableCell>
+                  ))}
+                  {(onEdit || onDelete) && (
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-2">
+                        {onEdit && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onEdit(row)}
+                            title="Editar"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {onDelete && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onDelete(row)}
+                            title="Eliminar"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+
+        <div className="flex items-center justify-between py-4">
+          <div className="flex items-center space-x-2">
+            <p className="text-sm text-muted-foreground">
+              {selectedRows.size} de {processedData.totalCount} fila(s)
+              seleccionada(s).
+            </p>
+            <Select
+              value={String(pagination.pageSize)}
+              onValueChange={(value) =>
+                setPagination((current) => ({
+                  ...current,
+                  pageSize: Number(value),
+                  pageIndex: 0,
+                }))
+              }
+            >
+              <SelectTrigger className="h-8 w-[70px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {pageSizeOptions.map((size) => (
+                  <SelectItem key={size} value={String(size)}>
+                    {size}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-muted-foreground">filas por página</p>
           </div>
 
-          <div className="flex items-center justify-between py-4">
-            <div className="flex items-center space-x-2">
-              <p className="text-sm text-muted-foreground">
-                {selectedRows.size} de {processedData.totalCount} fila(s)
-                seleccionada(s).
-              </p>
-              <Select
-                value={String(pagination.pageSize)}
-                onValueChange={(value) =>
-                  setPagination((current) => ({
-                    ...current,
-                    pageSize: Number(value),
-                    pageIndex: 0,
-                  }))
-                }
-              >
-                <SelectTrigger className="h-8 w-[70px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {pageSizeOptions.map((size) => (
-                    <SelectItem key={size} value={String(size)}>
-                      {size}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-sm text-muted-foreground">filas por página</p>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setPagination((current) => ({ ...current, pageIndex: 0 }))
-                }
-                disabled={pagination.pageIndex === 0}
-              >
-                {"<<"}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setPagination((current) => ({
-                    ...current,
-                    pageIndex: current.pageIndex - 1,
-                  }))
-                }
-                disabled={pagination.pageIndex === 0}
-              >
-                {"<"}
-              </Button>
-              <p className="text-sm text-muted-foreground">
-                Página {pagination.pageIndex + 1} de {totalPages}
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setPagination((current) => ({
-                    ...current,
-                    pageIndex: current.pageIndex + 1,
-                  }))
-                }
-                disabled={pagination.pageIndex === totalPages - 1}
-              >
-                {">"}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setPagination((current) => ({
-                    ...current,
-                    pageIndex: totalPages - 1,
-                  }))
-                }
-                disabled={pagination.pageIndex === totalPages - 1}
-              >
-                {">>"}
-              </Button>
-            </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setPagination((current) => ({ ...current, pageIndex: 0 }))
+              }
+              disabled={pagination.pageIndex === 0}
+            >
+              {"<<"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setPagination((current) => ({
+                  ...current,
+                  pageIndex: current.pageIndex - 1,
+                }))
+              }
+              disabled={pagination.pageIndex === 0}
+            >
+              {"<"}
+            </Button>
+            <p className="text-sm text-muted-foreground">
+              Página {pagination.pageIndex + 1} de {totalPages}
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setPagination((current) => ({
+                  ...current,
+                  pageIndex: current.pageIndex + 1,
+                }))
+              }
+              disabled={pagination.pageIndex === totalPages - 1}
+            >
+              {">"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setPagination((current) => ({
+                  ...current,
+                  pageIndex: totalPages - 1,
+                }))
+              }
+              disabled={pagination.pageIndex === totalPages - 1}
+            >
+              {">>"}
+            </Button>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
