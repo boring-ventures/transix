@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { users, profiles } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { users, profiles, companies } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
 import { insertUserSchema, insertProfileSchema } from "@/types/user.types";
 import { createClient } from '@supabase/supabase-js';
 
@@ -27,10 +27,18 @@ export async function GET(request: Request) {
             createdAt: profiles.createdAt,
             updatedAt: profiles.updatedAt,
           },
+          company: {
+            id: companies.id,
+            name: companies.name,
+            active: companies.active,
+            createdAt: companies.createdAt,
+            updatedAt: companies.updatedAt,
+          },
         })
         .from(users)
         .leftJoin(profiles, eq(profiles.userId, users.id))
-        .where(eq(users.id, userId))
+        .leftJoin(companies, eq(profiles.companyId, companies.id))
+        .where(and(eq(users.id, userId), eq(profiles.active, true)))
         .limit(1);
 
       return NextResponse.json(result[0]);
@@ -52,10 +60,18 @@ export async function GET(request: Request) {
           createdAt: profiles.createdAt,
           updatedAt: profiles.updatedAt,
         },
+        company: {
+          id: companies.id,
+          name: companies.name,
+          active: companies.active,
+          createdAt: companies.createdAt,
+          updatedAt: companies.updatedAt,
+        },
       })
       .from(users)
-      .where(eq(profiles.active, true))
-      .leftJoin(profiles, eq(profiles.userId, users.id));
+      .leftJoin(profiles, eq(profiles.userId, users.id))
+      .leftJoin(companies, eq(profiles.companyId, companies.id))
+      .where(eq(profiles.active, true));
 
     return NextResponse.json(results);
   } catch (error: unknown) {

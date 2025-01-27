@@ -8,7 +8,7 @@ export type UpdateCompanyInput = Partial<CreateCompanyInput>;
 export interface CompanyResponse {
   id: string;
   name: string;
-  active: boolean;
+  active: boolean | null;
   createdAt: Date;
   updatedAt: Date;
 } 

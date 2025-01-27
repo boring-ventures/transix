@@ -1,12 +1,14 @@
 import { users, profiles, roleEnum } from "@/db/schema";
 import { InferSelectModel } from "drizzle-orm";
 import { z } from "zod";
+import { Company } from "./company.types";
 
 export type User = InferSelectModel<typeof users>;
 export type Profile = InferSelectModel<typeof profiles>;
 
 export type UserWithProfile = User & {
   profile?: Profile;
+  company?: Company;
 };
 
 // Base schema for user forms

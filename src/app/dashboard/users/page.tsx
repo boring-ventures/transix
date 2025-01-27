@@ -47,6 +47,7 @@ import { roleEnum } from "@/db/schema";
 import { Column } from "@/components/table/types";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
+import type { CompanyResponse } from "@/types/company.types";
 
 export default function UsersPage() {
   const { data: users, isLoading: usersLoading } = useUsers();
@@ -61,6 +62,11 @@ export default function UsersPage() {
   const [deletingUser, setDeletingUser] = useState<UserWithProfile | null>(
     null
   );
+
+  const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
+  const [selectedCompany, setSelectedCompany] =
+    useState<CompanyResponse | null>(null);
+
   const { toast } = useToast();
 
   const createForm = useForm<CreateUserFormData>({
@@ -86,11 +92,10 @@ export default function UsersPage() {
     mode: "onChange",
   });
 
-  // Watch the role field to conditionally show company field
   const createRole = createForm.watch("role");
   const editRole = editForm.watch("role");
 
-  // Reset company field when role changes to superadmin
+  // Reset company field when role changes to superadmin in create form
   useEffect(() => {
     if (createRole === "superadmin") {
       createForm.setValue("companyId", "");
@@ -103,6 +108,7 @@ export default function UsersPage() {
     }
   }, [createRole, createForm]);
 
+  // Reset company field when role changes to superadmin in edit form
   useEffect(() => {
     if (editRole === "superadmin") {
       editForm.setValue("companyId", "");
@@ -136,7 +142,6 @@ export default function UsersPage() {
         error instanceof Error
           ? error.message
           : "Hubo un error al crear el usuario.";
-
       toast({
         title: "Error",
         description: errorMessage,
@@ -159,15 +164,24 @@ export default function UsersPage() {
       });
       setIsEditOpen(false);
       setEditingUser(null);
-      editForm.reset();
+      editForm.reset({
+        email: editingUser.email ?? "",
+        fullName: editingUser.profile.fullName ?? "",
+        role: editingUser.profile.role ?? "seller",
+        companyId: editingUser.profile.companyId || "",
+      });
       toast({
         title: "Usuario actualizado",
         description: "El usuario ha sido actualizado exitosamente.",
       });
-    } catch {
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Hubo un error al actualizar el usuario.";
       toast({
         title: "Error",
-        description: "Hubo un error al actualizar el usuario.",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -175,12 +189,11 @@ export default function UsersPage() {
 
   const handleEdit = (user: UserWithProfile) => {
     if (!user.profile) return;
-
     setEditingUser(user);
     editForm.reset({
-      email: user.email || "",
-      fullName: user.profile.fullName || "",
-      role: user.profile.role,
+      email: user.email ?? "",
+      fullName: user.profile.fullName ?? "",
+      role: user.profile.role ?? "seller",
       companyId: user.profile.companyId || "",
     });
     setIsEditOpen(true);
@@ -189,8 +202,8 @@ export default function UsersPage() {
   const handleDelete = (user: UserWithProfile) => {
     if (user.profile?.role === "superadmin") {
       toast({
-        title: "Operación no permitida",
-        description: "No se pueden desactivar usuarios Superadmin.",
+        title: "Error",
+        description: "No se puede desactivar un usuario Superadmin",
         variant: "destructive",
       });
       return;
@@ -223,6 +236,13 @@ export default function UsersPage() {
     }
   };
 
+  // Open the company modal (updated text)
+  const handleOpenCompanyModal = (company: CompanyResponse) => {
+    setSelectedCompany(company);
+    setIsCompanyModalOpen(true);
+  };
+
+  // Columns updated to change text if no company is set, in Spanish, and custom highlight
   const columns: Column<Record<string, unknown>>[] = [
     {
       id: "id",
@@ -249,77 +269,37 @@ export default function UsersPage() {
       },
     },
     {
-      id: "fullName",
-      accessorKey: "profile",
-      header: "Nombre",
-      sortable: true,
-      cell: ({ row }) => {
-        const data = row as unknown as UserWithProfile;
-        return <div className="min-w-[200px]">{data.profile?.fullName}</div>;
-      },
-    },
-    {
-      id: "role",
-      accessorKey: "profile",
-      header: "Rol",
-      sortable: true,
-      cell: ({ row }) => {
-        const data = row as unknown as UserWithProfile;
-        return (
-          <div className="min-w-[150px]">
-            {data.profile?.role
-              .replace("_", " ")
-              .replace(/\b\w/g, (letter: string) => letter.toUpperCase())}
-          </div>
-        );
-      },
-    },
-    {
       id: "company",
-      accessorKey: "profile",
+      accessorKey: "company",
       header: "Empresa",
-      sortable: true,
       cell: ({ row }) => {
         const data = row as unknown as UserWithProfile;
+        if (!data.company) {
+          return <span className="text-gray-400 italic">Sin empresa</span>;
+        }
         return (
-          <span className="font-mono text-[10px] text-muted-foreground truncate w-20 inline-block">
-            {data.profile?.companyId
-              ? data.profile.companyId.slice(0, 8) + "..."
-              : "N/A"}
-          </span>
-        );
-      },
-    },
-    {
-      id: "status",
-      accessorKey: "profile",
-      header: "Estado",
-      sortable: true,
-      cell: ({ row }) => {
-        const data = row as unknown as UserWithProfile;
-        const active = data.profile?.active;
-        return (
-          <span
-            className={`font-medium w-24 inline-block ${
-              active ? "text-green-600" : "text-red-600"
-            }`}
+          <button
+            className="cursor-pointer underline text-pink-600"
+            onClick={() => handleOpenCompanyModal(data.company!)}
           >
-            {active ? "Activo" : "Inactivo"}
-          </span>
+            {data.company.name}
+          </button>
         );
       },
     },
   ];
 
-  if (usersLoading || companiesLoading)
-    return <LoadingTable columnCount={5} rowCount={10} />;
+  if (usersLoading || companiesLoading) {
+    return <LoadingTable columnCount={3} rowCount={10} />;
+  }
 
   return (
-    <div className="p-4">
+    <div className="space-y-6">
+      {/* Create User Dialog */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create New User</DialogTitle>
+            <DialogTitle>Crear Usuario</DialogTitle>
           </DialogHeader>
           <Form {...createForm}>
             <form
@@ -357,7 +337,7 @@ export default function UsersPage() {
                 name="fullName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Full Name</FormLabel>
+                    <FormLabel>Nombre Completo</FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -370,13 +350,13 @@ export default function UsersPage() {
                 name="role"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Role</FormLabel>
+                    <FormLabel>Rol</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select role" />
+                        <SelectValue placeholder="Seleccionar rol" />
                       </SelectTrigger>
                       <SelectContent>
                         {roleEnum.enumValues.map((role) => (
@@ -421,17 +401,18 @@ export default function UsersPage() {
                 )}
               />
               <Button type="submit" disabled={createUser.isPending}>
-                Create User
+                Crear Usuario
               </Button>
             </form>
           </Form>
         </DialogContent>
       </Dialog>
 
+      {/* Edit User Dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit User</DialogTitle>
+            <DialogTitle>Editar Usuario</DialogTitle>
           </DialogHeader>
           <Form {...editForm}>
             <form
@@ -456,7 +437,7 @@ export default function UsersPage() {
                 name="fullName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Full Name</FormLabel>
+                    <FormLabel>Nombre Completo</FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -469,13 +450,13 @@ export default function UsersPage() {
                 name="role"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Role</FormLabel>
+                    <FormLabel>Rol</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select role" />
+                        <SelectValue placeholder="Seleccionar rol" />
                       </SelectTrigger>
                       <SelectContent>
                         {roleEnum.enumValues.map((role) => (
@@ -520,13 +501,14 @@ export default function UsersPage() {
                 )}
               />
               <Button type="submit" disabled={updateProfile.isPending}>
-                Update User
+                Actualizar Usuario
               </Button>
             </form>
           </Form>
         </DialogContent>
       </Dialog>
 
+      {/* Delete User Dialog */}
       <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <DialogContent>
           <DialogHeader>
@@ -560,6 +542,33 @@ export default function UsersPage() {
             >
               Desactivar Usuario
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Company Details Dialog (in Spanish) */}
+      <Dialog open={isCompanyModalOpen} onOpenChange={setIsCompanyModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Detalles de la empresa</DialogTitle>
+          </DialogHeader>
+          {selectedCompany && (
+            <div className="space-y-2">
+              <p className="font-mono text-sm">ID: {selectedCompany.id}</p>
+              <p>Nombre: {selectedCompany.name}</p>
+              <p>¿Está activa?: {selectedCompany.active ? "Sí" : "No"}</p>
+              <p>
+                Fecha de creación:{" "}
+                {new Date(selectedCompany.createdAt).toLocaleDateString()}
+              </p>
+              <p>
+                Fecha de actualización:{" "}
+                {new Date(selectedCompany.updatedAt).toLocaleDateString()}
+              </p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setIsCompanyModalOpen(false)}>Cerrar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
