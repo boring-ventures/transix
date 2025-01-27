@@ -10,6 +10,7 @@ export interface Column<T> {
 
 export interface TableProps<T> {
   title: string
+  description?: string;
   data: T[]
   columns: Column<T>[]
   searchable?: boolean

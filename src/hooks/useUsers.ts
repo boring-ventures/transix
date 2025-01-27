@@ -72,4 +72,27 @@ export function useUpdateProfile() {
       queryClient.invalidateQueries({ queryKey: ["users"] });
     },
   });
+}
+
+export function useDeleteUser() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      const response = await axios.delete(`${API_URL}/${userId}`);
+      if (response.data.error) {
+        throw new Error(response.data.error);
+      }
+      return response.data;
+    },
+    onError: (error: unknown) => {
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.error || "Error al desactivar el usuario");
+      }
+      throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+    },
+  });
 } 
