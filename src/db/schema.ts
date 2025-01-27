@@ -99,7 +99,7 @@ export const authSchema = pgSchema("auth");
 
 // Reference to Supabase's auth.users table (only essential fields we need)
 export const users = authSchema.table("users", {
-  id: uuid("id").primaryKey(),
+  id: uuid("id").primaryKey().defaultRandom(),
   email: text("email"),
   created_at: timestamp("created_at", { withTimezone: true }),
   updated_at: timestamp("updated_at", { withTimezone: true }),
