@@ -8,6 +8,7 @@ import {
   Plus,
   Pencil,
   Trash2,
+  PlusCircle,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -133,7 +134,7 @@ export function DataTable<T extends Record<string, unknown>>({
             <p className="text-muted-foreground mt-1">{description}</p>
           )}
         </div>
-        {onAdd && (
+        {onAdd && data.length > 0 && (
           <Button onClick={onAdd} size="sm">
             <Plus className="mr-2 h-4 w-4" />
             Agregar Nuevo
@@ -142,205 +143,227 @@ export function DataTable<T extends Record<string, unknown>>({
       </div>
 
       <div className="w-full">
-        <div className="flex items-center justify-between py-4">
-          {searchable && (
-            <Input
-              placeholder="Buscar..."
-              value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
-              className="max-w-sm"
-            />
-          )}
-        </div>
+        {data.length > 0 ? (
+          <>
+            <div className="flex items-center justify-between py-4">
+              {searchable && (
+                <Input
+                  placeholder="Buscar..."
+                  value={searchValue}
+                  onChange={(e) => setSearchValue(e.target.value)}
+                  className="max-w-sm"
+                />
+              )}
+            </div>
 
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {rowSelection && (
-                  <TableHead className="w-[40px]">
-                    <Checkbox
-                      checked={
-                        selectedRows.size === processedData.data.length
-                      }
-                      onCheckedChange={handleSelectAll}
-                    />
-                  </TableHead>
-                )}
-                {columns.map((column) => (
-                  <TableHead
-                    key={column.id}
-                    className={
-                      column.sortable ? "cursor-pointer select-none" : ""
-                    }
-                    onClick={() =>
-                      column.sortable && handleSort(column.accessorKey)
-                    }
-                  >
-                    <div className="flex items-center space-x-2">
-                      <span>{column.header}</span>
-                      {column.sortable && (
-                        <div className="w-4">
-                          {sortConfig.field === column.accessorKey ? (
-                            sortConfig.direction === "asc" ? (
-                              <ChevronUp className="h-4 w-4" />
-                            ) : sortConfig.direction === "desc" ? (
-                              <ChevronDown className="h-4 w-4" />
-                            ) : (
-                              <ChevronsUpDown className="h-4 w-4" />
-                            )
-                          ) : (
-                            <ChevronsUpDown className="h-4 w-4" />
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {rowSelection && (
+                      <TableHead className="w-[40px]">
+                        <Checkbox
+                          checked={
+                            selectedRows.size === processedData.data.length
+                          }
+                          onCheckedChange={handleSelectAll}
+                        />
+                      </TableHead>
+                    )}
+                    {columns.map((column) => (
+                      <TableHead
+                        key={column.id}
+                        className={
+                          column.sortable ? "cursor-pointer select-none" : ""
+                        }
+                        onClick={() =>
+                          column.sortable && handleSort(column.accessorKey)
+                        }
+                      >
+                        <div className="flex items-center space-x-2">
+                          <span>{column.header}</span>
+                          {column.sortable && (
+                            <div className="w-4">
+                              {sortConfig.field === column.accessorKey ? (
+                                sortConfig.direction === "asc" ? (
+                                  <ChevronUp className="h-4 w-4" />
+                                ) : sortConfig.direction === "desc" ? (
+                                  <ChevronDown className="h-4 w-4" />
+                                ) : (
+                                  <ChevronsUpDown className="h-4 w-4" />
+                                )
+                              ) : (
+                                <ChevronsUpDown className="h-4 w-4" />
+                              )}
+                            </div>
                           )}
                         </div>
+                      </TableHead>
+                    ))}
+                    {(onEdit || onDelete) && (
+                      <TableHead className="w-[100px]">Acciones</TableHead>
+                    )}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {processedData.data.map((row, rowIndex) => (
+                    <TableRow
+                      key={rowIndex}
+                      className={onRowClick ? "cursor-pointer" : ""}
+                      onClick={() => onRowClick && onRowClick(row)}
+                    >
+                      {rowSelection && (
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedRows.has(rowIndex)}
+                            onCheckedChange={() => handleSelectRow(rowIndex)}
+                          />
+                        </TableCell>
                       )}
-                    </div>
-                  </TableHead>
-                ))}
-                {(onEdit || onDelete) && (
-                  <TableHead className="w-[100px]">Acciones</TableHead>
-                )}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {processedData.data.map((row, rowIndex) => (
-                <TableRow
-                  key={rowIndex}
-                  className={onRowClick ? "cursor-pointer" : ""}
-                  onClick={() => onRowClick && onRowClick(row)}
-                >
-                  {rowSelection && (
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      <Checkbox
-                        checked={selectedRows.has(rowIndex)}
-                        onCheckedChange={() => handleSelectRow(rowIndex)}
-                      />
-                    </TableCell>
-                  )}
-                  {columns.map((column) => (
-                    <TableCell key={column.id}>
-                      {column.cell
-                        ? column.cell({ row })
-                        : String(row[column.accessorKey])}
-                    </TableCell>
+                      {columns.map((column) => (
+                        <TableCell key={column.id}>
+                          {column.cell
+                            ? column.cell({ row })
+                            : String(row[column.accessorKey])}
+                        </TableCell>
+                      ))}
+                      {(onEdit || onDelete) && (
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center gap-2">
+                            {onEdit && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => onEdit(row)}
+                                title="Editar"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {onDelete && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => onDelete(row)}
+                                title="Eliminar"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      )}
+                    </TableRow>
                   ))}
-                  {(onEdit || onDelete) && (
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center gap-2">
-                        {onEdit && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => onEdit(row)}
-                            title="Editar"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {onDelete && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => onDelete(row)}
-                            title="Eliminar"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+                </TableBody>
+              </Table>
+            </div>
 
-        <div className="flex items-center justify-between py-4">
-          <div className="flex items-center space-x-2">
-            <p className="text-sm text-muted-foreground">
-              {selectedRows.size} de {processedData.totalCount} fila(s)
-              seleccionada(s).
-            </p>
-            <Select
-              value={String(pagination.pageSize)}
-              onValueChange={(value) =>
-                setPagination((current) => ({
-                  ...current,
-                  pageSize: Number(value),
-                  pageIndex: 0,
-                }))
-              }
-            >
-              <SelectTrigger className="h-8 w-[70px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {pageSizeOptions.map((size) => (
-                  <SelectItem key={size} value={String(size)}>
-                    {size}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-sm text-muted-foreground">filas por página</p>
-          </div>
+            <div className="flex items-center justify-between py-4">
+              <div className="flex items-center space-x-2">
+                <p className="text-sm text-muted-foreground">
+                  {selectedRows.size} de {processedData.totalCount} fila(s)
+                  seleccionada(s).
+                </p>
+                <Select
+                  value={String(pagination.pageSize)}
+                  onValueChange={(value) =>
+                    setPagination((current) => ({
+                      ...current,
+                      pageSize: Number(value),
+                      pageIndex: 0,
+                    }))
+                  }
+                >
+                  <SelectTrigger className="h-8 w-[70px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {pageSizeOptions.map((size) => (
+                      <SelectItem key={size} value={String(size)}>
+                        {size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  filas por página
+                </p>
+              </div>
 
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                setPagination((current) => ({ ...current, pageIndex: 0 }))
-              }
-              disabled={pagination.pageIndex === 0}
-            >
-              {"<<"}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                setPagination((current) => ({
-                  ...current,
-                  pageIndex: current.pageIndex - 1,
-                }))
-              }
-              disabled={pagination.pageIndex === 0}
-            >
-              {"<"}
-            </Button>
-            <p className="text-sm text-muted-foreground">
-              Página {pagination.pageIndex + 1} de {totalPages}
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                setPagination((current) => ({
-                  ...current,
-                  pageIndex: current.pageIndex + 1,
-                }))
-              }
-              disabled={pagination.pageIndex === totalPages - 1}
-            >
-              {">"}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                setPagination((current) => ({
-                  ...current,
-                  pageIndex: totalPages - 1,
-                }))
-              }
-              disabled={pagination.pageIndex === totalPages - 1}
-            >
-              {">>"}
-            </Button>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setPagination((current) => ({ ...current, pageIndex: 0 }))
+                  }
+                  disabled={pagination.pageIndex === 0}
+                >
+                  {"<<"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setPagination((current) => ({
+                      ...current,
+                      pageIndex: current.pageIndex - 1,
+                    }))
+                  }
+                  disabled={pagination.pageIndex === 0}
+                >
+                  {"<"}
+                </Button>
+                <p className="text-sm text-muted-foreground">
+                  Página {pagination.pageIndex + 1} de {totalPages}
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setPagination((current) => ({
+                      ...current,
+                      pageIndex: current.pageIndex + 1,
+                    }))
+                  }
+                  disabled={pagination.pageIndex === totalPages - 1}
+                >
+                  {">"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setPagination((current) => ({
+                      ...current,
+                      pageIndex: totalPages - 1,
+                    }))
+                  }
+                  disabled={pagination.pageIndex === totalPages - 1}
+                >
+                  {">>"}
+                </Button>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="flex min-h-[400px] flex-col items-center justify-center rounded-md border border-dashed p-8 text-center animate-in fade-in-50">
+            <div className="mx-auto flex max-w-[420px] flex-col items-center justify-center text-center">
+              <PlusCircle className="h-10 w-10 text-muted-foreground" />
+              <h3 className="mt-4 text-lg font-semibold">No hay datos</h3>
+              <p className="mb-4 mt-2 text-sm text-muted-foreground">
+                No se encontraron registros. Agrega uno nuevo para empezar.
+              </p>
+              {onAdd && (
+                <Button onClick={onAdd} size="sm">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Agregar Nuevo
+                </Button>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

@@ -36,6 +36,13 @@
       "when": 1737978110499,
       "tag": "0004_faulty_magik",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1738013214833,
+      "tag": "0005_nappy_machine_man",
+      "breakpoints": true
     }
   ]
 }

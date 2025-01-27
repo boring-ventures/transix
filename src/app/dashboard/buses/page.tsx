@@ -1,10 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import {
+  useBuses,
+  useCreateBus,
+  useUpdateBus,
+  useDeleteBus,
+} from "@/hooks/useBuses";
+import { useCompanies } from "@/hooks/useCompanies";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/table/data-table";
 import { Column } from "@/components/table/types";
 import {
@@ -12,7 +17,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -22,71 +28,66 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Bus, CreateBusInput, BusTypeLabel } from "@/types/bus.types";
-import { busTypeEnum } from "@/db/schema";
-import { v4 as uuidv4 } from "uuid";
+import {
+  Bus,
+  CreateBusFormData,
+  EditBusFormData,
+  createBusFormSchema,
+  editBusFormSchema,
+  BusTypeLabel,
+  MaintenanceStatusLabel,
+} from "@/types/bus.types";
+import { busTypeEnum, maintenanceStatusEnum } from "@/db/schema";
+import { useForm } from "react-hook-form";
+import { LoadingTable } from "@/components/table/loading-table";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import type { CompanyResponse } from "@/types/company.types";
 
-export default function BusManagement() {
-  const [buses, setBuses] = useState<Bus[]>([
-    {
-      id: "1",
-      companyId: "1",
-      plateNumber: "ABC-123",
-      busType: "luxury",
-      totalCapacity: 40,
-      isActive: true,
-      maintenanceStatus: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: "2",
-      companyId: "1",
-      plateNumber: "XYZ-789",
-      busType: "double_decker",
-      totalCapacity: 80,
-      isActive: true,
-      maintenanceStatus: "Mantenimiento programado",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-  ]);
-
-  const [newBus, setNewBus] = useState<CreateBusInput>({
-    companyId: "1",
-    plateNumber: "",
-    busType: "standard",
-    totalCapacity: 40,
-    maintenanceStatus: null,
-  });
-
+export default function BusesPage() {
+  const { data: buses, isLoading: busesLoading } = useBuses();
+  const { data: companies, isLoading: companiesLoading } = useCompanies();
+  const createBus = useCreateBus();
+  const updateBus = useUpdateBus();
+  const deleteBus = useDeleteBus();
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [editingBus, setEditingBus] = useState<Bus | null>(null);
+  const [deletingBus, setDeletingBus] = useState<Bus | null>(null);
+  const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
+  const [selectedCompany, setSelectedCompany] =
+    useState<CompanyResponse | null>(null);
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setBuses((prev) => [
-      ...prev,
-      {
-        ...newBus,
-        id: uuidv4(),
-        isActive: true,
-        maintenanceStatus: newBus.maintenanceStatus || null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-    ]);
-    setNewBus({
-      companyId: "1",
+  const createForm = useForm<CreateBusFormData>({
+    resolver: zodResolver(createBusFormSchema),
+    defaultValues: {
       plateNumber: "",
       busType: "standard",
       totalCapacity: 40,
-      maintenanceStatus: null,
-    });
-    toast({
-      title: "Bus agregado",
-      description: "El nuevo bus ha sido registrado exitosamente.",
-    });
-  };
+      maintenanceStatus: "active",
+      companyId: "",
+    },
+  });
+
+  const editForm = useForm<EditBusFormData>({
+    resolver: zodResolver(editBusFormSchema),
+    defaultValues: {
+      plateNumber: "",
+      busType: "standard",
+      totalCapacity: 40,
+      maintenanceStatus: "active",
+      companyId: "",
+    },
+  });
 
   const busTypeLabels: BusTypeLabel = {
     standard: "Estándar",
@@ -95,7 +96,39 @@ export default function BusManagement() {
     mini: "Mini Bus",
   };
 
+  const maintenanceStatusLabels: MaintenanceStatusLabel = {
+    active: "Activo",
+    in_maintenance: "En Mantenimiento",
+    retired: "Retirado",
+  };
+
+  const maintenanceStatusColors: Record<string, { bg: string; text: string }> =
+    {
+      active: { bg: "bg-green-100", text: "text-green-800" },
+      in_maintenance: { bg: "bg-yellow-100", text: "text-yellow-800" },
+      retired: { bg: "bg-red-100", text: "text-red-800" },
+    };
+
+  const handleOpenCompanyModal = (company: CompanyResponse) => {
+    setSelectedCompany(company);
+    setIsCompanyModalOpen(true);
+  };
+
   const columns: Column<Bus>[] = [
+    {
+      id: "id",
+      accessorKey: "id",
+      header: "ID",
+      sortable: true,
+      cell: ({ row }) => {
+        const data = row as unknown as Bus;
+        return (
+          <span className="font-mono text-[10px] text-muted-foreground truncate w-20 inline-block">
+            {data.id.slice(0, 8)}...
+          </span>
+        );
+      },
+    },
     {
       id: "plateNumber",
       accessorKey: "plateNumber",
@@ -116,163 +149,427 @@ export default function BusManagement() {
       sortable: true,
     },
     {
-      id: "status",
-      accessorKey: "isActive",
-      header: "Estado",
-      sortable: true,
-      cell: ({ row }) => (
-        <span
-          className={`px-2 py-1 rounded-full text-xs ${
-            row.isActive
-              ? "bg-green-100 text-green-800"
-              : "bg-red-100 text-red-800"
-          }`}
-        >
-          {row.isActive ? "Activo" : "Inactivo"}
-        </span>
-      ),
-    },
-    {
       id: "maintenance",
       accessorKey: "maintenanceStatus",
-      header: "Mantenimiento",
+      header: "Estado de Mantenimiento",
       sortable: true,
-      cell: ({ row }) =>
-        row.maintenanceStatus ? (
-          <span className="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">
-            {row.maintenanceStatus}
+      cell: ({ row }) => {
+        const status = row.maintenanceStatus || "active";
+        const { bg, text } = maintenanceStatusColors[status];
+        return (
+          <span className={`px-2 py-1 rounded-full text-xs ${bg} ${text}`}>
+            {maintenanceStatusLabels[status]}
           </span>
-        ) : (
-          <span className="text-muted-foreground text-sm">
-            Sin mantenimiento
-          </span>
-        ),
+        );
+      },
+    },
+    {
+      id: "company",
+      accessorKey: "company",
+      header: "Empresa",
+      cell: ({ row }) => {
+        if (!row.company) {
+          return <span className="text-gray-400 italic">Sin empresa</span>;
+        }
+        return (
+          <button
+            className="cursor-pointer underline text-pink-600"
+            onClick={() => handleOpenCompanyModal(row.company!)}
+          >
+            {row.company.name}
+          </button>
+        );
+      },
     },
   ];
 
+  const handleEdit = (bus: Bus) => {
+    setEditingBus(bus);
+    editForm.reset({
+      plateNumber: bus.plateNumber,
+      busType: bus.busType,
+      totalCapacity: bus.totalCapacity,
+      maintenanceStatus: bus.maintenanceStatus || "active",
+      companyId: bus.companyId || "",
+    });
+    setIsEditOpen(true);
+  };
+
+  const handleDelete = (bus: Bus) => {
+    setDeletingBus(bus);
+    setIsDeleteOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingBus) return;
+
+    try {
+      await deleteBus.mutateAsync(deletingBus.id);
+      setIsDeleteOpen(false);
+      setDeletingBus(null);
+      toast({
+        title: "Bus eliminado",
+        description: "El bus ha sido eliminado exitosamente.",
+      });
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Hubo un error al eliminar el bus.";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const onEditSubmit = async (formData: EditBusFormData) => {
+    if (!editingBus) return;
+
+    try {
+      await updateBus.mutateAsync({
+        id: editingBus.id,
+        data: {
+          id: editingBus.id,
+          ...formData,
+          companyId: formData.companyId,
+        },
+      });
+      setIsEditOpen(false);
+      setEditingBus(null);
+      toast({
+        title: "Bus actualizado",
+        description: "El bus ha sido actualizado exitosamente.",
+      });
+    } catch {
+      toast({
+        title: "Error",
+        description: "Hubo un error al actualizar el bus.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const onCreateSubmit = async (formData: CreateBusFormData) => {
+    try {
+      await createBus.mutateAsync({
+        ...formData,
+        companyId: formData.companyId,
+      });
+      setIsCreateOpen(false);
+      createForm.reset();
+      toast({
+        title: "Bus creado",
+        description: "El bus ha sido creado exitosamente.",
+      });
+    } catch {
+      toast({
+        title: "Error",
+        description: "Hubo un error al crear el bus.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (busesLoading || companiesLoading) {
+    return <LoadingTable columnCount={6} rowCount={10} />;
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Gestión de Buses</h1>
-          <p className="text-muted-foreground">Administre su flota de buses</p>
-        </div>
-
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button>Agregar Bus</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Agregar Nuevo Bus</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="plateNumber">Número de Placa</Label>
-                <Input
-                  id="plateNumber"
-                  value={newBus.plateNumber}
-                  onChange={(e) =>
-                    setNewBus((prev) => ({
-                      ...prev,
-                      plateNumber: e.target.value,
-                    }))
-                  }
-                  placeholder="Ingrese la placa"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="busType">Tipo de Bus</Label>
-                <Select
-                  value={newBus.busType}
-                  onValueChange={(
-                    value: (typeof busTypeEnum.enumValues)[number]
-                  ) => setNewBus((prev) => ({ ...prev, busType: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccione el tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {busTypeEnum.enumValues.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {busTypeLabels[type]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="totalCapacity">Capacidad Total</Label>
-                <Input
-                  id="totalCapacity"
-                  type="number"
-                  value={newBus.totalCapacity}
-                  onChange={(e) =>
-                    setNewBus((prev) => ({
-                      ...prev,
-                      totalCapacity: parseInt(e.target.value),
-                    }))
-                  }
-                  placeholder="Ingrese la capacidad"
-                  required
-                />
-              </div>
-
-              <Button type="submit" className="w-full">
-                Guardar
+      {/* Create Bus Dialog */}
+      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Crear Bus</DialogTitle>
+          </DialogHeader>
+          <Form {...createForm}>
+            <form
+              onSubmit={createForm.handleSubmit(onCreateSubmit)}
+              className="space-y-4"
+            >
+              <FormField
+                control={createForm.control}
+                name="companyId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Empresa</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar empresa" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {companies?.map((company) => (
+                          <SelectItem key={company.id} value={company.id}>
+                            {company.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={createForm.control}
+                name="plateNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Número de Placa</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={createForm.control}
+                name="busType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tipo de Bus</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar tipo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {busTypeEnum.enumValues.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {busTypeLabels[type]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={createForm.control}
+                name="totalCapacity"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Capacidad Total</FormLabel>
+                    <FormControl>
+                      <Input {...field} type="number" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={createForm.control}
+                name="maintenanceStatus"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Estado de Mantenimiento</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar estado" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {maintenanceStatusEnum.enumValues.map((status) => (
+                          <SelectItem key={status} value={status}>
+                            {maintenanceStatusLabels[status]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" disabled={createBus.isPending}>
+                Crear Bus
               </Button>
             </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+          </Form>
+        </DialogContent>
+      </Dialog>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Total Buses</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{buses.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Buses Activos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {buses.filter((bus) => bus.isActive).length}
+      {/* Edit Bus Dialog */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Bus</DialogTitle>
+          </DialogHeader>
+          <Form {...editForm}>
+            <form
+              onSubmit={editForm.handleSubmit(onEditSubmit)}
+              className="space-y-4"
+            >
+              <FormField
+                control={editForm.control}
+                name="companyId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Empresa</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar empresa" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {companies?.map((company) => (
+                          <SelectItem key={company.id} value={company.id}>
+                            {company.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editForm.control}
+                name="plateNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Número de Placa</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editForm.control}
+                name="busType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tipo de Bus</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar tipo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {busTypeEnum.enumValues.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {busTypeLabels[type]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editForm.control}
+                name="totalCapacity"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Capacidad Total</FormLabel>
+                    <FormControl>
+                      <Input {...field} type="number" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editForm.control}
+                name="maintenanceStatus"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Estado de Mantenimiento</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar estado" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {maintenanceStatusEnum.enumValues.map((status) => (
+                          <SelectItem key={status} value={status}>
+                            {maintenanceStatusLabels[status]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" disabled={updateBus.isPending}>
+                Actualizar Bus
+              </Button>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Bus Dialog */}
+      <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Desactivar Bus</DialogTitle>
+            <DialogDescription>
+              ¿Está seguro que desea desactivar este bus?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="submit"
+              disabled={deleteBus.isPending}
+              onClick={confirmDelete}
+            >
+              Desactivar Bus
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Company Details Dialog */}
+      <Dialog open={isCompanyModalOpen} onOpenChange={setIsCompanyModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Detalles de la empresa</DialogTitle>
+          </DialogHeader>
+          {selectedCompany && (
+            <div className="space-y-2">
+              <p className="font-mono text-sm">ID: {selectedCompany.id}</p>
+              <p>Nombre: {selectedCompany.name}</p>
+              <p>¿Está activa?: {selectedCompany.active ? "Sí" : "No"}</p>
+              <p>
+                Fecha de creación:{" "}
+                {new Date(selectedCompany.createdAt).toLocaleDateString()}
+              </p>
+              <p>
+                Fecha de actualización:{" "}
+                {new Date(selectedCompany.updatedAt).toLocaleDateString()}
+              </p>
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">
-              En Mantenimiento
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {buses.filter((bus) => bus.maintenanceStatus !== null).length}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setIsCompanyModalOpen(false)}>Cerrar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <DataTable
-        title="Lista de Buses"
-        data={buses}
+        title="Buses"
+        description="Gestiona los buses del sistema."
+        data={buses || []}
         columns={columns}
-        searchable={true}
+        searchable
         searchField="plateNumber"
-        onAdd={() =>
-          document
-            .querySelector<HTMLButtonElement>('button[type="submit"]')
-            ?.click()
-        }
+        onAdd={() => setIsCreateOpen(true)}
+        onEdit={(bus: Bus) => handleEdit(bus)}
+        onDelete={(bus: Bus) => handleDelete(bus)}
       />
     </div>
   );

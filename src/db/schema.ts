@@ -74,6 +74,12 @@ export const seatTierEnum = pgEnum("seat_tier_enum", [
   "premium"
 ]);
 
+export const maintenanceStatusEnum = pgEnum("maintenance_status", [
+  "active",
+  "in_maintenance",
+  "retired",
+]);
+
 // ============================================================================
 // CORE TABLES
 // ============================================================================
@@ -339,7 +345,7 @@ export const buses = pgTable("buses", {
   busType: busTypeEnum("bus_type").notNull(),
   totalCapacity: integer("total_capacity").notNull(),
   isActive: boolean("is_active").default(true),
-  maintenanceStatus: text("maintenance_status"),
+  maintenanceStatus: maintenanceStatusEnum("maintenance_status").default("active"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
