@@ -269,6 +269,48 @@ export default function UsersPage() {
       },
     },
     {
+      id: "fullName",
+      accessorKey: "profile",
+      header: "Nombre Completo",
+      sortable: true,
+      cell: ({ row }) => {
+        const data = row as unknown as UserWithProfile;
+        return data.profile?.fullName || "N/A";
+      },
+    },
+    {
+      id: "role",
+      accessorKey: "profile",
+      header: "Rol",
+      sortable: true,
+      cell: ({ row }) => {
+        const data = row as unknown as UserWithProfile;
+        const role = data.profile?.role;
+        if (!role) return "N/A";
+
+        // Map each role to a particular color style
+        const roleColorMap: Record<string, string> = {
+          superadmin: "bg-red-100 text-red-700 border-red-600",
+          company_admin: "bg-blue-100 text-blue-700 border-blue-600",
+          branch_admin: "bg-green-100 text-green-700 border-green-600",
+          seller: "bg-yellow-100 text-yellow-700 border-yellow-600",
+        };
+
+        const style =
+          roleColorMap[role] || "bg-gray-100 text-gray-700 border-gray-600";
+
+        return (
+          <span
+            className={`inline-block px-2 py-1 border rounded text-xs ${style}`}
+          >
+            {role
+              .replace("_", " ")
+              .replace(/\b\w/g, (letter) => letter.toUpperCase())}
+          </span>
+        );
+      },
+    },
+    {
       id: "company",
       accessorKey: "company",
       header: "Empresa",
@@ -285,6 +327,18 @@ export default function UsersPage() {
             {data.company.name}
           </button>
         );
+      },
+    },
+    {
+      id: "createdAt",
+      accessorKey: "createdAt",
+      header: "Fecha de Creación",
+      sortable: true,
+      cell: ({ row }) => {
+        const data = row as unknown as UserWithProfile;
+        return data.created_at
+          ? new Date(data.created_at).toLocaleDateString()
+          : "N/A";
       },
     },
   ];
@@ -413,6 +467,10 @@ export default function UsersPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Editar Usuario</DialogTitle>
+            <DialogDescription>
+              Editando usuario:{" "}
+              <span className="font-mono">{editingUser?.id}</span>
+            </DialogDescription>
           </DialogHeader>
           <Form {...editForm}>
             <form

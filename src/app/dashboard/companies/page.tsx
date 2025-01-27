@@ -199,36 +199,15 @@ export default function CompaniesPage() {
       },
     },
     {
-      id: "status",
-      accessorKey: "active",
-      header: "Estado",
-      sortable: true,
-      cell: ({ row }) => {
-        const data = row as unknown as CompanyResponse;
-        const active = data.active;
-        return (
-          <span
-            className={`font-medium w-24 inline-block ${
-              active ? "text-green-600" : "text-red-600"
-            }`}
-          >
-            {active ? "Activo" : "Inactivo"}
-          </span>
-        );
-      },
-    },
-    {
       id: "createdAt",
       accessorKey: "createdAt",
       header: "Fecha de Creación",
       sortable: true,
       cell: ({ row }) => {
         const data = row as unknown as CompanyResponse;
-        return (
-          <span className="text-muted-foreground w-36 inline-block">
-            {new Date(data.createdAt).toLocaleDateString()}
-          </span>
-        );
+        return data.createdAt
+          ? new Date(data.createdAt).toLocaleDateString()
+          : "N/A";
       },
     },
   ];
