@@ -13,8 +13,8 @@ export type UserWithProfile = User & {
 
 // Base schema for user forms
 const baseUserFormSchema = z.object({
-  email: z.string().email("Email inválido"),
-  fullName: z.string().min(1, "El nombre es requerido"),
+  email: z.string().email("Email inválido").trim(),
+  fullName: z.string().min(1, "El nombre es requerido").trim(),
   role: z.enum(roleEnum.enumValues),
   companyId: z.string().nullable(),
 });
@@ -22,7 +22,7 @@ const baseUserFormSchema = z.object({
 // Schema for creating a new user
 export const createUserFormSchema = baseUserFormSchema
   .extend({
-    password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres"),
+    password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres").trim(),
   })
   .superRefine((data, ctx) => {
     if (data.role !== "superadmin" && !data.companyId) {
@@ -65,12 +65,12 @@ export type CreateProfileInput = {
 
 // API schemas
 export const insertUserSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8)
+  email: z.string().email().trim(),
+  password: z.string().min(8).trim(),
 });
 
 export const insertProfileSchema = z.object({
-  fullName: z.string().min(3),
+  fullName: z.string().min(3).trim(),
   role: z.enum(roleEnum.enumValues),
   companyId: z.string().uuid().nullable(),
   branchId: z.string().uuid().nullable(),
