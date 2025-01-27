@@ -34,7 +34,7 @@ export const createUserFormSchema = baseUserFormSchema
 
 // Schema for editing a user
 export const editUserFormSchema = baseUserFormSchema.superRefine((data, ctx) => {
-  if (data.role !== "superadmin") {
+  if (data.role !== "superadmin" && !data.companyId) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: "La empresa es requerida para roles que no son superadmin",
@@ -56,8 +56,8 @@ export type CreateUserInput = {
 export type CreateProfileInput = {
   fullName: string;
   role: typeof roleEnum.enumValues[number];
-  companyId?: string;
-  branchId?: string;
+  companyId: string | null;
+  branchId: string | null;
   active: boolean;
 };
 
@@ -70,8 +70,8 @@ export const insertUserSchema = z.object({
 export const insertProfileSchema = z.object({
   fullName: z.string().min(3),
   role: z.enum(roleEnum.enumValues),
-  companyId: z.string().uuid().optional(),
-  branchId: z.string().uuid().optional(),
+  companyId: z.string().uuid().nullable(),
+  branchId: z.string().uuid().nullable(),
   active: z.boolean().default(true),
 });
 

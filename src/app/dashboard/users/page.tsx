@@ -84,18 +84,29 @@ export default function UsersPage() {
   const createRole = createForm.watch("role");
   const editRole = editForm.watch("role");
 
-  // Reset company field when role changes to superadmin
+  // Handle role changes for create form
   useEffect(() => {
     if (createRole === "superadmin") {
-      createForm.setValue("companyId", "");
+      createForm.setValue("companyId", null);
       createForm.clearErrors("companyId");
+    } else if (!createForm.getValues("companyId")) {
+      createForm.setError("companyId", {
+        type: "required",
+        message: "La empresa es requerida para roles que no son superadmin",
+      });
     }
   }, [createRole, createForm]);
 
+  // Handle role changes for edit form
   useEffect(() => {
     if (editRole === "superadmin") {
-      editForm.setValue("companyId", "");
+      editForm.setValue("companyId", null);
       editForm.clearErrors("companyId");
+    } else if (!editForm.getValues("companyId")) {
+      editForm.setError("companyId", {
+        type: "required",
+        message: "La empresa es requerida para roles que no son superadmin",
+      });
     }
   }, [editRole, editForm]);
 
@@ -111,9 +122,10 @@ export default function UsersPage() {
           role: data.role,
           companyId:
             data.role === "superadmin"
-              ? undefined
-              : data.companyId || undefined,
+              ? null
+              : data.companyId || null,
           active: true,
+          branchId: null,
         },
       });
       setIsCreateOpen(false);
@@ -147,8 +159,8 @@ export default function UsersPage() {
           role: data.role,
           companyId:
             data.role === "superadmin"
-              ? undefined
-              : data.companyId || undefined,
+              ? null
+              : data.companyId || null,
         },
       });
       setIsEditOpen(false);
