@@ -11,13 +11,29 @@ export async function GET(request: Request) {
     const userId = searchParams.get("userId");
 
     if (userId) {
-      const result = await db.query.users.findFirst({
-        where: eq(users.id, userId),
-        with: {
-          profile: true,
-        },
-      });
-      return NextResponse.json(result);
+      const result = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          created_at: users.created_at,
+          updated_at: users.updated_at,
+          profile: {
+            id: profiles.id,
+            fullName: profiles.fullName,
+            role: profiles.role,
+            active: profiles.active,
+            companyId: profiles.companyId,
+            branchId: profiles.branchId,
+            createdAt: profiles.createdAt,
+            updatedAt: profiles.updatedAt,
+          },
+        })
+        .from(users)
+        .leftJoin(profiles, eq(profiles.userId, users.id))
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      return NextResponse.json(result[0]);
     }
 
     const results = await db
@@ -33,9 +49,12 @@ export async function GET(request: Request) {
           active: profiles.active,
           companyId: profiles.companyId,
           branchId: profiles.branchId,
+          createdAt: profiles.createdAt,
+          updatedAt: profiles.updatedAt,
         },
       })
       .from(users)
+      .where(eq(profiles.active, true))
       .leftJoin(profiles, eq(profiles.userId, users.id));
 
     return NextResponse.json(results);
@@ -47,7 +66,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
     const body = await request.json();
     const userData = insertUserSchema.parse(body.user);
     const profileData = insertProfileSchema.parse(body.profile);
@@ -58,7 +77,12 @@ export async function POST(request: Request) {
       email_confirm: true,
     });
 
-    if (authError) throw authError;
+    if (authError) {
+      return NextResponse.json(
+        { error: authError.message || "Failed to create user" }, 
+        { status: 400 }
+      );
+    }
 
     const [profile] = await db
       .insert(profiles)
@@ -74,7 +98,12 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ user: authUser.user, profile }, { status: 201 });
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "Failed to create user";
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+    if (error instanceof Error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    return NextResponse.json(
+      { error: "An unexpected error occurred" }, 
+      { status: 500 }
+    );
   }
 }

@@ -9,28 +9,21 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface LoadingTableProps {
   columnCount?: number;
   rowCount?: number;
-  title?: string;
   showToolbar?: boolean;
 }
 
 export function LoadingTable({
   columnCount = 5,
   rowCount = 5,
-  title = "Cargando...",
   showToolbar = true,
 }: LoadingTableProps) {
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>
-          <Skeleton className="h-6 w-[150px]">{title}</Skeleton>
-        </CardTitle>
-      </CardHeader>
       <CardContent>
         {showToolbar && (
           <div className="flex items-center justify-between py-4">

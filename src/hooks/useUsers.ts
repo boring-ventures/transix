@@ -36,8 +36,17 @@ export function useCreateUser() {
       user: CreateUserInput;
       profile: CreateProfileInput;
     }) => {
-      const { data } = await axios.post(API_URL, { user, profile });
-      return data;
+      const response = await axios.post(API_URL, { user, profile });
+      if (response.data.error) {
+        throw new Error(response.data.error);
+      }
+      return response.data;
+    },
+    onError: (error: unknown) => {
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.error || error.message);
+      }
+      throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
@@ -56,7 +65,7 @@ export function useUpdateProfile() {
       profileId: string;
       data: Partial<CreateProfileInput>;
     }) => {
-      const response = await axios.patch(`${API_URL}/profile/${profileId}`, data);
+      const response = await axios.patch(`${API_URL}/${profileId}`, data);
       return response.data;
     },
     onSuccess: () => {
