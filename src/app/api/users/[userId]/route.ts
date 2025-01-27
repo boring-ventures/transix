@@ -49,7 +49,7 @@ export async function DELETE(
   context: { params: { userId: string } }
 ) {
   try {
-    const { userId } = context.params;
+      const { userId } = await context.params;
 
     // Check if user exists
     const existingUser = await db
