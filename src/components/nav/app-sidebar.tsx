@@ -11,6 +11,7 @@ import {
   Map,
   ChevronDown,
   List,
+  Building,
 } from "lucide-react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -76,6 +77,11 @@ const data = {
       title: "Usuarios",
       url: "/dashboard/users",
       icon: Users,
+    },
+    {
+      title: "Empresas",
+      url: "/dashboard/companies",
+      icon: Building,
     },
     {
       title: "Finanzas",

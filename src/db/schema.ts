@@ -358,7 +358,7 @@ export const busSeats = pgTable("bus_seats", {
 // Organizational Structure
 export const companies = pgTable("companies", {
   id: uuid("id").primaryKey().defaultRandom(),
-  name: text("name").unique().notNull(),
+  name: text("name").notNull(),
   active: boolean("active").default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
