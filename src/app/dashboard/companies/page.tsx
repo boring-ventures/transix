@@ -32,6 +32,7 @@ import { Column } from "@/components/table/types";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { LoadingTable } from "@/components/table/loading-table";
 
 const createCompanySchema = z.object({
   name: z.string().min(1, "El nombre es requerido"),
@@ -232,7 +233,7 @@ export default function CompaniesPage() {
     },
   ];
 
-  if (isLoading) return <div className="p-4">Cargando...</div>;
+  if (isLoading) return <LoadingTable columnCount={4} rowCount={10} />;
 
   const tableData =
     companies

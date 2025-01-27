@@ -10,8 +10,6 @@ const createCompanySchema = z.object({
   active: z.boolean().default(true),
 });
 
-const updateCompanySchema = createCompanySchema.partial();
-
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -33,8 +31,8 @@ export async function GET(request: Request) {
 
       return NextResponse.json(result[0]);
     }
-
-    const results = await db.select().from(companies);
+    // only select companies with active true
+    const results = await db.select().from(companies).where(eq(companies.active, true));
     return NextResponse.json(results);
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Error al obtener empresas";
@@ -65,72 +63,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
-
-export async function PATCH(request: Request) {
-  try {
-    const companyId = request.url.split("/").pop();
-    if (!companyId) {
-      return NextResponse.json(
-        { error: "ID de empresa no proporcionado" },
-        { status: 400 }
-      );
-    }
-
-    const body = await request.json();
-    const validatedData = updateCompanySchema.parse(body);
-
-    const [updatedCompany] = await db
-      .update(companies)
-      .set(validatedData)
-      .where(eq(companies.id, companyId))
-      .returning();
-
-    if (!updatedCompany) {
-      return NextResponse.json(
-        { error: "Empresa no encontrada" },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json(updatedCompany);
-  } catch (error: unknown) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Datos de empresa inválidos", details: error.errors },
-        { status: 400 }
-      );
-    }
-
-    const errorMessage = error instanceof Error ? error.message : "Error al actualizar empresa";
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
-  }
-}
-
-export async function DELETE(request: Request) {
-  try {
-    const companyId = request.url.split("/").pop();
-    if (!companyId) {
-      return NextResponse.json(
-        { error: "ID de empresa no proporcionado" },
-        { status: 400 }
-      );
-    }
-
-    const [deletedCompany] = await db
-      .delete(companies)
-      .where(eq(companies.id, companyId))
-      .returning();
-
-    if (!deletedCompany) {
-      return NextResponse.json(
-        { error: "Empresa no encontrada" },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json(deletedCompany);
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "Error al eliminar empresa";
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
-  }
-} 
