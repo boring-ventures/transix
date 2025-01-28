@@ -29,15 +29,14 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Bus,
-  CreateBusFormData,
-  EditBusFormData,
-  createBusFormSchema,
-  editBusFormSchema,
-  BusTypeLabel,
+  BusWithRelations,
+  CreateBusInput,
+  UpdateBusInput,
+  createBusSchema,
+  updateBusSchema,
   MaintenanceStatusLabel,
 } from "@/types/bus.types";
-import { busTypeEnum, maintenanceStatusEnum } from "@/db/schema";
+import { maintenanceStatusEnum } from "@/db/schema";
 import { useForm } from "react-hook-form";
 import { LoadingTable } from "@/components/table/loading-table";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -49,7 +48,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import type { CompanyResponse } from "@/types/company.types";
+import type { Company } from "@/types/company.types";
 
 export default function BusesPage() {
   const { data: buses, isLoading: busesLoading } = useBuses();
@@ -60,41 +59,33 @@ export default function BusesPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [editingBus, setEditingBus] = useState<Bus | null>(null);
-  const [deletingBus, setDeletingBus] = useState<Bus | null>(null);
+  const [editingBus, setEditingBus] = useState<BusWithRelations | null>(null);
+  const [deletingBus, setDeletingBus] = useState<BusWithRelations | null>(null);
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
-  const [selectedCompany, setSelectedCompany] =
-    useState<CompanyResponse | null>(null);
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const { toast } = useToast();
 
-  const createForm = useForm<CreateBusFormData>({
-    resolver: zodResolver(createBusFormSchema),
+  const createForm = useForm<CreateBusInput>({
+    resolver: zodResolver(createBusSchema),
     defaultValues: {
       plateNumber: "",
-      busType: "standard",
-      totalCapacity: 40,
-      maintenanceStatus: "active",
+      templateId: "",
       companyId: "",
+      maintenanceStatus: "active",
+      isActive: true,
     },
   });
 
-  const editForm = useForm<EditBusFormData>({
-    resolver: zodResolver(editBusFormSchema),
+  const editForm = useForm<UpdateBusInput>({
+    resolver: zodResolver(updateBusSchema),
     defaultValues: {
       plateNumber: "",
-      busType: "standard",
-      totalCapacity: 40,
-      maintenanceStatus: "active",
+      templateId: "",
       companyId: "",
+      maintenanceStatus: "active",
+      isActive: true,
     },
   });
-
-  const busTypeLabels: BusTypeLabel = {
-    standard: "Estándar",
-    double_decker: "Dos Pisos",
-    luxury: "Lujo",
-    mini: "Mini Bus",
-  };
 
   const maintenanceStatusLabels: MaintenanceStatusLabel = {
     active: "Activo",
@@ -109,22 +100,21 @@ export default function BusesPage() {
       retired: { bg: "bg-red-100", text: "text-red-800" },
     };
 
-  const handleOpenCompanyModal = (company: CompanyResponse) => {
+  const handleOpenCompanyModal = (company: Company) => {
     setSelectedCompany(company);
     setIsCompanyModalOpen(true);
   };
 
-  const columns: Column<Bus>[] = [
+  const columns: Column<BusWithRelations>[] = [
     {
       id: "id",
       accessorKey: "id",
       header: "ID",
       sortable: true,
       cell: ({ row }) => {
-        const data = row as unknown as Bus;
         return (
           <span className="font-mono text-[10px] text-muted-foreground truncate w-20 inline-block">
-            {data.id.slice(0, 8)}...
+            {row.id.slice(0, 8)}...
           </span>
         );
       },
@@ -136,17 +126,15 @@ export default function BusesPage() {
       sortable: true,
     },
     {
-      id: "busType",
-      accessorKey: "busType",
-      header: "Tipo",
-      cell: ({ row }) => busTypeLabels[row.busType],
-      sortable: true,
-    },
-    {
-      id: "totalCapacity",
-      accessorKey: "totalCapacity",
-      header: "Capacidad",
-      sortable: true,
+      id: "template",
+      accessorKey: "template",
+      header: "Plantilla",
+      cell: ({ row }) => {
+        if (!row.template) {
+          return <span className="text-gray-400 italic">Sin plantilla</span>;
+        }
+        return row.template.name;
+      },
     },
     {
       id: "maintenance",
@@ -174,7 +162,7 @@ export default function BusesPage() {
         return (
           <button
             className="cursor-pointer underline text-pink-600"
-            onClick={() => handleOpenCompanyModal(row.company!)}
+            onClick={() => handleOpenCompanyModal(row.company as Company)}
           >
             {row.company.name}
           </button>
@@ -183,19 +171,19 @@ export default function BusesPage() {
     },
   ];
 
-  const handleEdit = (bus: Bus) => {
+  const handleEdit = (bus: BusWithRelations) => {
     setEditingBus(bus);
     editForm.reset({
       plateNumber: bus.plateNumber,
-      busType: bus.busType,
-      totalCapacity: bus.totalCapacity,
+      templateId: bus.templateId,
       maintenanceStatus: bus.maintenanceStatus || "active",
       companyId: bus.companyId || "",
+      isActive: bus.isActive || true,
     });
     setIsEditOpen(true);
   };
 
-  const handleDelete = (bus: Bus) => {
+  const handleDelete = (bus: BusWithRelations) => {
     setDeletingBus(bus);
     setIsDeleteOpen(true);
   };
@@ -224,17 +212,13 @@ export default function BusesPage() {
     }
   };
 
-  const onEditSubmit = async (formData: EditBusFormData) => {
+  const onEditSubmit = async (formData: UpdateBusInput) => {
     if (!editingBus) return;
 
     try {
       await updateBus.mutateAsync({
         id: editingBus.id,
-        data: {
-          id: editingBus.id,
-          ...formData,
-          companyId: formData.companyId,
-        },
+        data: formData,
       });
       setIsEditOpen(false);
       setEditingBus(null);
@@ -251,12 +235,9 @@ export default function BusesPage() {
     }
   };
 
-  const onCreateSubmit = async (formData: CreateBusFormData) => {
+  const onCreateSubmit = async (formData: CreateBusInput) => {
     try {
-      await createBus.mutateAsync({
-        ...formData,
-        companyId: formData.companyId,
-      });
+      await createBus.mutateAsync(formData);
       setIsCreateOpen(false);
       createForm.reset();
       toast({
@@ -273,7 +254,7 @@ export default function BusesPage() {
   };
 
   if (busesLoading || companiesLoading) {
-    return <LoadingTable columnCount={6} rowCount={10} />;
+    return <LoadingTable columnCount={5} rowCount={10} />;
   }
 
   return (
@@ -326,38 +307,18 @@ export default function BusesPage() {
               />
               <FormField
                 control={createForm.control}
-                name="busType"
+                name="templateId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Tipo de Bus</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
+                    <FormLabel>Plantilla</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar tipo" />
+                        <SelectValue placeholder="Seleccionar plantilla" />
                       </SelectTrigger>
                       <SelectContent>
-                        {busTypeEnum.enumValues.map((type) => (
-                          <SelectItem key={type} value={type}>
-                            {busTypeLabels[type]}
-                          </SelectItem>
-                        ))}
+                        {/* TODO: Add templates list */}
                       </SelectContent>
                     </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={createForm.control}
-                name="totalCapacity"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Capacidad Total</FormLabel>
-                    <FormControl>
-                      <Input {...field} type="number" />
-                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -443,38 +404,18 @@ export default function BusesPage() {
               />
               <FormField
                 control={editForm.control}
-                name="busType"
+                name="templateId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Tipo de Bus</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
+                    <FormLabel>Plantilla</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar tipo" />
+                        <SelectValue placeholder="Seleccionar plantilla" />
                       </SelectTrigger>
                       <SelectContent>
-                        {busTypeEnum.enumValues.map((type) => (
-                          <SelectItem key={type} value={type}>
-                            {busTypeLabels[type]}
-                          </SelectItem>
-                        ))}
+                        {/* TODO: Add templates list */}
                       </SelectContent>
                     </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={editForm.control}
-                name="totalCapacity"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Capacidad Total</FormLabel>
-                    <FormControl>
-                      <Input {...field} type="number" />
-                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -568,8 +509,8 @@ export default function BusesPage() {
         searchable
         searchField="plateNumber"
         onAdd={() => setIsCreateOpen(true)}
-        onEdit={(bus: Bus) => handleEdit(bus)}
-        onDelete={(bus: Bus) => handleDelete(bus)}
+        onEdit={(bus: BusWithRelations) => handleEdit(bus)}
+        onDelete={(bus: BusWithRelations) => handleDelete(bus)}
       />
     </div>
   );

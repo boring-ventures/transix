@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { buses, companies } from "@/db/schema";
+import { buses, companies, busTypeTemplates } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { insertBusSchema } from "@/types/bus.types";
+import { createBusSchema } from "@/types/bus.types";
 
 export async function GET(request: Request) {
   try {
@@ -14,8 +14,7 @@ export async function GET(request: Request) {
         .select({
           id: buses.id,
           plateNumber: buses.plateNumber,
-          busType: buses.busType,
-          totalCapacity: buses.totalCapacity,
+          templateId: buses.templateId,
           isActive: buses.isActive,
           maintenanceStatus: buses.maintenanceStatus,
           companyId: buses.companyId,
@@ -28,9 +27,18 @@ export async function GET(request: Request) {
             createdAt: companies.createdAt,
             updatedAt: companies.updatedAt,
           },
+          template: {
+            id: busTypeTemplates.id,
+            name: busTypeTemplates.name,
+            description: busTypeTemplates.description,
+            totalCapacity: busTypeTemplates.totalCapacity,
+            seatMatrix: busTypeTemplates.seatMatrix,
+            isActive: busTypeTemplates.isActive,
+          },
         })
         .from(buses)
         .leftJoin(companies, eq(buses.companyId, companies.id))
+        .leftJoin(busTypeTemplates, eq(buses.templateId, busTypeTemplates.id))
         .where(eq(buses.id, busId))
         .limit(1);
 
@@ -48,8 +56,7 @@ export async function GET(request: Request) {
       .select({
         id: buses.id,
         plateNumber: buses.plateNumber,
-        busType: buses.busType,
-        totalCapacity: buses.totalCapacity,
+        templateId: buses.templateId,
         isActive: buses.isActive,
         maintenanceStatus: buses.maintenanceStatus,
         companyId: buses.companyId,
@@ -62,9 +69,18 @@ export async function GET(request: Request) {
           createdAt: companies.createdAt,
           updatedAt: companies.updatedAt,
         },
+        template: {
+          id: busTypeTemplates.id,
+          name: busTypeTemplates.name,
+          description: busTypeTemplates.description,
+          totalCapacity: busTypeTemplates.totalCapacity,
+          seatMatrix: busTypeTemplates.seatMatrix,
+          isActive: busTypeTemplates.isActive,
+        },
       })
       .from(buses)
       .leftJoin(companies, eq(buses.companyId, companies.id))
+      .leftJoin(busTypeTemplates, eq(buses.templateId, busTypeTemplates.id))
       .where(eq(buses.isActive, true));
 
     return NextResponse.json(results);
@@ -77,17 +93,14 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-      const busData = insertBusSchema.parse(body);
-      
-      console.log(busData)
+    const busData = createBusSchema.parse(body);
 
     const [bus] = await db
       .insert(buses)
       .values({
         companyId: busData.companyId,
+        templateId: busData.templateId,
         plateNumber: busData.plateNumber,
-        busType: busData.busType,
-        totalCapacity: busData.totalCapacity,
         maintenanceStatus: busData.maintenanceStatus || null,
         isActive: true,
       })
