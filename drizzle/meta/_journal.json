@@ -5,43 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1734585201281,
-      "tag": "0000_shocking_gravity",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1734726784714,
-      "tag": "0001_sad_king_cobra",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1735251122831,
-      "tag": "0002_hesitant_wendigo",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1735268055664,
-      "tag": "0003_noisy_ultimatum",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1737978110499,
-      "tag": "0004_faulty_magik",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1738013214833,
-      "tag": "0005_nappy_machine_man",
+      "when": 1738077088582,
+      "tag": "0000_petite_pandemic",
       "breakpoints": true
     }
   ]

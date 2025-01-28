@@ -17,7 +17,7 @@ export type BusSeat = InferSelectModel<typeof busSeats>;
 const baseBusFormSchema = z.object({
   plateNumber: z.string().trim().min(1, "La placa es requerida"),
   busType: z.enum(busTypeEnum.enumValues),
-  totalCapacity: z.coerce.number().min(1, "La capacidad debe ser mayor a 0"),
+  totalCapacity: z.number().min(1, "La capacidad debe ser mayor a 0"),
   maintenanceStatus: z.enum(maintenanceStatusEnum.enumValues).default("active"),
   companyId: z.string().uuid("ID de empresa inválido"),
 });
@@ -41,7 +41,7 @@ export const insertBusSchema = z.object({
   companyId: z.string().uuid(),
   plateNumber: z.string().trim().min(1),
   busType: z.enum(busTypeEnum.enumValues),
-  totalCapacity: z.coerce.number().min(1),
+  totalCapacity: z.number().min(1),
   maintenanceStatus: z.enum(maintenanceStatusEnum.enumValues).default("active"),
 });
 

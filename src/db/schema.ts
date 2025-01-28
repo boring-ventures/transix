@@ -60,21 +60,14 @@ export const incidentTypeEnum = pgEnum("incident_type_enum", [
   "accident",
 ]);
 
-// Add new ENUMs
-export const busTypeEnum = pgEnum("bus_type_enum", [
-  "standard",    // Regular bus
-  "double_decker", // Two floors
-  "luxury",      // Premium seating
-  "mini"         // Smaller capacity
+
+
+export const seatStatusEnum = pgEnum("seat_status_enum", [
+  "available",
+  "maintenance",
 ]);
 
-export const seatTierEnum = pgEnum("seat_tier_enum", [
-  "economy",
-  "business",
-  "premium"
-]);
-
-export const maintenanceStatusEnum = pgEnum("maintenance_status", [
+export const maintenanceStatusEnum = pgEnum("maintenance_status_enum", [
   "active",
   "in_maintenance",
   "retired",
@@ -199,8 +192,9 @@ export const tickets = pgTable("tickets", {
   id: uuid("id").primaryKey().defaultRandom(),
   scheduleId: uuid("schedule_id").references(() => schedules.id),
   customerId: uuid("customer_id").references(() => customers.id),
-  busSeatId: uuid("bus_seat_id").references(() => busSeats.id),
+  busSeatId: uuid("bus_seat_id").references(() => busSeats.id).notNull(),
   status: ticketStatusEnum("status").default("active"),
+  price: numeric("price", { precision: 10, scale: 2 }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -337,15 +331,39 @@ export const incidents = pgTable("incidents", {
   reportedBy: uuid("reported_by").references(() => profiles.id),
 });
 
+// Bus Type Templates
+export const busTypeTemplates = pgTable("bus_type_templates", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  companyId: uuid("company_id").references(() => companies.id).notNull(),
+  name: text("name").notNull(), // e.g., "Double Decker Standard", "Luxury VIP"
+  description: text("description"),
+  totalCapacity: integer("total_capacity").notNull(),
+  seatMatrix: jsonb("seat_matrix").notNull(), // Format: { firstFloor: string[][], secondFloor?: string[][] }
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 // Bus Fleet Management
 export const buses = pgTable("buses", {
   id: uuid("id").primaryKey().defaultRandom(),
   companyId: uuid("company_id").references(() => companies.id),
+  templateId: uuid("template_id").references(() => busTypeTemplates.id).notNull(),
   plateNumber: text("plate_number").unique().notNull(),
-  busType: busTypeEnum("bus_type").notNull(),
-  totalCapacity: integer("total_capacity").notNull(),
   isActive: boolean("is_active").default(true),
-  maintenanceStatus: maintenanceStatusEnum("maintenance_status").default("active"),
+  maintenanceStatus: maintenanceStatusEnum("maintenance_status_enum").default("active"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Seat Tiers Configuration
+export const seatTiers = pgTable("seat_tiers", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  companyId: uuid("company_id").references(() => companies.id).notNull(),
+  name: text("name").notNull(), // e.g., "VIP Front", "Regular Back"
+  description: text("description"),
+  basePrice: numeric("base_price", { precision: 10, scale: 2 }).notNull(),
+  isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
@@ -354,11 +372,12 @@ export const buses = pgTable("buses", {
 export const busSeats = pgTable("bus_seats", {
   id: uuid("id").primaryKey().defaultRandom(),
   busId: uuid("bus_id").references(() => buses.id),
-  seatNumber: text("seat_number").notNull(),
-  tier: seatTierEnum("tier").notNull(),
-  deck: integer("deck").default(1),
+  seatNumber: text("seat_number").notNull(), // e.g., "1A", "2B", etc.
+  tierId: uuid("tier_id").references(() => seatTiers.id).notNull(),
+  status: seatStatusEnum("status").default("available"),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 // Organizational Structure
