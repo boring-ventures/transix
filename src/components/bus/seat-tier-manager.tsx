@@ -4,44 +4,41 @@ import { Input } from "@/components/ui/input";
 import { FormControl, FormItem, FormLabel } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { useCreateSeatTier } from "@/hooks/useSeatTiers";
+import { SeatTier, CreateSeatTierInput } from "@/types/bus.types";
 
 interface SeatTierManagerProps {
   companyId: string;
-  value: Array<{
-    name: string;
-    description?: string;
-    basePrice: number;
-    isActive?: boolean;
-  }>;
+  existingTiers: SeatTier[];
   onChange: (
-    tiers: Array<{
+    selectedTiers: {
       name: string;
-      description?: string;
       basePrice: number;
-      isActive?: boolean;
-    }>
+      isActive: boolean;
+      description?: string;
+    }[]
   ) => void;
-  existingTiers: Array<{
-    id: string;
+  value: {
     name: string;
-    companyId: string;
-    basePrice: string;
-  }>;
+    basePrice: number;
+    isActive: boolean;
+    description?: string;
+  }[];
 }
 
 export const SeatTierManager = ({
   companyId,
-  value = [],
-  onChange,
   existingTiers = [],
+  onChange,
+  value = [],
 }: SeatTierManagerProps) => {
   const createSeatTier = useCreateSeatTier();
   const { toast } = useToast();
   const [isAddingTier, setIsAddingTier] = useState(false);
-  const [newTier, setNewTier] = useState({
+  const [newTier, setNewTier] = useState<CreateSeatTierInput>({
     name: "",
     description: "",
     basePrice: 0,
+    companyId: "",
     isActive: true,
   });
 
@@ -49,13 +46,31 @@ export const SeatTierManager = ({
     e.preventDefault();
     if (newTier.name && newTier.basePrice >= 0) {
       try {
-        await createSeatTier.mutateAsync({
+        const createdTier = await createSeatTier.mutateAsync({
           ...newTier,
           companyId,
         });
-        onChange([...value, newTier]);
-        setNewTier({ name: "", description: "", basePrice: 0, isActive: true });
+
+        // Add the new tier to the selected tiers
+        onChange([
+          ...value,
+          {
+            name: createdTier.name,
+            basePrice: createdTier.basePrice,
+            description: createdTier.description,
+            isActive: createdTier.isActive,
+          },
+        ]);
+
+        setNewTier({
+          name: "",
+          description: "",
+          basePrice: 0,
+          companyId: "",
+          isActive: true,
+        });
         setIsAddingTier(false);
+
         toast({
           title: "Nivel creado",
           description: "El nivel de asiento ha sido creado exitosamente.",
@@ -70,9 +85,22 @@ export const SeatTierManager = ({
     }
   };
 
-  const removeTier = (index: number, e: React.MouseEvent) => {
-    e.preventDefault();
-    onChange(value.filter((_, i) => i !== index));
+  const toggleTier = (tier: SeatTier) => {
+    const tierData = {
+      name: tier.name,
+      basePrice:
+        typeof tier.basePrice === "string"
+          ? parseFloat(tier.basePrice)
+          : tier.basePrice,
+      description: tier.description || undefined,
+      isActive: tier.isActive || false,
+    };
+
+    if (value.some((t) => t.name === tier.name)) {
+      onChange(value.filter((t) => t.name !== tier.name));
+    } else {
+      onChange([...value, tierData]);
+    }
   };
 
   return (
@@ -154,20 +182,12 @@ export const SeatTierManager = ({
         {existingTiers.map((tier) => (
           <div
             key={tier.id}
-            className="border rounded p-3 flex justify-between items-center bg-gray-50"
-          >
-            <div>
-              <h4 className="font-medium">{tier.name}</h4>
-              <p className="text-sm">Precio Base: ${tier.basePrice}</p>
-            </div>
-            <span className="text-sm text-gray-500">Existente</span>
-          </div>
-        ))}
-
-        {value.map((tier, index) => (
-          <div
-            key={index}
-            className="border rounded p-3 flex justify-between items-center"
+            className={`border rounded p-3 flex justify-between items-center cursor-pointer ${
+              value.some((t) => t.name === tier.name)
+                ? "bg-gray-50 border-primary"
+                : ""
+            }`}
+            onClick={() => toggleTier(tier)}
           >
             <div>
               <h4 className="font-medium">{tier.name}</h4>
@@ -175,17 +195,9 @@ export const SeatTierManager = ({
                 <p className="text-sm text-gray-500">{tier.description}</p>
               )}
               <p className="text-sm">
-                Precio Base: ${tier.basePrice.toFixed(2)}
+                Precio Base: ${parseFloat(tier.basePrice.toString()).toFixed(2)}
               </p>
             </div>
-            <Button
-              type="button"
-              variant="destructive"
-              size="sm"
-              onClick={(e) => removeTier(index, e)}
-            >
-              Eliminar
-            </Button>
           </div>
         ))}
       </div>
