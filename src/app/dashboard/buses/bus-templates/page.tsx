@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState } from "react";
 import { useCompanies } from "@/hooks/useCompanies";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,418 +36,15 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { useCreateBusTemplate } from "@/hooks/useBusTemplates";
-
-// Visual Seat Editor Component
-const SeatEditor = ({
-  value,
-  onChange,
-}: {
-  value: { firstFloor: string[][]; secondFloor?: string[][] };
-  onChange: (value: {
-    firstFloor: string[][];
-    secondFloor?: string[][];
-  }) => void;
-}) => {
-  const [firstFloorConfig, setFirstFloorConfig] = useState({
-    rows: value.firstFloor.length || 4,
-    seatsPerRow: value.firstFloor[0]?.length || 4,
-  });
-  const [secondFloorConfig, setSecondFloorConfig] = useState({
-    rows: value.secondFloor?.length || 4,
-    seatsPerRow: value.secondFloor?.[0]?.length || 4,
-  });
-  const [hasSecondFloor, setHasSecondFloor] = useState(!!value.secondFloor);
-  const [activeFloor, setActiveFloor] = useState<"first" | "second">("first");
-
-  const generateFloor = useCallback((rows: number, seatsPerRow: number) => {
-    return Array(rows)
-      .fill(null)
-      .map((_, rowIndex) =>
-        Array(seatsPerRow)
-          .fill(null)
-          .map(
-            (_, seatIndex) =>
-              `${rowIndex + 1}${String.fromCharCode(65 + seatIndex)}`
-          )
-      );
-  }, []);
-
-  const updateMatrix = useCallback(() => {
-    const newMatrix = {
-      firstFloor: generateFloor(
-        firstFloorConfig.rows,
-        firstFloorConfig.seatsPerRow
-      ),
-      ...(hasSecondFloor
-        ? {
-            secondFloor: generateFloor(
-              secondFloorConfig.rows,
-              secondFloorConfig.seatsPerRow
-            ),
-          }
-        : {}),
-    };
-    onChange(newMatrix);
-  }, [
-    firstFloorConfig,
-    secondFloorConfig,
-    hasSecondFloor,
-    generateFloor,
-    onChange,
-  ]);
-
-  // Initial setup
-  useEffect(() => {
-    updateMatrix();
-  }, []); // Run only once on mount
-
-  const handleFirstFloorChange = (
-    field: "rows" | "seatsPerRow",
-    value: number
-  ) => {
-    setFirstFloorConfig((prev) => {
-      const newConfig = { ...prev, [field]: value };
-      setTimeout(() => {
-        const newMatrix = {
-          firstFloor: generateFloor(newConfig.rows, newConfig.seatsPerRow),
-          ...(hasSecondFloor
-            ? {
-                secondFloor: generateFloor(
-                  secondFloorConfig.rows,
-                  secondFloorConfig.seatsPerRow
-                ),
-              }
-            : {}),
-        };
-        onChange(newMatrix);
-      }, 0);
-      return newConfig;
-    });
-  };
-
-  const handleSecondFloorChange = (
-    field: "rows" | "seatsPerRow",
-    value: number
-  ) => {
-    setSecondFloorConfig((prev) => {
-      const newConfig = { ...prev, [field]: value };
-      setTimeout(() => {
-        const newMatrix = {
-          firstFloor: generateFloor(
-            firstFloorConfig.rows,
-            firstFloorConfig.seatsPerRow
-          ),
-          secondFloor: generateFloor(newConfig.rows, newConfig.seatsPerRow),
-        };
-        onChange(newMatrix);
-      }, 0);
-      return newConfig;
-    });
-  };
-
-  const handleSecondFloorToggle = (checked: boolean) => {
-    setHasSecondFloor(checked);
-    setTimeout(() => {
-      const newMatrix = {
-        firstFloor: generateFloor(
-          firstFloorConfig.rows,
-          firstFloorConfig.seatsPerRow
-        ),
-        ...(checked
-          ? {
-              secondFloor: generateFloor(
-                secondFloorConfig.rows,
-                secondFloorConfig.seatsPerRow
-              ),
-            }
-          : {}),
-      };
-      onChange(newMatrix);
-    }, 0);
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h4 className="font-medium">Vista Previa</h4>
-        {hasSecondFloor && (
-          <div className="flex space-x-2">
-            <Button
-              type="button"
-              variant={activeFloor === "first" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setActiveFloor("first")}
-            >
-              Primer Piso
-            </Button>
-            <Button
-              type="button"
-              variant={activeFloor === "second" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setActiveFloor("second")}
-            >
-              Segundo Piso
-            </Button>
-          </div>
-        )}
-      </div>
-
-      <div className="space-y-4">
-        {activeFloor === "first" ? (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <FormItem>
-                <FormLabel>Filas (Primer Piso)</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={firstFloorConfig.rows}
-                    onChange={(e) =>
-                      handleFirstFloorChange("rows", parseInt(e.target.value))
-                    }
-                  />
-                </FormControl>
-              </FormItem>
-              <FormItem>
-                <FormLabel>Asientos por Fila (Primer Piso)</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={firstFloorConfig.seatsPerRow}
-                    onChange={(e) =>
-                      handleFirstFloorChange(
-                        "seatsPerRow",
-                        parseInt(e.target.value)
-                      )
-                    }
-                  />
-                </FormControl>
-              </FormItem>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <FormItem>
-                <FormLabel>Filas (Segundo Piso)</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={secondFloorConfig.rows}
-                    onChange={(e) =>
-                      handleSecondFloorChange("rows", parseInt(e.target.value))
-                    }
-                  />
-                </FormControl>
-              </FormItem>
-              <FormItem>
-                <FormLabel>Asientos por Fila (Segundo Piso)</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={secondFloorConfig.seatsPerRow}
-                    onChange={(e) =>
-                      handleSecondFloorChange(
-                        "seatsPerRow",
-                        parseInt(e.target.value)
-                      )
-                    }
-                  />
-                </FormControl>
-              </FormItem>
-            </div>
-          </div>
-        )}
-
-        <FormItem>
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              checked={hasSecondFloor}
-              onChange={(e) => handleSecondFloorToggle(e.target.checked)}
-            />
-            <FormLabel>Incluir segundo piso</FormLabel>
-          </div>
-        </FormItem>
-
-        <div className="border rounded p-4">
-          <div className="grid gap-2">
-            {(activeFloor === "first"
-              ? value.firstFloor
-              : value.secondFloor
-            )?.map((row, rowIndex) => (
-              <div key={rowIndex} className="flex gap-2">
-                {row.map((seat, seatIndex) => (
-                  <div
-                    key={seatIndex}
-                    className="w-8 h-8 border rounded flex items-center justify-center text-xs"
-                  >
-                    {seat}
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Add SeatTierManager component
-const SeatTierManager = ({
-  value = [],
-  onChange,
-}: {
-  value: Array<{
-    name: string;
-    description?: string;
-    basePrice: number;
-    isActive?: boolean;
-  }>;
-  onChange: (
-    tiers: Array<{
-      name: string;
-      description?: string;
-      basePrice: number;
-      isActive?: boolean;
-    }>
-  ) => void;
-}) => {
-  const [isAddingTier, setIsAddingTier] = useState(false);
-  const [newTier, setNewTier] = useState({
-    name: "",
-    description: "",
-    basePrice: 0,
-    isActive: true,
-  });
-
-  const addTier = (e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent form submission
-    if (newTier.name && newTier.basePrice >= 0) {
-      onChange([...value, newTier]);
-      setNewTier({ name: "", description: "", basePrice: 0, isActive: true });
-      setIsAddingTier(false);
-    }
-  };
-
-  const removeTier = (index: number, e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent form submission
-    onChange(value.filter((_, i) => i !== index));
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium">Niveles de Asiento</h3>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={(e) => {
-            e.preventDefault();
-            setIsAddingTier(true);
-          }}
-        >
-          Agregar Nivel
-        </Button>
-      </div>
-
-      {isAddingTier && (
-        <div className="space-y-4 border rounded p-4">
-          <FormItem>
-            <FormLabel>Nombre</FormLabel>
-            <FormControl>
-              <Input
-                value={newTier.name}
-                onChange={(e) =>
-                  setNewTier({ ...newTier, name: e.target.value })
-                }
-              />
-            </FormControl>
-          </FormItem>
-          <FormItem>
-            <FormLabel>Descripción</FormLabel>
-            <FormControl>
-              <Input
-                value={newTier.description}
-                onChange={(e) =>
-                  setNewTier({ ...newTier, description: e.target.value })
-                }
-              />
-            </FormControl>
-          </FormItem>
-          <FormItem>
-            <FormLabel>Precio Base</FormLabel>
-            <FormControl>
-              <Input
-                type="number"
-                min={0}
-                value={newTier.basePrice}
-                onChange={(e) =>
-                  setNewTier({
-                    ...newTier,
-                    basePrice: parseFloat(e.target.value),
-                  })
-                }
-              />
-            </FormControl>
-          </FormItem>
-          <div className="flex space-x-2">
-            <Button type="button" onClick={addTier}>
-              Guardar
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={(e) => {
-                e.preventDefault();
-                setIsAddingTier(false);
-              }}
-            >
-              Cancelar
-            </Button>
-          </div>
-        </div>
-      )}
-
-      <div className="space-y-2">
-        {value.map((tier, index) => (
-          <div
-            key={index}
-            className="border rounded p-3 flex justify-between items-center"
-          >
-            <div>
-              <h4 className="font-medium">{tier.name}</h4>
-              {tier.description && (
-                <p className="text-sm text-gray-500">{tier.description}</p>
-              )}
-              <p className="text-sm">
-                Precio Base: ${tier.basePrice.toFixed(2)}
-              </p>
-            </div>
-            <Button
-              type="button"
-              variant="destructive"
-              size="sm"
-              onClick={(e) => removeTier(index, e)}
-            >
-              Eliminar
-            </Button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
+import { useCreateBusTemplate, useBusTemplates } from "@/hooks/useBusTemplates";
+import { useSeatTiers } from "@/hooks/useSeatTiers";
+import { SeatEditor } from "@/components/bus/seat-editor";
+import { SeatTierManager } from "@/components/bus/seat-tier-manager";
 
 export default function BusTemplatesPage() {
   const { data: companies, isLoading: companiesLoading } = useCompanies();
+  const { data: seatTiers, isLoading: seatTiersLoading } = useSeatTiers();
+  const { data: templates, isLoading: templatesLoading } = useBusTemplates();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const { toast } = useToast();
 
@@ -535,7 +132,7 @@ export default function BusTemplatesPage() {
     }
   };
 
-  if (companiesLoading) {
+  if (companiesLoading || seatTiersLoading || templatesLoading) {
     return <LoadingTable columnCount={4} rowCount={10} />;
   }
 
@@ -616,8 +213,10 @@ export default function BusTemplatesPage() {
                       render={({ field }) => (
                         <FormItem>
                           <SeatTierManager
+                            companyId={createForm.watch("companyId")}
                             value={field.value}
                             onChange={field.onChange}
+                            existingTiers={seatTiers || []}
                           />
                           <FormMessage />
                         </FormItem>
@@ -673,7 +272,7 @@ export default function BusTemplatesPage() {
       <DataTable
         title="Plantillas de Bus"
         description="Gestiona las plantillas de configuración de buses."
-        data={[]} // TODO: Add templates data hook
+        data={templates || []}
         columns={columns}
         searchable
         searchField="name"

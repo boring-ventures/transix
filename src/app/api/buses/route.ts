@@ -32,7 +32,7 @@ export async function GET(request: Request) {
             name: busTypeTemplates.name,
             description: busTypeTemplates.description,
             totalCapacity: busTypeTemplates.totalCapacity,
-            seatMatrix: busTypeTemplates.seatMatrix,
+            seatTemplateMatrix: busTypeTemplates.seatTemplateMatrix,
             isActive: busTypeTemplates.isActive,
           },
         })
@@ -102,6 +102,7 @@ export async function POST(request: Request) {
         templateId: busData.templateId,
         plateNumber: busData.plateNumber,
         maintenanceStatus: busData.maintenanceStatus || null,
+        seatTemplateMatrix: busData.seatTemplateMatrix,
         isActive: true,
       })
       .returning();
