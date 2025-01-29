@@ -25,10 +25,16 @@ const busTypeTemplateSchema = z.object({
   name: z.string().min(1, "El nombre es requerido").trim(),
   description: z.string().optional(),
   totalCapacity: z.number().min(1, "La capacidad debe ser mayor a 0"),
-  seatMatrix: z.object({
+  seatTemplateMatrix: z.object({
     firstFloor: z.array(z.array(z.string())),
     secondFloor: z.array(z.array(z.string())).optional(),
   }),
+  seatTiers: z.array(z.object({
+    name: z.string().min(1, "El nombre es requerido").trim(),
+    description: z.string().optional(),
+    basePrice: z.number().min(0, "El precio base debe ser mayor o igual a 0"),
+    isActive: z.boolean().default(true),
+  })),
   isActive: z.boolean().default(true),
 });
 
@@ -44,6 +50,10 @@ const baseBusSchema = z.object({
   plateNumber: z.string().trim().min(1, "La placa es requerida"),
   isActive: z.boolean().default(true),
   maintenanceStatus: z.enum(maintenanceStatusEnum.enumValues).default("active"),
+  seatTemplateMatrix: z.object({
+    firstFloor: z.array(z.array(z.string())),
+    secondFloor: z.array(z.array(z.string())).optional(),
+  }),
 });
 
 export const createBusSchema = baseBusSchema;
