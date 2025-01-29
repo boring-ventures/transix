@@ -338,7 +338,7 @@ export const busTypeTemplates = pgTable("bus_type_templates", {
   name: text("name").notNull(), // e.g., "Double Decker Standard", "Luxury VIP"
   description: text("description"),
   totalCapacity: integer("total_capacity").notNull(),
-  seatMatrix: jsonb("seat_matrix").notNull(), // Format: { firstFloor: string[][], secondFloor?: string[][] }
+  seatTemplateMatrix: jsonb("seat_template_matrix").notNull(), // Format: { firstFloor: string[][], secondFloor?: string[][] }
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
@@ -351,6 +351,7 @@ export const buses = pgTable("buses", {
   templateId: uuid("template_id").references(() => busTypeTemplates.id).notNull(),
   plateNumber: text("plate_number").unique().notNull(),
   isActive: boolean("is_active").default(true),
+  seatMatrix: jsonb("seat_matrix").notNull(),
   maintenanceStatus: maintenanceStatusEnum("maintenance_status_enum").default("active"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
