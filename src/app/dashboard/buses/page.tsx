@@ -49,10 +49,15 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import type { Company } from "@/types/company.types";
+import { useBusTemplates } from "@/hooks/useBusTemplates";
+import Link from "next/link";
+import { Plus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 export default function BusesPage() {
   const { data: buses, isLoading: busesLoading } = useBuses();
   const { data: companies, isLoading: companiesLoading } = useCompanies();
+  const { data: templates, isLoading: templatesLoading } = useBusTemplates();
   const createBus = useCreateBus();
   const updateBus = useUpdateBus();
   const deleteBus = useDeleteBus();
@@ -107,19 +112,6 @@ export default function BusesPage() {
 
   const columns: Column<BusWithRelations>[] = [
     {
-      id: "id",
-      accessorKey: "id",
-      header: "ID",
-      sortable: true,
-      cell: ({ row }) => {
-        return (
-          <span className="font-mono text-[10px] text-muted-foreground truncate w-20 inline-block">
-            {row.id.slice(0, 8)}...
-          </span>
-        );
-      },
-    },
-    {
       id: "plateNumber",
       accessorKey: "plateNumber",
       header: "Placa",
@@ -133,7 +125,14 @@ export default function BusesPage() {
         if (!row.template) {
           return <span className="text-gray-400 italic">Sin plantilla</span>;
         }
-        return row.template.name;
+        return (
+          <div className="flex flex-col gap-1">
+            <span>{row.template.name}</span>
+            <Badge variant="secondary" className="w-fit">
+              {row.template.totalCapacity} asientos
+            </Badge>
+          </div>
+        );
       },
     },
     {
@@ -177,7 +176,7 @@ export default function BusesPage() {
       plateNumber: bus.plateNumber,
       templateId: bus.templateId,
       maintenanceStatus: bus.maintenanceStatus || "active",
-      companyId: bus.companyId || "",
+      companyId: bus.companyId ?? "",
       isActive: bus.isActive || true,
     });
     setIsEditOpen(true);
@@ -212,6 +211,24 @@ export default function BusesPage() {
     }
   };
 
+  const onCreateSubmit = async (formData: CreateBusInput) => {
+    try {
+      await createBus.mutateAsync(formData);
+      setIsCreateOpen(false);
+      createForm.reset();
+      toast({
+        title: "Bus creado",
+        description: "El bus ha sido creado exitosamente.",
+      });
+    } catch {
+      toast({
+        title: "Error",
+        description: "Hubo un error al crear el bus.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const onEditSubmit = async (formData: UpdateBusInput) => {
     if (!editingBus) return;
 
@@ -235,26 +252,8 @@ export default function BusesPage() {
     }
   };
 
-  const onCreateSubmit = async (formData: CreateBusInput) => {
-    try {
-      await createBus.mutateAsync(formData);
-      setIsCreateOpen(false);
-      createForm.reset();
-      toast({
-        title: "Bus creado",
-        description: "El bus ha sido creado exitosamente.",
-      });
-    } catch {
-      toast({
-        title: "Error",
-        description: "Hubo un error al crear el bus.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  if (busesLoading || companiesLoading) {
-    return <LoadingTable columnCount={5} rowCount={10} />;
+  if (busesLoading || companiesLoading || templatesLoading) {
+    return <LoadingTable columnCount={4} rowCount={10} />;
   }
 
   return (
@@ -264,6 +263,18 @@ export default function BusesPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Crear Bus</DialogTitle>
+            {(!templates || templates.length === 0) && (
+              <DialogDescription>
+                No hay plantillas disponibles.{" "}
+                <Link
+                  href="/dashboard/buses/templates"
+                  className="text-primary hover:underline"
+                >
+                  Crear una plantilla
+                </Link>{" "}
+                antes de crear un bus.
+              </DialogDescription>
+            )}
           </DialogHeader>
           <Form {...createForm}>
             <form
@@ -310,13 +321,26 @@ export default function BusesPage() {
                 name="templateId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Plantilla</FormLabel>
+                    <div className="flex items-center justify-between">
+                      <FormLabel>Plantilla</FormLabel>
+                      <Link
+                        href="/dashboard/buses/templates"
+                        className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
+                      >
+                        <Plus className="h-3 w-3" />
+                        Nueva plantilla
+                      </Link>
+                    </div>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <SelectTrigger>
                         <SelectValue placeholder="Seleccionar plantilla" />
                       </SelectTrigger>
                       <SelectContent>
-                        {/* TODO: Add templates list */}
+                        {templates?.map((template) => (
+                          <SelectItem key={template.id} value={template.id}>
+                            {template.name} ({template.totalCapacity} asientos)
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -348,7 +372,12 @@ export default function BusesPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" disabled={createBus.isPending}>
+              <Button
+                type="submit"
+                disabled={
+                  createBus.isPending || !templates || templates.length === 0
+                }
+              >
                 Crear Bus
               </Button>
             </form>
@@ -407,13 +436,26 @@ export default function BusesPage() {
                 name="templateId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Plantilla</FormLabel>
+                    <div className="flex items-center justify-between">
+                      <FormLabel>Plantilla</FormLabel>
+                      <Link
+                        href="/dashboard/buses/templates"
+                        className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
+                      >
+                        <Plus className="h-3 w-3" />
+                        Nueva plantilla
+                      </Link>
+                    </div>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <SelectTrigger>
                         <SelectValue placeholder="Seleccionar plantilla" />
                       </SelectTrigger>
                       <SelectContent>
-                        {/* TODO: Add templates list */}
+                        {templates?.map((template) => (
+                          <SelectItem key={template.id} value={template.id}>
+                            {template.name} ({template.totalCapacity} asientos)
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
