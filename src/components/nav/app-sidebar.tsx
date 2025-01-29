@@ -72,6 +72,18 @@ const data = {
       title: "Buses",
       url: "/dashboard/buses",
       icon: Bus,
+      items: [
+        {
+          title: "Lista de Buses",
+          url: "/dashboard/buses",
+          icon: List,
+        },
+        {
+          title: "Plantillas",
+          url: "/dashboard/buses/bus-templates",
+          icon: Bus,
+        },
+      ],
     },
     {
       title: "Usuarios",
