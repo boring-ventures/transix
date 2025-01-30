@@ -18,6 +18,30 @@ export type BusWithRelations = Bus & {
 };
 
 /**
+ * Seat Matrix Types
+ */
+export type SeatPosition = {
+  id: string;
+  name: string;
+  tierId?: string;
+  row: number;
+  column: number;
+};
+
+export type FloorMatrix = {
+  dimensions: {
+    rows: number;
+    seatsPerRow: number;
+  };
+  seats: SeatPosition[];
+};
+
+export type SeatTemplateMatrix = {
+  firstFloor: FloorMatrix;
+  secondFloor?: FloorMatrix;
+};
+
+/**
  * Bus Type Template Schemas
  */
 const busTypeTemplateSchema = z.object({
@@ -26,8 +50,32 @@ const busTypeTemplateSchema = z.object({
   description: z.string().optional(),
   totalCapacity: z.number().min(1, "La capacidad debe ser mayor a 0"),
   seatTemplateMatrix: z.object({
-    firstFloor: z.array(z.array(z.string())),
-    secondFloor: z.array(z.array(z.string())).optional(),
+    firstFloor: z.object({
+      dimensions: z.object({
+        rows: z.number(),
+        seatsPerRow: z.number(),
+      }),
+      seats: z.array(z.object({
+        id: z.string(),
+        name: z.string(),
+        tierId: z.string().optional(),
+        row: z.number(),
+        column: z.number(),
+      })),
+    }),
+    secondFloor: z.object({
+      dimensions: z.object({
+        rows: z.number(),
+        seatsPerRow: z.number(),
+      }),
+      seats: z.array(z.object({
+        id: z.string(),
+        name: z.string(),
+        tierId: z.string().optional(),
+        row: z.number(),
+        column: z.number(),
+      })),
+    }).optional(),
   }),
   seatTiers: z.array(z.object({
     name: z.string().min(1, "El nombre es requerido").trim(),

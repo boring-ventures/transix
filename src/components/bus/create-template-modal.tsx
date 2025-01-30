@@ -18,6 +18,8 @@ import { useToast } from "@/hooks/use-toast";
 import {
   CreateBusTypeTemplateInput,
   createBusTypeTemplateSchema,
+  SeatTemplateMatrix,
+  SeatPosition,
 } from "@/types/bus.types";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -41,6 +43,29 @@ interface CreateTemplateModalProps {
   companies: Company[];
 }
 
+const generateSeats = (
+  config: { rows: number; seatsPerRow: number },
+  existingSeats: SeatPosition[] = [],
+  isSecondFloor: boolean = false
+): SeatPosition[] => {
+  const seats: SeatPosition[] = [];
+  for (let row = 0; row < config.rows; row++) {
+    for (let col = 0; col < config.seatsPerRow; col++) {
+      const name = `${row + 1}${String.fromCharCode(65 + col)}`;
+      const seatId = isSecondFloor ? `2${name}` : name;
+      const existingSeat = existingSeats.find((s) => s.id === seatId);
+      seats.push({
+        id: seatId,
+        name: isSecondFloor ? `2${name}` : name,
+        row,
+        column: col,
+        tierId: existingSeat?.tierId,
+      });
+    }
+  }
+  return seats;
+};
+
 export const CreateTemplateModal = ({
   isOpen,
   onClose,
@@ -50,6 +75,11 @@ export const CreateTemplateModal = ({
   const createBusTemplate = useCreateBusTemplate();
   const { data: seatTiers } = useSeatTiers();
 
+  const [firstFloorConfig, setFirstFloorConfig] = useState({
+    rows: 4,
+    seatsPerRow: 4,
+  });
+
   const createForm = useForm<CreateBusTypeTemplateInput>({
     resolver: zodResolver(createBusTypeTemplateSchema),
     defaultValues: {
@@ -58,16 +88,10 @@ export const CreateTemplateModal = ({
       companyId: "",
       totalCapacity: 0,
       seatTemplateMatrix: {
-        firstFloor: Array(4)
-          .fill(null)
-          .map((_, rowIndex) =>
-            Array(4)
-              .fill(null)
-              .map(
-                (_, seatIndex) =>
-                  `${rowIndex + 1}${String.fromCharCode(65 + seatIndex)}`
-              )
-          ),
+        firstFloor: {
+          dimensions: firstFloorConfig,
+          seats: generateSeats(firstFloorConfig),
+        },
       },
       seatTiers: [],
       isActive: true,
@@ -82,71 +106,53 @@ export const CreateTemplateModal = ({
     secondFloor: null,
   });
 
-  const [seatTierAssignments, setSeatTierAssignments] = useState<{
-    firstFloor: Record<string, string>;
-    secondFloor: Record<string, string>;
-  }>({
-    firstFloor: {},
-    secondFloor: {},
-  });
+  const calculateTotalCapacity = useCallback(
+    (seatMatrix: SeatTemplateMatrix) => {
+      const firstFloorCapacity = seatMatrix.firstFloor.seats.length;
+      const secondFloorCapacity = seatMatrix.secondFloor?.seats.length || 0;
+      return firstFloorCapacity + secondFloorCapacity;
+    },
+    []
+  );
 
   const handleMatrixChange = useCallback(
-    (newMatrix: { firstFloor: string[][]; secondFloor?: string[][] }) => {
-      const totalCapacity = calculateTotalCapacity(newMatrix);
-      createForm.setValue("seatTemplateMatrix", newMatrix, {
+    (newMatrix: SeatTemplateMatrix) => {
+      const currentMatrix = createForm.getValues("seatTemplateMatrix");
+
+      // Update floor configs
+      setFirstFloorConfig(newMatrix.firstFloor.dimensions);
+
+      // Preserve tier assignments when updating dimensions
+      const updatedMatrix = {
+        firstFloor: {
+          dimensions: newMatrix.firstFloor.dimensions,
+          seats: generateSeats(
+            newMatrix.firstFloor.dimensions,
+            currentMatrix.firstFloor.seats,
+            false
+          ),
+        },
+        ...(newMatrix.secondFloor && {
+          secondFloor: {
+            dimensions: newMatrix.secondFloor.dimensions,
+            seats: generateSeats(
+              newMatrix.secondFloor.dimensions,
+              currentMatrix.secondFloor?.seats || [],
+              true
+            ),
+          },
+        }),
+      };
+
+      const totalCapacity = calculateTotalCapacity(updatedMatrix);
+      createForm.setValue("seatTemplateMatrix", updatedMatrix, {
         shouldValidate: true,
       });
       createForm.setValue("totalCapacity", totalCapacity, {
         shouldValidate: true,
       });
-
-      // If second floor is added and there are no existing second floor assignments
-      if (
-        newMatrix.secondFloor &&
-        Object.keys(seatTierAssignments.secondFloor).length === 0
-      ) {
-        // Create a mapping of old seat IDs to new seat IDs
-        const newSecondFloorSeats = newMatrix.secondFloor.flat();
-        const firstFloorSeats = newMatrix.firstFloor.flat();
-
-        // Copy assignments from first floor to second floor
-        const newSecondFloorAssignments: Record<string, string> = {};
-        newSecondFloorSeats.forEach((seatId, index) => {
-          const firstFloorSeatId = firstFloorSeats[index];
-          if (
-            firstFloorSeatId &&
-            seatTierAssignments.firstFloor[firstFloorSeatId]
-          ) {
-            newSecondFloorAssignments[seatId] =
-              seatTierAssignments.firstFloor[firstFloorSeatId];
-          }
-        });
-
-        setSeatTierAssignments((prev) => ({
-          ...prev,
-          secondFloor: newSecondFloorAssignments,
-        }));
-      }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [
-      createForm,
-      seatTierAssignments.firstFloor,
-      seatTierAssignments.secondFloor,
-    ]
-  );
-
-  const calculateTotalCapacity = useCallback(
-    (seatMatrix: { firstFloor: string[][]; secondFloor?: string[][] }) => {
-      const firstFloorCapacity = seatMatrix.firstFloor.reduce(
-        (acc, row) => acc + row.length,
-        0
-      );
-      const secondFloorCapacity =
-        seatMatrix.secondFloor?.reduce((acc, row) => acc + row.length, 0) || 0;
-      return firstFloorCapacity + secondFloorCapacity;
-    },
-    []
+    [createForm, calculateTotalCapacity, setFirstFloorConfig]
   );
 
   const handleSeatClick = (
@@ -163,34 +169,78 @@ export const CreateTemplateModal = ({
       return;
     }
 
-    setSeatTierAssignments((prev) => ({
-      ...prev,
+    const currentMatrix = createForm.getValues("seatTemplateMatrix");
+    if (!currentMatrix[floor]) return;
+
+    const updatedMatrix = {
+      ...currentMatrix,
       [floor]: {
-        ...prev[floor],
-        [seatId]: selectedTierId,
+        ...currentMatrix[floor],
+        seats: currentMatrix[floor].seats.map((seat) =>
+          seat.id === seatId ? { ...seat, tierId: selectedTierId } : seat
+        ),
       },
-    }));
+    };
+
+    createForm.setValue("seatTemplateMatrix", updatedMatrix, {
+      shouldValidate: true,
+    });
   };
+
+  const handleSecondFloorToggle = useCallback(
+    (checked: boolean) => {
+      if (checked) {
+        const currentMatrix = createForm.getValues("seatTemplateMatrix");
+        const newConfig = {
+          rows: firstFloorConfig.rows,
+          seatsPerRow: firstFloorConfig.seatsPerRow,
+        };
+
+        const updatedMatrix: SeatTemplateMatrix = {
+          firstFloor: currentMatrix.firstFloor,
+          secondFloor: {
+            dimensions: newConfig,
+            seats: currentMatrix.firstFloor.seats.map((seat) => ({
+              ...seat,
+              id: `2${seat.name}`,
+              name: `2${seat.name}`,
+              tierId: seat.tierId,
+            })),
+          },
+        };
+
+        setSelectedTierIds((prev) => ({
+          ...prev,
+          secondFloor: prev.firstFloor,
+        }));
+
+        createForm.setValue("seatTemplateMatrix", updatedMatrix, {
+          shouldValidate: true,
+        });
+      } else {
+        const currentMatrix = createForm.getValues("seatTemplateMatrix");
+        const newMatrix = {
+          firstFloor: currentMatrix.firstFloor,
+        };
+        createForm.setValue("seatTemplateMatrix", newMatrix, {
+          shouldValidate: true,
+        });
+
+        setSelectedTierIds((prev) => ({
+          ...prev,
+          secondFloor: null,
+        }));
+      }
+    },
+    [createForm, firstFloorConfig]
+  );
 
   const onSubmit = async (formData: CreateBusTypeTemplateInput) => {
     try {
-      const dataWithAssignments = {
-        ...formData,
-        seatTierAssignments: {
-          firstFloor: seatTierAssignments.firstFloor,
-          ...(formData.seatTemplateMatrix.secondFloor
-            ? { secondFloor: seatTierAssignments.secondFloor }
-            : {}),
-        },
-      };
-
-      await createBusTemplate.mutateAsync(dataWithAssignments);
+      console.log(formData);
+      // await createBusTemplate.mutateAsync(formData);
       onClose();
       createForm.reset();
-      setSeatTierAssignments({
-        firstFloor: {},
-        secondFloor: {},
-      });
       setSelectedTierIds({
         firstFloor: null,
         secondFloor: null,
@@ -312,7 +362,6 @@ export const CreateTemplateModal = ({
                           onSeatClick={(seatId, floor) =>
                             handleSeatClick(seatId, floor)
                           }
-                          seatTierAssignments={seatTierAssignments}
                           selectedTierIds={selectedTierIds}
                           onTierSelect={(floor, tierId) =>
                             setSelectedTierIds((prev) => ({
@@ -321,6 +370,7 @@ export const CreateTemplateModal = ({
                             }))
                           }
                           seatTiers={seatTiers || []}
+                          onSecondFloorToggle={handleSecondFloorToggle}
                         />
                       </FormControl>
                       <FormMessage />

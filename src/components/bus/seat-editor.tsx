@@ -9,25 +9,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SeatTier } from "@/types/bus.types";
+import { SeatTier, SeatTemplateMatrix, SeatPosition } from "@/types/bus.types";
 
 interface SeatEditorProps {
-  value: { firstFloor: string[][]; secondFloor?: string[][] };
-  onChange: (value: {
-    firstFloor: string[][];
-    secondFloor?: string[][];
-  }) => void;
+  value: SeatTemplateMatrix;
+  onChange: (value: SeatTemplateMatrix) => void;
   onSeatClick?: (seatId: string, floor: "firstFloor" | "secondFloor") => void;
-  seatTierAssignments?: {
-    firstFloor: Record<string, string>;
-    secondFloor: Record<string, string>;
-  };
   selectedTierIds: {
     firstFloor: string | null;
     secondFloor: string | null;
   };
   onTierSelect: (floor: "firstFloor" | "secondFloor", tierId: string) => void;
   seatTiers: SeatTier[];
+  onSecondFloorToggle: (checked: boolean) => void;
 }
 
 const TIER_COLORS = [
@@ -62,34 +56,39 @@ export const SeatEditor = ({
   value,
   onChange,
   onSeatClick,
-  seatTierAssignments = { firstFloor: {}, secondFloor: {} },
   selectedTierIds,
   onTierSelect,
   seatTiers,
+  onSecondFloorToggle,
 }: SeatEditorProps) => {
   const [firstFloorConfig, setFirstFloorConfig] = useState({
-    rows: value.firstFloor.length || 4,
-    seatsPerRow: value.firstFloor[0]?.length || 4,
+    rows: value.firstFloor.dimensions.rows,
+    seatsPerRow: value.firstFloor.dimensions.seatsPerRow,
   });
   const [secondFloorConfig, setSecondFloorConfig] = useState({
-    rows: value.secondFloor?.length || 4,
-    seatsPerRow: value.secondFloor?.[0]?.length || 4,
+    rows: value.secondFloor?.dimensions.rows || 4,
+    seatsPerRow: value.secondFloor?.dimensions.seatsPerRow || 4,
   });
-  const [hasSecondFloor, setHasSecondFloor] = useState(!!value.secondFloor);
   const [activeFloor, setActiveFloor] = useState<"first" | "second">("first");
 
-  const generateMatrix = useCallback(
-    (config: { rows: number; seatsPerRow: number }) => {
-      return Array(config.rows)
-        .fill(null)
-        .map((_, rowIndex) =>
-          Array(config.seatsPerRow)
-            .fill(null)
-            .map(
-              (_, seatIndex) =>
-                `${rowIndex + 1}${String.fromCharCode(65 + seatIndex)}`
-            )
-        );
+  // Derive hasSecondFloor from value prop
+  const hasSecondFloor = !!value.secondFloor;
+
+  const generateSeats = useCallback(
+    (config: { rows: number; seatsPerRow: number }): SeatPosition[] => {
+      const seats: SeatPosition[] = [];
+      for (let row = 0; row < config.rows; row++) {
+        for (let col = 0; col < config.seatsPerRow; col++) {
+          const name = `${row + 1}${String.fromCharCode(65 + col)}`;
+          seats.push({
+            id: name,
+            name,
+            row,
+            column: col,
+          });
+        }
+      }
+      return seats;
     },
     []
   );
@@ -99,9 +98,14 @@ export const SeatEditor = ({
       const newConfig = { ...firstFloorConfig, [field]: newValue };
       setFirstFloorConfig(newConfig);
 
-      const newMatrix = {
-        firstFloor: generateMatrix(newConfig),
-        ...(hasSecondFloor ? { secondFloor: value.secondFloor } : {}),
+      const newMatrix: SeatTemplateMatrix = {
+        firstFloor: {
+          dimensions: newConfig,
+          seats: generateSeats(newConfig),
+        },
+        ...(hasSecondFloor && value.secondFloor
+          ? { secondFloor: value.secondFloor }
+          : {}),
       };
       onChange(newMatrix);
     },
@@ -109,7 +113,7 @@ export const SeatEditor = ({
       firstFloorConfig,
       hasSecondFloor,
       value.secondFloor,
-      generateMatrix,
+      generateSeats,
       onChange,
     ]
   );
@@ -119,45 +123,51 @@ export const SeatEditor = ({
       const newConfig = { ...secondFloorConfig, [field]: newValue };
       setSecondFloorConfig(newConfig);
 
-      const newMatrix = {
+      const newMatrix: SeatTemplateMatrix = {
         firstFloor: value.firstFloor,
-        secondFloor: generateMatrix(newConfig),
+        secondFloor: {
+          dimensions: newConfig,
+          seats: generateSeats(newConfig),
+        },
       };
       onChange(newMatrix);
     },
-    [secondFloorConfig, value.firstFloor, generateMatrix, onChange]
+    [secondFloorConfig, value.firstFloor, generateSeats, onChange]
   );
 
-  const handleSecondFloorToggle = useCallback(
-    (checked: boolean) => {
-      setHasSecondFloor(checked);
+  const renderSeats = (floor: "firstFloor" | "secondFloor") => {
+    const floorData = value[floor];
+    if (!floorData) return null;
 
-      if (checked) {
-        // Copy first floor dimensions to second floor
-        setSecondFloorConfig({
-          rows: firstFloorConfig.rows,
-          seatsPerRow: firstFloorConfig.seatsPerRow,
-        });
+    const rows: SeatPosition[][] = [];
+    for (let i = 0; i < floorData.dimensions.rows; i++) {
+      rows.push(floorData.seats.filter((seat) => seat.row === i));
+    }
 
-        // Generate second floor matrix with same dimensions as first floor
-        const newMatrix = {
-          firstFloor: value.firstFloor,
-          secondFloor: generateMatrix({
-            rows: firstFloorConfig.rows,
-            seatsPerRow: firstFloorConfig.seatsPerRow,
-          }),
-        };
-        onChange(newMatrix);
-      } else {
-        // Remove second floor
-        const newMatrix = {
-          firstFloor: value.firstFloor,
-        };
-        onChange(newMatrix);
-      }
-    },
-    [value.firstFloor, firstFloorConfig, generateMatrix, onChange]
-  );
+    return rows.map((row, rowIndex) => (
+      <div key={rowIndex} className="flex gap-2">
+        {row.map((seat) => {
+          const tierIndex = seat.tierId
+            ? seatTiers?.findIndex((t) => t.id === seat.tierId)
+            : -1;
+          const colorClasses =
+            tierIndex >= 0
+              ? TIER_COLORS[tierIndex % TIER_COLORS.length]
+              : { bg: "hover:bg-gray-50", border: "" };
+
+          return (
+            <div
+              key={seat.id}
+              className={`w-8 h-8 border rounded flex items-center justify-center text-xs cursor-pointer ${colorClasses.bg} ${colorClasses.border}`}
+              onClick={() => onSeatClick?.(seat.id, floor)}
+            >
+              {seat.name}
+            </div>
+          );
+        })}
+      </div>
+    ));
+  };
 
   return (
     <div className="space-y-4">
@@ -290,35 +300,9 @@ export const SeatEditor = ({
 
         <div className="border rounded p-4">
           <div className="grid gap-2">
-            {(activeFloor === "first"
-              ? value.firstFloor
-              : value.secondFloor
-            )?.map((row, rowIndex) => (
-              <div key={rowIndex} className="flex gap-2">
-                {row.map((seat, seatIndex) => {
-                  const currentFloor =
-                    activeFloor === "first" ? "firstFloor" : "secondFloor";
-                  const tierId = seatTierAssignments[currentFloor][seat];
-                  const tierIndex = tierId
-                    ? seatTiers?.findIndex((t) => t.id === tierId)
-                    : -1;
-                  const colorClasses =
-                    tierIndex >= 0
-                      ? TIER_COLORS[tierIndex % TIER_COLORS.length]
-                      : { bg: "hover:bg-gray-50", border: "" };
-
-                  return (
-                    <div
-                      key={seatIndex}
-                      className={`w-8 h-8 border rounded flex items-center justify-center text-xs cursor-pointer ${colorClasses.bg} ${colorClasses.border}`}
-                      onClick={() => onSeatClick?.(seat, currentFloor)}
-                    >
-                      {seat}
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
+            {renderSeats(
+              activeFloor === "first" ? "firstFloor" : "secondFloor"
+            )}
           </div>
         </div>
 
@@ -327,7 +311,7 @@ export const SeatEditor = ({
             <input
               type="checkbox"
               checked={hasSecondFloor}
-              onChange={(e) => handleSecondFloorToggle(e.target.checked)}
+              onChange={(e) => onSecondFloorToggle(e.target.checked)}
             />
             <FormLabel>Incluir segundo piso</FormLabel>
           </div>
