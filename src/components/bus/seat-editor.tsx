@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormControl, FormItem, FormLabel } from "@/components/ui/form";
@@ -159,17 +159,6 @@ export const SeatEditor = ({
     [value.firstFloor, firstFloorConfig, generateMatrix, onChange]
   );
 
-  const getSeatTierColor = (
-    seatId: string,
-    floor: "firstFloor" | "secondFloor"
-  ) => {
-    const tierId = seatTierAssignments[floor][seatId];
-    if (!tierId) return "";
-
-    const tierIndex = seatTiers?.findIndex((t) => t.id === tierId) || 0;
-    return TIER_COLORS[tierIndex % TIER_COLORS.length].bg;
-  };
-
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -316,14 +305,12 @@ export const SeatEditor = ({
                   const colorClasses =
                     tierIndex >= 0
                       ? TIER_COLORS[tierIndex % TIER_COLORS.length]
-                      : {};
+                      : { bg: "hover:bg-gray-50", border: "" };
 
                   return (
                     <div
                       key={seatIndex}
-                      className={`w-8 h-8 border rounded flex items-center justify-center text-xs cursor-pointer ${
-                        colorClasses.bg || "hover:bg-gray-50"
-                      } ${colorClasses.border || ""}`}
+                      className={`w-8 h-8 border rounded flex items-center justify-center text-xs cursor-pointer ${colorClasses.bg} ${colorClasses.border}`}
                       onClick={() => onSeatClick?.(seat, currentFloor)}
                     >
                       {seat}

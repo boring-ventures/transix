@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -128,6 +128,7 @@ export const CreateTemplateModal = ({
         }));
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       createForm,
       seatTierAssignments.firstFloor,
