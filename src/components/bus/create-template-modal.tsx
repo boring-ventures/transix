@@ -20,6 +20,7 @@ import {
   createBusTypeTemplateSchema,
   SeatTemplateMatrix,
   SeatPosition,
+  busTypeTemplateSchema,
 } from "@/types/bus.types";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -81,7 +82,7 @@ export const CreateTemplateModal = ({
   });
 
   const createForm = useForm<CreateBusTypeTemplateInput>({
-    resolver: zodResolver(createBusTypeTemplateSchema),
+    resolver: zodResolver(busTypeTemplateSchema),
     defaultValues: {
       name: "",
       description: "",
@@ -190,7 +191,22 @@ export const CreateTemplateModal = ({
   const handleSecondFloorToggle = useCallback(
     (checked: boolean) => {
       if (checked) {
+        // Check if first floor seats have tiers assigned
         const currentMatrix = createForm.getValues("seatTemplateMatrix");
+        const unassignedSeats = currentMatrix.firstFloor.seats.some(
+          (seat) => !seat.tierId
+        );
+
+        if (unassignedSeats) {
+          toast({
+            title: "Error",
+            description:
+              "Debe asignar niveles a todos los asientos del primer piso antes de agregar el segundo piso.",
+            variant: "destructive",
+          });
+          return;
+        }
+
         const newConfig = {
           rows: firstFloorConfig.rows,
           seatsPerRow: firstFloorConfig.seatsPerRow,
@@ -232,13 +248,27 @@ export const CreateTemplateModal = ({
         }));
       }
     },
-    [createForm, firstFloorConfig]
+    [createForm, firstFloorConfig, toast]
   );
 
   const onSubmit = async (formData: CreateBusTypeTemplateInput) => {
     try {
+      // Validate with submission schema manually
       console.log(formData);
-      // await createBusTemplate.mutateAsync(formData);
+      const result = createBusTypeTemplateSchema.safeParse(formData);
+      if (!result.success) {
+        const errors = result.error.errors;
+        errors.forEach((error) => {
+          toast({
+            title: "Error",
+            description: error.message,
+            variant: "destructive",
+          });
+        });
+        return;
+      }
+
+      await createBusTemplate.mutateAsync(formData);
       onClose();
       createForm.reset();
       setSelectedTierIds({
@@ -249,10 +279,13 @@ export const CreateTemplateModal = ({
         title: "Plantilla creada",
         description: "La plantilla ha sido creada exitosamente.",
       });
-    } catch {
+    } catch (error) {
       toast({
         title: "Error",
-        description: "Hubo un error al crear la plantilla.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Hubo un error al crear la plantilla.",
         variant: "destructive",
       });
     }
