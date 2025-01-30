@@ -27,15 +27,17 @@ interface SeatMatrixPreviewProps {
   matrix: SeatTemplateMatrix;
   seatTiers: SeatTier[];
   className?: string;
+  floor?: 1 | 2;
 }
 
 export const SeatMatrixPreview = ({
   matrix,
   seatTiers,
   className = "",
+  floor,
 }: SeatMatrixPreviewProps) => {
-  const renderFloor = (floor: "firstFloor" | "secondFloor") => {
-    const floorData = matrix[floor];
+  const renderFloor = (floorKey: "firstFloor" | "secondFloor") => {
+    const floorData = matrix[floorKey];
     if (!floorData) return null;
 
     const rows = [];
@@ -44,9 +46,9 @@ export const SeatMatrixPreview = ({
     }
 
     return (
-      <div className="grid gap-[1px]">
+      <div className="grid gap-[2px]">
         {rows.map((row, rowIndex) => (
-          <div key={rowIndex} className="flex gap-[1px]">
+          <div key={rowIndex} className="flex gap-[2px]">
             {row.map((seat) => {
               const tierIndex = seat.tierId
                 ? seatTiers?.findIndex((t) => t.id === seat.tierId)
@@ -59,12 +61,16 @@ export const SeatMatrixPreview = ({
               return (
                 <div
                   key={seat.id}
-                  className={`w-2 h-2 border rounded-none ${colorClasses.bg} ${colorClasses.border}`}
+                  className={`relative w-5 h-5 border rounded-sm ${colorClasses.bg} ${colorClasses.border} group`}
                   title={
                     seatTiers.find((t) => t.id === seat.tierId)?.name ||
                     "Sin nivel"
                   }
-                />
+                >
+                  <span className="absolute inset-0 flex items-center justify-center text-[8px] font-medium text-muted-foreground">
+                    {seat.name}
+                  </span>
+                </div>
               );
             })}
           </div>
@@ -74,11 +80,13 @@ export const SeatMatrixPreview = ({
   };
 
   return (
-    <div className={`flex gap-2 items-start ${className}`}>
-      {renderFloor("firstFloor")}
-      {matrix.secondFloor && (
+    <div className={`flex gap-4 items-center ${className}`}>
+      {(!floor || floor === 1) && renderFloor("firstFloor")}
+      {matrix.secondFloor && (!floor || floor === 2) && (
         <>
-          <div className="border-l border-dashed border-gray-200 h-full" />
+          {!floor && (
+            <div className="border-l border-dashed border-gray-200 h-full" />
+          )}
           {renderFloor("secondFloor")}
         </>
       )}
