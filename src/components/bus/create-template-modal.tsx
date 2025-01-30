@@ -82,9 +82,13 @@ export const CreateTemplateModal = ({
     secondFloor: null,
   });
 
-  const [seatTierAssignments, setSeatTierAssignments] = useState<
-    Record<string, string>
-  >({});
+  const [seatTierAssignments, setSeatTierAssignments] = useState<{
+    firstFloor: Record<string, string>;
+    secondFloor: Record<string, string>;
+  }>({
+    firstFloor: {},
+    secondFloor: {},
+  });
 
   const handleMatrixChange = useCallback(
     (newMatrix: { firstFloor: string[][]; secondFloor?: string[][] }) => {
@@ -95,8 +99,33 @@ export const CreateTemplateModal = ({
       createForm.setValue("totalCapacity", totalCapacity, {
         shouldValidate: true,
       });
+
+      // If second floor is added, copy first floor assignments
+      if (newMatrix.secondFloor) {
+        // Create a mapping of old seat IDs to new seat IDs
+        const newSecondFloorSeats = newMatrix.secondFloor.flat();
+        const firstFloorSeats = newMatrix.firstFloor.flat();
+
+        // Copy assignments from first floor to second floor
+        const newSecondFloorAssignments: Record<string, string> = {};
+        newSecondFloorSeats.forEach((seatId, index) => {
+          const firstFloorSeatId = firstFloorSeats[index];
+          if (
+            firstFloorSeatId &&
+            seatTierAssignments.firstFloor[firstFloorSeatId]
+          ) {
+            newSecondFloorAssignments[seatId] =
+              seatTierAssignments.firstFloor[firstFloorSeatId];
+          }
+        });
+
+        setSeatTierAssignments((prev) => ({
+          ...prev,
+          secondFloor: newSecondFloorAssignments,
+        }));
+      }
     },
-    [createForm]
+    [createForm, seatTierAssignments.firstFloor]
   );
 
   const calculateTotalCapacity = useCallback(
@@ -128,7 +157,10 @@ export const CreateTemplateModal = ({
 
     setSeatTierAssignments((prev) => ({
       ...prev,
-      [seatId]: selectedTierId,
+      [floor]: {
+        ...prev[floor],
+        [seatId]: selectedTierId,
+      },
     }));
   };
 
@@ -136,13 +168,21 @@ export const CreateTemplateModal = ({
     try {
       const dataWithAssignments = {
         ...formData,
-        seatTierAssignments,
+        seatTierAssignments: {
+          firstFloor: seatTierAssignments.firstFloor,
+          ...(formData.seatTemplateMatrix.secondFloor
+            ? { secondFloor: seatTierAssignments.secondFloor }
+            : {}),
+        },
       };
 
       await createBusTemplate.mutateAsync(dataWithAssignments);
       onClose();
       createForm.reset();
-      setSeatTierAssignments({});
+      setSeatTierAssignments({
+        firstFloor: {},
+        secondFloor: {},
+      });
       setSelectedTierIds({
         firstFloor: null,
         secondFloor: null,

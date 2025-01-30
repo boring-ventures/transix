@@ -18,7 +18,10 @@ interface SeatEditorProps {
     secondFloor?: string[][];
   }) => void;
   onSeatClick?: (seatId: string, floor: "firstFloor" | "secondFloor") => void;
-  seatTierAssignments?: Record<string, string>;
+  seatTierAssignments?: {
+    firstFloor: Record<string, string>;
+    secondFloor: Record<string, string>;
+  };
   selectedTierIds: {
     firstFloor: string | null;
     secondFloor: string | null;
@@ -59,7 +62,7 @@ export const SeatEditor = ({
   value,
   onChange,
   onSeatClick,
-  seatTierAssignments = {},
+  seatTierAssignments = { firstFloor: {}, secondFloor: {} },
   selectedTierIds,
   onTierSelect,
   seatTiers,
@@ -128,21 +131,39 @@ export const SeatEditor = ({
   const handleSecondFloorToggle = useCallback(
     (checked: boolean) => {
       setHasSecondFloor(checked);
-      const newMatrix = {
-        firstFloor: value.firstFloor,
-        ...(checked
-          ? {
-              secondFloor: generateMatrix(secondFloorConfig),
-            }
-          : {}),
-      };
-      onChange(newMatrix);
+
+      if (checked) {
+        // Copy first floor dimensions to second floor
+        setSecondFloorConfig({
+          rows: firstFloorConfig.rows,
+          seatsPerRow: firstFloorConfig.seatsPerRow,
+        });
+
+        // Generate second floor matrix with same dimensions as first floor
+        const newMatrix = {
+          firstFloor: value.firstFloor,
+          secondFloor: generateMatrix({
+            rows: firstFloorConfig.rows,
+            seatsPerRow: firstFloorConfig.seatsPerRow,
+          }),
+        };
+        onChange(newMatrix);
+      } else {
+        // Remove second floor
+        const newMatrix = {
+          firstFloor: value.firstFloor,
+        };
+        onChange(newMatrix);
+      }
     },
-    [value.firstFloor, secondFloorConfig, generateMatrix, onChange]
+    [value.firstFloor, firstFloorConfig, generateMatrix, onChange]
   );
 
-  const getSeatTierColor = (seatId: string) => {
-    const tierId = seatTierAssignments[seatId];
+  const getSeatTierColor = (
+    seatId: string,
+    floor: "firstFloor" | "secondFloor"
+  ) => {
+    const tierId = seatTierAssignments[floor][seatId];
     if (!tierId) return "";
 
     const tierIndex = seatTiers?.findIndex((t) => t.id === tierId) || 0;
@@ -286,7 +307,9 @@ export const SeatEditor = ({
             )?.map((row, rowIndex) => (
               <div key={rowIndex} className="flex gap-2">
                 {row.map((seat, seatIndex) => {
-                  const tierId = seatTierAssignments[seat];
+                  const currentFloor =
+                    activeFloor === "first" ? "firstFloor" : "secondFloor";
+                  const tierId = seatTierAssignments[currentFloor][seat];
                   const tierIndex = tierId
                     ? seatTiers?.findIndex((t) => t.id === tierId)
                     : -1;
@@ -301,12 +324,7 @@ export const SeatEditor = ({
                       className={`w-8 h-8 border rounded flex items-center justify-center text-xs cursor-pointer ${
                         colorClasses.bg || "hover:bg-gray-50"
                       } ${colorClasses.border || ""}`}
-                      onClick={() =>
-                        onSeatClick?.(
-                          seat,
-                          activeFloor === "first" ? "firstFloor" : "secondFloor"
-                        )
-                      }
+                      onClick={() => onSeatClick?.(seat, currentFloor)}
                     >
                       {seat}
                     </div>
