@@ -46,4 +46,50 @@ export function useCreateBusTemplate() {
       queryClient.invalidateQueries({ queryKey: ["busTemplates"] });
     },
   });
+}
+
+export function useUpdateBusTemplate() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<CreateBusTypeTemplateInput> }) => {
+      const response = await axios.patch(`${API_URL}/${id}`, data);
+      if (response.data.error) {
+        throw new Error(response.data.error);
+      }
+      return response.data;
+    },
+    onError: (error: unknown) => {
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.error || "Error al actualizar la plantilla");
+      }
+      throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["busTemplates"] });
+    },
+  });
+}
+
+export function useDeleteBusTemplate() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (templateId: string) => {
+      const response = await axios.patch(`${API_URL}/${templateId}`, { isActive: false });
+      if (response.data.error) {
+        throw new Error(response.data.error);
+      }
+      return response.data;
+    },
+    onError: (error: unknown) => {
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.error || "Error al desactivar la plantilla");
+      }
+      throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["busTemplates"] });
+    },
+  });
 } 

@@ -25,7 +25,8 @@ export async function GET() {
       },
     })
     .from(busTypeTemplates)
-    .leftJoin(companies, eq(busTypeTemplates.companyId, companies.id));
+    .leftJoin(companies, eq(busTypeTemplates.companyId, companies.id))
+    .where(eq(busTypeTemplates.isActive, true));
 
     return NextResponse.json(templates);
   } catch (error) {
