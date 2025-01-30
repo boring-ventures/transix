@@ -118,42 +118,21 @@ export const CreateTemplateModal = ({
 
   const handleMatrixChange = useCallback(
     (newMatrix: SeatTemplateMatrix) => {
-      const currentMatrix = createForm.getValues("seatTemplateMatrix");
-
       // Update floor configs
       setFirstFloorConfig(newMatrix.firstFloor.dimensions);
 
-      // Preserve tier assignments when updating dimensions
-      const updatedMatrix = {
-        firstFloor: {
-          dimensions: newMatrix.firstFloor.dimensions,
-          seats: generateSeats(
-            newMatrix.firstFloor.dimensions,
-            currentMatrix.firstFloor.seats,
-            false
-          ),
-        },
-        ...(newMatrix.secondFloor && {
-          secondFloor: {
-            dimensions: newMatrix.secondFloor.dimensions,
-            seats: generateSeats(
-              newMatrix.secondFloor.dimensions,
-              currentMatrix.secondFloor?.seats || [],
-              true
-            ),
-          },
-        }),
-      };
+      // Calculate total capacity
+      const totalCapacity = calculateTotalCapacity(newMatrix);
 
-      const totalCapacity = calculateTotalCapacity(updatedMatrix);
-      createForm.setValue("seatTemplateMatrix", updatedMatrix, {
+      // Update form values
+      createForm.setValue("seatTemplateMatrix", newMatrix, {
         shouldValidate: true,
       });
       createForm.setValue("totalCapacity", totalCapacity, {
         shouldValidate: true,
       });
     },
-    [createForm, calculateTotalCapacity, setFirstFloorConfig]
+    [createForm, calculateTotalCapacity]
   );
 
   const handleSeatClick = (

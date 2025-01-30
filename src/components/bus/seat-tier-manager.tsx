@@ -113,24 +113,6 @@ export const SeatTierManager = ({
     }
   };
 
-  const toggleTier = (tier: SeatTier) => {
-    const tierData = {
-      name: tier.name,
-      basePrice:
-        typeof tier.basePrice === "string"
-          ? parseFloat(tier.basePrice)
-          : tier.basePrice,
-      description: tier.description || undefined,
-      isActive: tier.isActive || false,
-    };
-
-    if (value.some((t) => t.name === tier.name)) {
-      onChange(value.filter((t) => t.name !== tier.name));
-    } else {
-      onChange([...value, tierData]);
-    }
-  };
-
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -214,42 +196,14 @@ export const SeatTierManager = ({
           return (
             <div
               key={tier.id}
-              className={`border rounded p-3 flex justify-between items-center cursor-pointer ${
-                value.some((t) => t.name === tier.name)
-                  ? colorClasses.selected
-                  : colorClasses.bg
-              } ${colorClasses.border}`}
-              onClick={() => toggleTier(tier)}
+              className={`border rounded p-3 flex justify-between items-center ${colorClasses.bg} ${colorClasses.border}`}
             >
               <div>
-                <h4
-                  className={`font-medium ${
-                    value.some((t) => t.name === tier.name) ? "text-white" : ""
-                  }`}
-                >
-                  {tier.name}
-                </h4>
+                <h4 className="font-medium">{tier.name}</h4>
                 {tier.description && (
-                  <p
-                    className={`text-sm ${
-                      value.some((t) => t.name === tier.name)
-                        ? "text-white/80"
-                        : "text-gray-500"
-                    }`}
-                  >
-                    {tier.description}
-                  </p>
+                  <p className="text-sm text-gray-500">{tier.description}</p>
                 )}
-                <p
-                  className={`text-sm ${
-                    value.some((t) => t.name === tier.name)
-                      ? "text-white/90"
-                      : ""
-                  }`}
-                >
-                  Precio Base: $
-                  {parseFloat(tier.basePrice.toString()).toFixed(2)}
-                </p>
+                <p className="text-sm">Precio Base: ${tier.basePrice}</p>
               </div>
             </div>
           );

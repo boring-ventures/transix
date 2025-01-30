@@ -87,15 +87,7 @@ export const busTypeTemplateSchema = z.object({
 });
 
 export const createBusTypeTemplateSchema = busTypeTemplateSchema.superRefine((data, ctx) => {
-  // Validate seat tiers exist
-  if (data.seatTiers.length === 0) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Debe crear al menos un nivel de asiento",
-      path: ["seatTiers"],
-    });
-  }
-
+  // Remove the seat tiers validation since we're using existing tiers
   // Validate first floor seats have tiers
   const firstFloorUnassigned = data.seatTemplateMatrix.firstFloor.seats.some(
     seat => !seat.tierId

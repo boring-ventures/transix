@@ -74,34 +74,36 @@ export const SeatEditor = ({
   // Derive hasSecondFloor from value prop
   const hasSecondFloor = !!value.secondFloor;
 
-  const generateSeats = useCallback(
-    (config: { rows: number; seatsPerRow: number }): SeatPosition[] => {
-      const seats: SeatPosition[] = [];
-      for (let row = 0; row < config.rows; row++) {
-        for (let col = 0; col < config.seatsPerRow; col++) {
-          const name = `${row + 1}${String.fromCharCode(65 + col)}`;
-          seats.push({
-            id: name,
-            name,
-            row,
-            column: col,
-          });
-        }
-      }
-      return seats;
-    },
-    []
-  );
-
   const handleFirstFloorChange = useCallback(
     (field: "rows" | "seatsPerRow", newValue: number) => {
       const newConfig = { ...firstFloorConfig, [field]: newValue };
       setFirstFloorConfig(newConfig);
 
+      // Get current matrix to preserve tier assignments
+      const currentMatrix = { ...value };
+      const currentSeats = currentMatrix.firstFloor.seats;
+
+      // Generate new seats while preserving existing tier assignments
+      const newSeats = [];
+      for (let row = 0; row < newConfig.rows; row++) {
+        for (let col = 0; col < newConfig.seatsPerRow; col++) {
+          const name = `${row + 1}${String.fromCharCode(65 + col)}`;
+          // Try to find existing seat with same name to preserve its tier
+          const existingSeat = currentSeats.find((s) => s.name === name);
+          newSeats.push({
+            id: name,
+            name,
+            row,
+            column: col,
+            tierId: existingSeat?.tierId,
+          });
+        }
+      }
+
       const newMatrix: SeatTemplateMatrix = {
         firstFloor: {
           dimensions: newConfig,
-          seats: generateSeats(newConfig),
+          seats: newSeats,
         },
         ...(hasSecondFloor && value.secondFloor
           ? { secondFloor: value.secondFloor }
@@ -109,13 +111,7 @@ export const SeatEditor = ({
       };
       onChange(newMatrix);
     },
-    [
-      firstFloorConfig,
-      hasSecondFloor,
-      value.secondFloor,
-      generateSeats,
-      onChange,
-    ]
+    [firstFloorConfig, hasSecondFloor, value, onChange]
   );
 
   const handleSecondFloorChange = useCallback(
@@ -123,16 +119,65 @@ export const SeatEditor = ({
       const newConfig = { ...secondFloorConfig, [field]: newValue };
       setSecondFloorConfig(newConfig);
 
+      // Get current matrix to preserve tier assignments
+      const currentMatrix = { ...value };
+      const currentSeats = currentMatrix.secondFloor?.seats || [];
+
+      // Generate new seats while preserving existing tier assignments
+      const newSeats = [];
+      for (let row = 0; row < newConfig.rows; row++) {
+        for (let col = 0; col < newConfig.seatsPerRow; col++) {
+          const name = `${row + 1}${String.fromCharCode(65 + col)}`;
+          const seatId = `2${name}`;
+          // Try to find existing seat with same ID to preserve its tier
+          const existingSeat = currentSeats.find((s) => s.id === seatId);
+          newSeats.push({
+            id: seatId,
+            name: `2${name}`,
+            row,
+            column: col,
+            tierId: existingSeat?.tierId,
+          });
+        }
+      }
+
       const newMatrix: SeatTemplateMatrix = {
         firstFloor: value.firstFloor,
         secondFloor: {
           dimensions: newConfig,
-          seats: generateSeats(newConfig),
+          seats: newSeats,
         },
       };
       onChange(newMatrix);
     },
-    [secondFloorConfig, value.firstFloor, generateSeats, onChange]
+    [secondFloorConfig, value, onChange]
+  );
+
+  const handleMarkAllSeats = useCallback(
+    (floor: "firstFloor" | "secondFloor") => {
+      const selectedTierId = selectedTierIds[floor];
+      if (!selectedTierId) return;
+
+      const currentMatrix = { ...value };
+      const floorData = currentMatrix[floor];
+      if (!floorData) return;
+
+      const updatedSeats = floorData.seats.map((seat) => ({
+        ...seat,
+        tierId: selectedTierId,
+      }));
+
+      const updatedMatrix = {
+        ...currentMatrix,
+        [floor]: {
+          ...floorData,
+          seats: updatedSeats,
+        },
+      };
+
+      onChange(updatedMatrix);
+    },
+    [value, selectedTierIds, onChange]
   );
 
   const renderSeats = (floor: "firstFloor" | "secondFloor") => {
@@ -168,6 +213,24 @@ export const SeatEditor = ({
       </div>
     ));
   };
+
+  const renderTierSelectContent = () => (
+    <SelectContent>
+      {seatTiers.map((tier, index) => {
+        const colorClasses = TIER_COLORS[index % TIER_COLORS.length];
+        return (
+          <SelectItem key={tier.id} value={tier.id}>
+            <div className="flex items-center space-x-2">
+              <div
+                className={`w-4 h-4 rounded ${colorClasses.bg} ${colorClasses.border}`}
+              />
+              <span>{tier.name}</span>
+            </div>
+          </SelectItem>
+        );
+      })}
+    </SelectContent>
+  );
 
   return (
     <div className="space-y-4">
@@ -229,6 +292,53 @@ export const SeatEditor = ({
                 </FormControl>
               </FormItem>
             </div>
+            <div className="flex items-center space-x-4">
+              <FormItem className="flex-1">
+                <FormLabel>Nivel para Asignar</FormLabel>
+                <Select
+                  value={selectedTierIds.firstFloor || ""}
+                  onValueChange={(value) => onTierSelect("firstFloor", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue>
+                      {selectedTierIds.firstFloor ? (
+                        <div className="flex items-center space-x-2">
+                          <div
+                            className={`w-4 h-4 rounded ${
+                              TIER_COLORS[
+                                seatTiers.findIndex(
+                                  (t) => t.id === selectedTierIds.firstFloor
+                                ) % TIER_COLORS.length
+                              ].bg
+                            }`}
+                          />
+                          <span>
+                            {
+                              seatTiers.find(
+                                (t) => t.id === selectedTierIds.firstFloor
+                              )?.name
+                            }
+                          </span>
+                        </div>
+                      ) : (
+                        "Seleccionar nivel"
+                      )}
+                    </SelectValue>
+                  </SelectTrigger>
+                  {renderTierSelectContent()}
+                </Select>
+              </FormItem>
+              {selectedTierIds.firstFloor && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleMarkAllSeats("firstFloor")}
+                  className="mt-6"
+                >
+                  Marcar Todos
+                </Button>
+              )}
+            </div>
           </div>
         ) : (
           <div className="space-y-4">
@@ -263,48 +373,55 @@ export const SeatEditor = ({
                 </FormControl>
               </FormItem>
             </div>
+            <div className="flex items-center space-x-4">
+              <FormItem className="flex-1">
+                <FormLabel>Nivel para Asignar</FormLabel>
+                <Select
+                  value={selectedTierIds.secondFloor || ""}
+                  onValueChange={(value) => onTierSelect("secondFloor", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue>
+                      {selectedTierIds.secondFloor ? (
+                        <div className="flex items-center space-x-2">
+                          <div
+                            className={`w-4 h-4 rounded ${
+                              TIER_COLORS[
+                                seatTiers.findIndex(
+                                  (t) => t.id === selectedTierIds.secondFloor
+                                ) % TIER_COLORS.length
+                              ].bg
+                            }`}
+                          />
+                          <span>
+                            {
+                              seatTiers.find(
+                                (t) => t.id === selectedTierIds.secondFloor
+                              )?.name
+                            }
+                          </span>
+                        </div>
+                      ) : (
+                        "Seleccionar nivel"
+                      )}
+                    </SelectValue>
+                  </SelectTrigger>
+                  {renderTierSelectContent()}
+                </Select>
+              </FormItem>
+              {selectedTierIds.secondFloor && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleMarkAllSeats("secondFloor")}
+                  className="mt-6"
+                >
+                  Marcar Todos
+                </Button>
+              )}
+            </div>
           </div>
         )}
-
-        <FormItem>
-          <FormLabel>
-            Seleccionar Nivel para Asignar (
-            {activeFloor === "first" ? "Primer" : "Segundo"} Piso)
-          </FormLabel>
-          <Select
-            value={
-              selectedTierIds[
-                activeFloor === "first" ? "firstFloor" : "secondFloor"
-              ] || ""
-            }
-            onValueChange={(value) =>
-              onTierSelect(
-                activeFloor === "first" ? "firstFloor" : "secondFloor",
-                value
-              )
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Seleccionar nivel de asiento" />
-            </SelectTrigger>
-            <SelectContent>
-              {seatTiers.map((tier) => (
-                <SelectItem key={tier.id} value={tier.id}>
-                  {tier.name} - $
-                  {parseFloat(tier.basePrice.toString()).toFixed(2)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </FormItem>
-
-        <div className="border rounded p-4">
-          <div className="grid gap-2">
-            {renderSeats(
-              activeFloor === "first" ? "firstFloor" : "secondFloor"
-            )}
-          </div>
-        </div>
 
         <FormItem>
           <div className="flex items-center space-x-2">
@@ -316,6 +433,14 @@ export const SeatEditor = ({
             <FormLabel>Incluir segundo piso</FormLabel>
           </div>
         </FormItem>
+
+        <div className="border rounded p-4">
+          <div className="grid gap-2">
+            {renderSeats(
+              activeFloor === "first" ? "firstFloor" : "secondFloor"
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
