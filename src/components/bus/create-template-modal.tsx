@@ -100,8 +100,11 @@ export const CreateTemplateModal = ({
         shouldValidate: true,
       });
 
-      // If second floor is added, copy first floor assignments
-      if (newMatrix.secondFloor) {
+      // If second floor is added and there are no existing second floor assignments
+      if (
+        newMatrix.secondFloor &&
+        Object.keys(seatTierAssignments.secondFloor).length === 0
+      ) {
         // Create a mapping of old seat IDs to new seat IDs
         const newSecondFloorSeats = newMatrix.secondFloor.flat();
         const firstFloorSeats = newMatrix.firstFloor.flat();
@@ -125,7 +128,11 @@ export const CreateTemplateModal = ({
         }));
       }
     },
-    [createForm, seatTierAssignments.firstFloor]
+    [
+      createForm,
+      seatTierAssignments.firstFloor,
+      seatTierAssignments.secondFloor,
+    ]
   );
 
   const calculateTotalCapacity = useCallback(
