@@ -78,10 +78,12 @@ export const busTypeTemplateSchema = z.object({
     }).optional(),
   }),
   seatTiers: z.array(z.object({
+    id: z.string().uuid("ID de nivel inválido"),
     name: z.string().min(1, "El nombre es requerido").trim(),
     description: z.string().optional(),
     basePrice: z.number().min(0, "El precio base debe ser mayor o igual a 0"),
     isActive: z.boolean().default(true),
+    companyId: z.string().uuid("ID de empresa inválido"),
   })),
   isActive: z.boolean().default(true),
 });

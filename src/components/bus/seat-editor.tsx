@@ -26,29 +26,29 @@ interface SeatEditorProps {
 
 const TIER_COLORS = [
   {
-    bg: "bg-purple-100 hover:bg-purple-200",
-    border: "border-purple-200",
-    selected: "bg-purple-500 text-white",
+    bg: "bg-red-100 hover:bg-red-200",
+    border: "border-red-200",
+    selected: "bg-red-500 text-white",
   },
   {
-    bg: "bg-blue-100 hover:bg-blue-200",
-    border: "border-blue-200",
-    selected: "bg-blue-500 text-white",
+    bg: "bg-red-200 hover:bg-red-300",
+    border: "border-red-300",
+    selected: "bg-red-600 text-white",
   },
   {
-    bg: "bg-green-100 hover:bg-green-200",
-    border: "border-green-200",
-    selected: "bg-green-500 text-white",
+    bg: "bg-gray-100 hover:bg-gray-200",
+    border: "border-gray-200",
+    selected: "bg-gray-500 text-white",
   },
   {
-    bg: "bg-yellow-100 hover:bg-yellow-200",
-    border: "border-yellow-200",
-    selected: "bg-yellow-500 text-white",
+    bg: "bg-gray-200 hover:bg-gray-300",
+    border: "border-gray-300",
+    selected: "bg-gray-600 text-white",
   },
   {
-    bg: "bg-pink-100 hover:bg-pink-200",
-    border: "border-pink-200",
-    selected: "bg-pink-500 text-white",
+    bg: "bg-red-50 hover:bg-red-100",
+    border: "border-red-100",
+    selected: "bg-red-400 text-white",
   },
 ];
 

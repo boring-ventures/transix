@@ -34,27 +34,22 @@ const TIER_COLORS = [
   {
     bg: "bg-red-100",
     border: "border-red-200",
-    selected: "bg-red-500 text-white",
   },
   {
     bg: "bg-red-200",
     border: "border-red-300",
-    selected: "bg-red-600 text-white",
   },
   {
     bg: "bg-gray-100",
     border: "border-gray-200",
-    selected: "bg-gray-500 text-white",
   },
   {
     bg: "bg-gray-200",
     border: "border-gray-300",
-    selected: "bg-gray-600 text-white",
   },
   {
     bg: "bg-red-50",
     border: "border-red-100",
-    selected: "bg-red-400 text-white",
   },
 ];
 
@@ -84,18 +79,17 @@ export const SeatTierManager = ({
           companyId,
         });
 
-        // Add the new tier to the selected tiers
-        onChange([
-          ...value,
-          {
-            id: createdTier.id,
-            name: createdTier.name,
-            basePrice: createdTier.basePrice,
-            description: createdTier.description,
-            isActive: createdTier.isActive,
-            companyId: createdTier.companyId,
-          },
-        ]);
+        // Add the new tier to the selected tiers with all required fields
+        const newSelectedTier = {
+          id: createdTier.id,
+          name: createdTier.name,
+          basePrice: createdTier.basePrice,
+          description: createdTier.description,
+          isActive: createdTier.isActive,
+          companyId: createdTier.companyId,
+        };
+
+        onChange([...value, newSelectedTier]);
 
         setNewTier({
           name: "",
@@ -110,7 +104,7 @@ export const SeatTierManager = ({
           title: "Tipo de asiento creado",
           description: "El tipo de asiento ha sido creado exitosamente.",
         });
-      } catch {
+      } catch (error) {
         toast({
           title: "Error",
           description: "Hubo un error al crear el tipo de asiento.",
@@ -200,40 +194,14 @@ export const SeatTierManager = ({
       <div className="space-y-2">
         {existingTiers.map((tier, index) => {
           const colorClasses = TIER_COLORS[index % TIER_COLORS.length];
-          const isSelected = value.some(
-            (selectedTier) => selectedTier.name === tier.name
-          );
-
           return (
             <div
               key={tier.id}
               className={cn(
-                "border rounded p-3 flex justify-between items-center cursor-pointer",
+                "border rounded p-3 flex justify-between items-center",
                 colorClasses.bg,
-                colorClasses.border,
-                isSelected && "ring-2 ring-primary"
+                colorClasses.border
               )}
-              onClick={() => {
-                const newValue = isSelected
-                  ? value.filter(
-                      (selectedTier) => selectedTier.name !== tier.name
-                    )
-                  : [
-                      ...value,
-                      {
-                        id: tier.id,
-                        name: tier.name,
-                        basePrice:
-                          typeof tier.basePrice === "string"
-                            ? parseFloat(tier.basePrice)
-                            : tier.basePrice,
-                        description: tier.description || undefined,
-                        isActive: tier.isActive ?? true,
-                        companyId: tier.companyId,
-                      },
-                    ];
-                onChange(newValue);
-              }}
             >
               <div>
                 <h4 className="font-medium">{tier.name}</h4>
