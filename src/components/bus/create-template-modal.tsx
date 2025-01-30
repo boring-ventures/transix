@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -49,16 +49,6 @@ export const CreateTemplateModal = ({
   const { toast } = useToast();
   const createBusTemplate = useCreateBusTemplate();
   const { data: seatTiers } = useSeatTiers();
-  const [selectedTierIds, setSelectedTierIds] = useState<{
-    firstFloor: string | null;
-    secondFloor: string | null;
-  }>({
-    firstFloor: null,
-    secondFloor: null,
-  });
-  const [seatTierAssignments, setSeatTierAssignments] = useState<
-    Record<string, string>
-  >({});
 
   const createForm = useForm<CreateBusTypeTemplateInput>({
     resolver: zodResolver(createBusTypeTemplateSchema),
@@ -84,27 +74,43 @@ export const CreateTemplateModal = ({
     },
   });
 
+  const [selectedTierIds, setSelectedTierIds] = useState<{
+    firstFloor: string | null;
+    secondFloor: string | null;
+  }>({
+    firstFloor: null,
+    secondFloor: null,
+  });
+
+  const [seatTierAssignments, setSeatTierAssignments] = useState<
+    Record<string, string>
+  >({});
+
   const handleMatrixChange = useCallback(
     (newMatrix: { firstFloor: string[][]; secondFloor?: string[][] }) => {
       const totalCapacity = calculateTotalCapacity(newMatrix);
-      createForm.setValue("seatTemplateMatrix", newMatrix);
-      createForm.setValue("totalCapacity", totalCapacity);
+      createForm.setValue("seatTemplateMatrix", newMatrix, {
+        shouldValidate: true,
+      });
+      createForm.setValue("totalCapacity", totalCapacity, {
+        shouldValidate: true,
+      });
     },
     [createForm]
   );
 
-  const calculateTotalCapacity = (seatMatrix: {
-    firstFloor: string[][];
-    secondFloor?: string[][];
-  }) => {
-    const firstFloorCapacity = seatMatrix.firstFloor.reduce(
-      (acc, row) => acc + row.length,
-      0
-    );
-    const secondFloorCapacity =
-      seatMatrix.secondFloor?.reduce((acc, row) => acc + row.length, 0) || 0;
-    return firstFloorCapacity + secondFloorCapacity;
-  };
+  const calculateTotalCapacity = useCallback(
+    (seatMatrix: { firstFloor: string[][]; secondFloor?: string[][] }) => {
+      const firstFloorCapacity = seatMatrix.firstFloor.reduce(
+        (acc, row) => acc + row.length,
+        0
+      );
+      const secondFloorCapacity =
+        seatMatrix.secondFloor?.reduce((acc, row) => acc + row.length, 0) || 0;
+      return firstFloorCapacity + secondFloorCapacity;
+    },
+    []
+  );
 
   const handleSeatClick = (
     seatId: string,

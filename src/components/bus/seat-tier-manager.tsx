@@ -25,6 +25,34 @@ interface SeatTierManagerProps {
   }[];
 }
 
+const TIER_COLORS = [
+  {
+    bg: "bg-purple-100",
+    border: "border-purple-200",
+    selected: "bg-purple-500 text-white",
+  },
+  {
+    bg: "bg-blue-100",
+    border: "border-blue-200",
+    selected: "bg-blue-500 text-white",
+  },
+  {
+    bg: "bg-green-100",
+    border: "border-green-200",
+    selected: "bg-green-500 text-white",
+  },
+  {
+    bg: "bg-yellow-100",
+    border: "border-yellow-200",
+    selected: "bg-yellow-500 text-white",
+  },
+  {
+    bg: "bg-pink-100",
+    border: "border-pink-200",
+    selected: "bg-pink-500 text-white",
+  },
+];
+
 export const SeatTierManager = ({
   companyId,
   existingTiers = [],
@@ -107,17 +135,19 @@ export const SeatTierManager = ({
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-medium">Niveles de Asiento</h3>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={(e) => {
-            e.preventDefault();
-            setIsAddingTier(true);
-          }}
-        >
-          Agregar Nivel
-        </Button>
+        {existingTiers.length < 5 && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={(e) => {
+              e.preventDefault();
+              setIsAddingTier(true);
+            }}
+          >
+            Agregar Nivel
+          </Button>
+        )}
       </div>
 
       {isAddingTier && (
@@ -179,27 +209,51 @@ export const SeatTierManager = ({
       )}
 
       <div className="space-y-2">
-        {existingTiers.map((tier) => (
-          <div
-            key={tier.id}
-            className={`border rounded p-3 flex justify-between items-center cursor-pointer ${
-              value.some((t) => t.name === tier.name)
-                ? "bg-gray-50 border-primary"
-                : ""
-            }`}
-            onClick={() => toggleTier(tier)}
-          >
-            <div>
-              <h4 className="font-medium">{tier.name}</h4>
-              {tier.description && (
-                <p className="text-sm text-gray-500">{tier.description}</p>
-              )}
-              <p className="text-sm">
-                Precio Base: ${parseFloat(tier.basePrice.toString()).toFixed(2)}
-              </p>
+        {existingTiers.map((tier, index) => {
+          const colorClasses = TIER_COLORS[index % TIER_COLORS.length];
+          return (
+            <div
+              key={tier.id}
+              className={`border rounded p-3 flex justify-between items-center cursor-pointer ${
+                value.some((t) => t.name === tier.name)
+                  ? colorClasses.selected
+                  : colorClasses.bg
+              } ${colorClasses.border}`}
+              onClick={() => toggleTier(tier)}
+            >
+              <div>
+                <h4
+                  className={`font-medium ${
+                    value.some((t) => t.name === tier.name) ? "text-white" : ""
+                  }`}
+                >
+                  {tier.name}
+                </h4>
+                {tier.description && (
+                  <p
+                    className={`text-sm ${
+                      value.some((t) => t.name === tier.name)
+                        ? "text-white/80"
+                        : "text-gray-500"
+                    }`}
+                  >
+                    {tier.description}
+                  </p>
+                )}
+                <p
+                  className={`text-sm ${
+                    value.some((t) => t.name === tier.name)
+                      ? "text-white/90"
+                      : ""
+                  }`}
+                >
+                  Precio Base: $
+                  {parseFloat(tier.basePrice.toString()).toFixed(2)}
+                </p>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
