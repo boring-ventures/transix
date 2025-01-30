@@ -5,17 +5,17 @@ import { eq } from "drizzle-orm";
 
 export async function PATCH(
   request: Request,
-  context: { params: { userId: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-      const { userId } = await context.params;
+      const { id } = await params;
     const body = await request.json();
 
     // Check if user exists
     const existingUser = await db
       .select()
       .from(users)
-      .where(eq(users.id, userId))
+      .where(eq(users.id, id))
       .limit(1);
 
     if (!existingUser.length) {
@@ -34,7 +34,7 @@ export async function PATCH(
         ...body,
         updatedAt: new Date(),
       })
-      .where(eq(profiles.userId, userId))
+      .where(eq(profiles.userId, id))
       .returning();
 
     return NextResponse.json(updatedProfile);
@@ -46,16 +46,16 @@ export async function PATCH(
 
 export async function DELETE(
   request: Request,
-  context: { params: { userId: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-      const { userId } = await context.params;
+    const { id } = await params;
 
     // Check if user exists
     const existingUser = await db
       .select()
       .from(users)
-      .where(eq(users.id, userId))
+      .where(eq(users.id, id))
       .limit(1);
 
     if (!existingUser.length) {
@@ -72,7 +72,7 @@ export async function DELETE(
         active: false,
         updatedAt: new Date(),
       })
-      .where(eq(profiles.userId, userId))
+      .where(eq(profiles.userId, id))
       .returning();
 
     return NextResponse.json(updatedProfile);

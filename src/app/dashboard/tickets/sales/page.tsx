@@ -14,7 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowRight, ArrowLeft, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { busTypeEnum } from "@/db/schema";
 import { BusSeatMap } from "@/components/bus/bus-seat-map";
 
 // Types based on the schema
@@ -44,7 +43,7 @@ type Schedule = {
 type Bus = {
   id: string;
   plate_number: string;
-  bus_type: (typeof busTypeEnum.enumValues)[number];
+  bus_type: "standard" | "luxury" | "double_decker" | "mini";
   total_capacity: number;
   is_active: boolean;
   maintenance_status: string;

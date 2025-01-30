@@ -1,10 +1,9 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { busTypeEnum } from "@/db/schema";
 
 type SeatTier = "economy" | "business" | "premium";
-type BusType = (typeof busTypeEnum.enumValues)[number];
+type BusType = "standard" | "luxury" | "double_decker" | "mini";
 
 interface Seat {
   number: string;

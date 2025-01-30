@@ -5,17 +5,17 @@ import { eq } from "drizzle-orm";
 
 export async function PATCH(
   request: Request,
-  context: { params: { companyId: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { companyId } = await context.params;
+    const { id } = await params;
     const data = await request.json();
 
     // Check if company exists
     const existingCompany = await db
       .select()
       .from(companies)
-      .where(eq(companies.id, companyId))
+      .where(eq(companies.id, id))
       .limit(1);
 
     if (!existingCompany.length) {
@@ -29,7 +29,7 @@ export async function PATCH(
     const [updatedCompany] = await db
       .update(companies)
       .set({ ...data, updatedAt: new Date() })
-      .where(eq(companies.id, companyId))
+      .where(eq(companies.id, id))
       .returning();
 
     return NextResponse.json(updatedCompany);
@@ -41,16 +41,16 @@ export async function PATCH(
 
 export async function DELETE(
   request: Request,
-  context: { params: { companyId: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { companyId } = await context.params;
+    const { id } = await params;
 
     // Check if company exists
     const existingCompany = await db
       .select()
       .from(companies)
-      .where(eq(companies.id, companyId))
+      .where(eq(companies.id, id))
       .limit(1);
 
     if (!existingCompany.length) {
@@ -64,7 +64,7 @@ export async function DELETE(
     const [updatedCompany] = await db
       .update(companies)
       .set({ active: false })
-      .where(eq(companies.id, companyId))
+      .where(eq(companies.id, id))
       .returning();
 
     return NextResponse.json(updatedCompany);

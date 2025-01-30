@@ -71,7 +71,7 @@ export default function Routes() {
       busId: "1",
       departureDate: "2024-01-15",
       departureTime: "09:00",
-      price: 150,
+      price: "150",
       capacity: 40,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -82,7 +82,7 @@ export default function Routes() {
       busId: "2",
       departureDate: "2024-01-15",
       departureTime: "10:00",
-      price: 100,
+      price: "100",
       capacity: 35,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -94,6 +94,7 @@ export default function Routes() {
     originId: "",
     destinationId: "",
     capacity: 0,
+    seatsTaken: 0,
   });
 
   const handleRouteSubmit = (e: React.FormEvent) => {
@@ -108,7 +109,13 @@ export default function Routes() {
         updatedAt: new Date(),
       },
     ]);
-    setNewRoute({ name: "", originId: "", destinationId: "", capacity: 0 });
+    setNewRoute({
+      name: "",
+      originId: "",
+      destinationId: "",
+      capacity: 0,
+      seatsTaken: 0,
+    });
   };
 
   const getLocationName = (id: string) => {
@@ -126,14 +133,14 @@ export default function Routes() {
       id: "origin",
       accessorKey: "originId",
       header: "Origen",
-      cell: ({ row }) => getLocationName(row.originId),
+      cell: ({ row }) => getLocationName(row.originId || ""),
       sortable: true,
     },
     {
       id: "destination",
       accessorKey: "destinationId",
       header: "Destino",
-      cell: ({ row }) => getLocationName(row.destinationId),
+      cell: ({ row }) => getLocationName(row.destinationId || ""),
       sortable: true,
     },
     {

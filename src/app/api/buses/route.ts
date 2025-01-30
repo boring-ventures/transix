@@ -102,7 +102,7 @@ export async function POST(request: Request) {
         templateId: busData.templateId,
         plateNumber: busData.plateNumber,
         maintenanceStatus: busData.maintenanceStatus || null,
-        seatTemplateMatrix: busData.seatTemplateMatrix,
+        seatMatrix: busData.seatMatrix,
         isActive: true,
       })
       .returning();

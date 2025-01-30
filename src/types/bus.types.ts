@@ -50,7 +50,7 @@ const baseBusSchema = z.object({
   plateNumber: z.string().trim().min(1, "La placa es requerida"),
   isActive: z.boolean().default(true),
   maintenanceStatus: z.enum(maintenanceStatusEnum.enumValues).default("active"),
-  seatTemplateMatrix: z.object({
+  seatMatrix: z.object({
     firstFloor: z.array(z.array(z.string())),
     secondFloor: z.array(z.array(z.string())).optional(),
   }),

@@ -36,19 +36,22 @@ export const updatePaymentSchema = paymentSchema.partial();
 /**
  * Payment Line Schemas
  */
-const paymentLineSchema = z.object({
+const basePaymentLineSchema = z.object({
   paymentId: z.string().uuid("ID de pago inválido"),
   ticketId: z.string().uuid("ID de ticket inválido").optional(),
   parcelId: z.string().uuid("ID de encomienda inválido").optional(),
   description: z.string().optional(),
   amount: z.number().min(0, "El monto debe ser mayor o igual a 0"),
-}).refine(data => data.ticketId || data.parcelId, {
-  message: "Debe especificar un ticket o una encomienda",
-  path: ["ticketId", "parcelId"],
 });
 
-export const createPaymentLineSchema = paymentLineSchema;
-export const updatePaymentLineSchema = paymentLineSchema.partial();
+export const createPaymentLineSchema = basePaymentLineSchema.refine(
+  data => data.ticketId || data.parcelId, {
+    message: "Debe especificar un ticket o una encomienda",
+    path: ["ticketId", "parcelId"],
+  }
+);
+
+export const updatePaymentLineSchema = basePaymentLineSchema.partial();
 
 /**
  * Invoice Schemas

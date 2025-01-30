@@ -47,18 +47,18 @@ export const SeatEditor = ({
   const [hasSecondFloor, setHasSecondFloor] = useState(!!value.secondFloor);
   const [activeFloor, setActiveFloor] = useState<"first" | "second">("first");
 
-  const generateFloor = useCallback((rows: number, seatsPerRow: number) => {
-    return Array(rows)
+  const generateFloor = useCallback(() => {
+    return Array(firstFloorConfig.rows)
       .fill(null)
       .map((_, rowIndex) =>
-        Array(seatsPerRow)
+        Array(firstFloorConfig.seatsPerRow)
           .fill(null)
           .map(
             (_, seatIndex) =>
               `${rowIndex + 1}${String.fromCharCode(65 + seatIndex)}`
           )
       );
-  }, []);
+  }, [firstFloorConfig.rows, firstFloorConfig.seatsPerRow]);
 
   // Initial setup - only runs once
   useEffect(() => {
@@ -74,15 +74,9 @@ export const SeatEditor = ({
     });
 
     if (value.firstFloor.length === 0) {
-      const initialMatrix = {
-        firstFloor: generateFloor(
-          initialFirstFloorConfig.rows,
-          initialFirstFloorConfig.seatsPerRow
-        ),
-      };
-      onChange(initialMatrix);
+      generateFloor();
     }
-  }, []); // Empty dependency array - runs only once
+  }, [value.firstFloor.length, generateFloor, onChange]);
 
   // Handle value changes
   useEffect(() => {
@@ -127,13 +121,10 @@ export const SeatEditor = ({
     setFirstFloorConfig((prev) => {
       const newConfig = { ...prev, [field]: value };
       const newMatrix = {
-        firstFloor: generateFloor(newConfig.rows, newConfig.seatsPerRow),
+        firstFloor: generateFloor(),
         ...(hasSecondFloor
           ? {
-              secondFloor: generateFloor(
-                secondFloorConfig.rows,
-                secondFloorConfig.seatsPerRow
-              ),
+              secondFloor: generateFloor(),
             }
           : {}),
       };
@@ -149,11 +140,8 @@ export const SeatEditor = ({
     setSecondFloorConfig((prev) => {
       const newConfig = { ...prev, [field]: value };
       const newMatrix = {
-        firstFloor: generateFloor(
-          firstFloorConfig.rows,
-          firstFloorConfig.seatsPerRow
-        ),
-        secondFloor: generateFloor(newConfig.rows, newConfig.seatsPerRow),
+        firstFloor: generateFloor(),
+        secondFloor: generateFloor(),
       };
       onChange(newMatrix);
       return newConfig;
@@ -163,16 +151,10 @@ export const SeatEditor = ({
   const handleSecondFloorToggle = (checked: boolean) => {
     setHasSecondFloor(checked);
     const newMatrix = {
-      firstFloor: generateFloor(
-        firstFloorConfig.rows,
-        firstFloorConfig.seatsPerRow
-      ),
+      firstFloor: generateFloor(),
       ...(checked
         ? {
-            secondFloor: generateFloor(
-              secondFloorConfig.rows,
-              secondFloorConfig.seatsPerRow
-            ),
+            secondFloor: generateFloor(),
           }
         : {}),
     };
