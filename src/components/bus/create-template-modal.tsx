@@ -180,7 +180,7 @@ export const CreateTemplateModal = ({
           toast({
             title: "Error",
             description:
-              "Debe asignar niveles a todos los asientos del primer piso antes de agregar el segundo piso.",
+              "Debe asignar tipos de asiento a todos los asientos del primer piso antes de agregar el segundo piso.",
             variant: "destructive",
           });
           return;
@@ -272,18 +272,18 @@ export const CreateTemplateModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl">
-        <DialogHeader>
+      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="px-6 pt-6">
           <DialogTitle>Crear Plantilla de Bus</DialogTitle>
         </DialogHeader>
         <Form {...createForm}>
           <form
             onSubmit={createForm.handleSubmit(onSubmit)}
-            className="space-y-6"
+            className="flex-1 overflow-hidden"
           >
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-2 gap-6 p-6 h-full">
               {/* Left Column - Bus Details and Seat Tiers */}
-              <div className="space-y-6">
+              <div className="space-y-6 overflow-auto pr-2">
                 <div className="space-y-4">
                   <FormField
                     control={createForm.control}
@@ -360,7 +360,7 @@ export const CreateTemplateModal = ({
               </div>
 
               {/* Right Column - Seat Configuration */}
-              <div className="space-y-6">
+              <div className="space-y-6 overflow-auto pr-2">
                 <FormField
                   control={createForm.control}
                   name="seatTemplateMatrix"
@@ -368,22 +368,24 @@ export const CreateTemplateModal = ({
                     <FormItem>
                       <FormLabel>Configuración de Asientos</FormLabel>
                       <FormControl>
-                        <SeatEditor
-                          value={field.value}
-                          onChange={handleMatrixChange}
-                          onSeatClick={(seatId, floor) =>
-                            handleSeatClick(seatId, floor)
-                          }
-                          selectedTierIds={selectedTierIds}
-                          onTierSelect={(floor, tierId) =>
-                            setSelectedTierIds((prev) => ({
-                              ...prev,
-                              [floor]: tierId,
-                            }))
-                          }
-                          seatTiers={seatTiers || []}
-                          onSecondFloorToggle={handleSecondFloorToggle}
-                        />
+                        <div className="border rounded-lg p-4 bg-background">
+                          <SeatEditor
+                            value={field.value}
+                            onChange={handleMatrixChange}
+                            onSeatClick={(seatId, floor) =>
+                              handleSeatClick(seatId, floor)
+                            }
+                            selectedTierIds={selectedTierIds}
+                            onTierSelect={(floor, tierId) =>
+                              setSelectedTierIds((prev) => ({
+                                ...prev,
+                                [floor]: tierId,
+                              }))
+                            }
+                            seatTiers={seatTiers || []}
+                            onSecondFloorToggle={handleSecondFloorToggle}
+                          />
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -392,7 +394,7 @@ export const CreateTemplateModal = ({
               </div>
             </div>
 
-            <div className="flex justify-end space-x-2">
+            <div className="flex items-center justify-end gap-4 p-6 border-t bg-muted/50">
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancelar
               </Button>

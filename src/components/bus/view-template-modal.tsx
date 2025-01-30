@@ -12,6 +12,7 @@ import { Company } from "@/types/company.types";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 
 interface ViewTemplateModalProps {
   isOpen: boolean;
@@ -32,11 +33,11 @@ export const ViewTemplateModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[1000px] h-[800px] p-0">
-        <DialogHeader className="p-6 pb-0">
+      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="px-6 pt-6">
           <DialogTitle>Detalles de la Plantilla</DialogTitle>
         </DialogHeader>
-        <Tabs defaultValue="preview" className="flex-1">
+        <Tabs defaultValue="preview" className="flex-1 flex flex-col">
           <div className="border-b px-6">
             <TabsList className="w-full justify-start gap-6 rounded-none border-b-0 pl-0">
               <TabsTrigger
@@ -53,7 +54,7 @@ export const ViewTemplateModal = ({
               </TabsTrigger>
             </TabsList>
           </div>
-          <ScrollArea className="h-[calc(800px-8rem)]">
+          <ScrollArea className="flex-1">
             <TabsContent value="preview" className="m-0">
               <div className="p-6 space-y-4">
                 <div className="flex items-center justify-between">
@@ -63,17 +64,70 @@ export const ViewTemplateModal = ({
                 </div>
 
                 <div className="flex flex-col">
-                  <Tabs defaultValue="floor1" className="flex-1">
-                    <div className="flex items-center justify-between mb-4">
-                      <TabsList>
-                        <TabsTrigger value="floor1">Primer Piso</TabsTrigger>
-                        {seatMatrix.secondFloor && (
-                          <TabsTrigger value="floor2">Segundo Piso</TabsTrigger>
+                  <div className="flex items-center mb-4">
+                    <h3 className="text-base font-medium">
+                      Distribución de Asientos
+                    </h3>
+                  </div>
+
+                  <div className="flex gap-6">
+                    <div className="flex-1">
+                      <div
+                        className={cn(
+                          "grid gap-6",
+                          seatMatrix.secondFloor ? "grid-cols-2" : "grid-cols-1"
                         )}
-                      </TabsList>
-                      <div className="flex items-center gap-4">
+                      >
+                        <div
+                          className={cn(
+                            !seatMatrix.secondFloor &&
+                              "max-w-2xl mx-auto w-full"
+                          )}
+                        >
+                          <h4 className="text-sm font-medium mb-2">
+                            Primer Piso
+                          </h4>
+                          <div className="bg-gray-100 rounded-lg flex items-center justify-center min-h-[350px] w-full">
+                            <div className="w-full h-full flex items-center justify-center p-8">
+                              <div className="w-fit max-w-full max-h-full">
+                                <SeatMatrixPreview
+                                  matrix={seatMatrix}
+                                  seatTiers={seatTiers || []}
+                                  className="justify-center"
+                                  floor={1}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {seatMatrix.secondFloor && (
+                          <div>
+                            <h4 className="text-sm font-medium mb-2">
+                              Segundo Piso
+                            </h4>
+                            <div className="bg-gray-100 rounded-lg flex items-center justify-center min-h-[350px] w-full">
+                              <div className="w-full h-full flex items-center justify-center p-8">
+                                <div className="w-fit max-w-full max-h-full">
+                                  <SeatMatrixPreview
+                                    matrix={seatMatrix}
+                                    seatTiers={seatTiers || []}
+                                    className="justify-center"
+                                    floor={2}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-center gap-4 mt-4">
                         <Badge variant="outline" className="bg-background">
                           ← Izquierda
+                        </Badge>
+                        <Badge variant="outline" className="bg-background">
+                          Frente
                         </Badge>
                         <Badge variant="outline" className="bg-background">
                           Derecha →
@@ -81,53 +135,19 @@ export const ViewTemplateModal = ({
                       </div>
                     </div>
 
-                    <div className="min-h-[400px]">
-                      <TabsContent value="floor1" className="mt-0">
-                        <div className="border-2 border-dashed border-muted-foreground/20 rounded-lg p-6 bg-background flex items-center justify-center min-h-[400px]">
-                          <SeatMatrixPreview
-                            matrix={seatMatrix}
-                            seatTiers={seatTiers || []}
-                            className="justify-center scale-[2] origin-center"
-                            floor={1}
-                          />
-                        </div>
-                      </TabsContent>
-
-                      {seatMatrix.secondFloor && (
-                        <TabsContent value="floor2" className="mt-0">
-                          <div className="border-2 border-dashed border-muted-foreground/20 rounded-lg p-6 bg-background flex items-center justify-center min-h-[400px]">
-                            <SeatMatrixPreview
-                              matrix={seatMatrix}
-                              seatTiers={seatTiers || []}
-                              className="justify-center scale-[2] origin-center"
-                              floor={2}
-                            />
-                          </div>
-                        </TabsContent>
-                      )}
-                    </div>
-                  </Tabs>
-
-                  <div className="mt-6 flex flex-col gap-6">
-                    <div className="flex justify-center">
-                      <Badge variant="outline" className="bg-background">
-                        Frente
-                      </Badge>
-                    </div>
-
-                    {/* Leyenda de Niveles */}
-                    <div className="border-t pt-4">
+                    {/* Leyenda de Tipos de Asiento */}
+                    <div className="w-64 border-l pl-6">
                       <h3 className="text-sm font-medium mb-3">
-                        Leyenda de Niveles
+                        Leyenda de Tipos de Asiento
                       </h3>
-                      <div className="flex flex-wrap gap-3">
+                      <div className="flex flex-col gap-2">
                         {seatTiers?.map((tier, index) => {
                           const colorVariants = {
-                            purple: "bg-purple-200 border-purple-300",
-                            blue: "bg-blue-200 border-blue-300",
-                            green: "bg-green-200 border-green-300",
-                            yellow: "bg-yellow-200 border-yellow-300",
-                            pink: "bg-pink-200 border-pink-300",
+                            first: "bg-red-100 border-red-200",
+                            second: "bg-red-200 border-red-300",
+                            third: "bg-gray-100 border-gray-200",
+                            fourth: "bg-gray-200 border-gray-300",
+                            fifth: "bg-red-50 border-red-100",
                           };
                           const colors = Object.values(colorVariants);
                           const colorClass = colors[index % colors.length];
@@ -135,17 +155,19 @@ export const ViewTemplateModal = ({
                           return (
                             <div
                               key={tier.id}
-                              className="flex items-center gap-2 px-3 py-1.5 border rounded-full"
+                              className="flex items-center gap-2 px-3 py-1.5 border rounded-lg"
                             >
                               <div
                                 className={`w-4 h-4 rounded-full border ${colorClass}`}
                               />
-                              <span className="text-sm font-medium">
-                                {tier.name}
-                              </span>
-                              <span className="text-sm text-muted-foreground">
-                                ${parseFloat(tier.basePrice).toFixed(2)}
-                              </span>
+                              <div className="flex flex-col">
+                                <span className="text-sm font-medium">
+                                  {tier.name}
+                                </span>
+                                <span className="text-sm text-muted-foreground">
+                                  ${parseFloat(tier.basePrice).toFixed(2)}
+                                </span>
+                              </div>
                             </div>
                           );
                         })}

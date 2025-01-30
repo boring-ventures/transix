@@ -130,15 +130,16 @@ export function BusSeatMap({
     }
   };
 
-  const getTierColor = (tier: SeatTier) => {
-    switch (tier) {
-      case "premium":
-        return "bg-purple-100 hover:bg-purple-200 data-[selected=true]:bg-purple-500 data-[selected=true]:text-white";
-      case "business":
-        return "bg-blue-100 hover:bg-blue-200 data-[selected=true]:bg-blue-500 data-[selected=true]:text-white";
-      case "economy":
-        return "bg-green-100 hover:bg-green-200 data-[selected=true]:bg-green-500 data-[selected=true]:text-white";
-    }
+  const getTierColor = (tier: string) => {
+    const colors: Record<string, string> = {
+      "12312": "bg-red-100 hover:bg-red-200 border-red-200",
+      VIP: "bg-red-200 hover:bg-red-300 border-red-300",
+      "Tester 2": "bg-gray-100 hover:bg-gray-200 border-gray-200",
+      Regular: "bg-gray-200 hover:bg-gray-300 border-gray-300",
+      default: "bg-red-50 hover:bg-red-100 border-red-100",
+    };
+
+    return colors[tier] || colors.default;
   };
 
   const layout = getBusLayout(busType);

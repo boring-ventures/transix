@@ -294,7 +294,7 @@ export const SeatEditor = ({
             </div>
             <div className="flex items-center space-x-4">
               <FormItem className="flex-1">
-                <FormLabel>Nivel para Asignar</FormLabel>
+                <FormLabel>Tipo de Asiento para Asignar</FormLabel>
                 <Select
                   value={selectedTierIds.firstFloor || ""}
                   onValueChange={(value) => onTierSelect("firstFloor", value)}
@@ -321,7 +321,7 @@ export const SeatEditor = ({
                           </span>
                         </div>
                       ) : (
-                        "Seleccionar nivel"
+                        "Seleccionar tipo de asiento"
                       )}
                     </SelectValue>
                   </SelectTrigger>
@@ -375,7 +375,7 @@ export const SeatEditor = ({
             </div>
             <div className="flex items-center space-x-4">
               <FormItem className="flex-1">
-                <FormLabel>Nivel para Asignar</FormLabel>
+                <FormLabel>Tipo de Asiento para Asignar</FormLabel>
                 <Select
                   value={selectedTierIds.secondFloor || ""}
                   onValueChange={(value) => onTierSelect("secondFloor", value)}
@@ -402,7 +402,7 @@ export const SeatEditor = ({
                           </span>
                         </div>
                       ) : (
-                        "Seleccionar nivel"
+                        "Seleccionar tipo de asiento"
                       )}
                     </SelectValue>
                   </SelectTrigger>

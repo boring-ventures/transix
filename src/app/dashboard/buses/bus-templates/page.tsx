@@ -114,6 +114,8 @@ export default function BusTemplatesPage() {
             <SeatMatrixPreview
               matrix={data.seatTemplateMatrix as SeatTemplateMatrix}
               seatTiers={seatTiers || []}
+              variant="small"
+              showLabels={false}
             />
           </div>
         );
