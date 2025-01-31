@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { buses, companies, busTypeTemplates } from "@/db/schema";
+import { buses, companies, busTypeTemplates, busSeats, seatStatusEnum } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { createBusSchema } from "@/types/bus.types";
 
@@ -95,19 +95,80 @@ export async function POST(request: Request) {
     const body = await request.json();
     const busData = createBusSchema.parse(body);
 
-    const [bus] = await db
-      .insert(buses)
-      .values({
-        companyId: busData.companyId,
-        templateId: busData.templateId,
-        plateNumber: busData.plateNumber,
-        maintenanceStatus: busData.maintenanceStatus || null,
-        seatMatrix: busData.seatMatrix,
-        isActive: true,
-      })
-      .returning();
+    // Get the template data
+    const [template] = await db
+      .select()
+      .from(busTypeTemplates)
+      .where(eq(busTypeTemplates.id, busData.templateId));
 
-    return NextResponse.json(bus, { status: 201 });
+    if (!template) {
+      return NextResponse.json(
+        { error: "Plantilla no encontrada" },
+        { status: 404 }
+      );
+    }
+
+    // Start a transaction to ensure data consistency
+    const result = await db.transaction(async (tx) => {
+      // Create the bus with the template's seat matrix
+      const [bus] = await tx
+        .insert(buses)
+        .values({
+          companyId: busData.companyId,
+          templateId: busData.templateId,
+          plateNumber: busData.plateNumber,
+          maintenanceStatus: busData.maintenanceStatus || "active",
+          isActive: true,
+          seatMatrix: template.seatTemplateMatrix, // Use the template's seat matrix
+        })
+        .returning();
+
+      // Create bus seats based on the template's seat configuration
+      const seatMatrix = template.seatTemplateMatrix as {
+        firstFloor: {
+          seats: Array<{
+            id: string;
+            name: string;
+            tierId: string;
+          }>;
+        };
+        secondFloor?: {
+          seats: Array<{
+            id: string;
+            name: string;
+            tierId: string;
+          }>;
+        };
+      };
+
+      // Create seats for first floor
+      const firstFloorSeats = seatMatrix.firstFloor.seats.map((seat) => ({
+        busId: bus.id,
+        seatNumber: seat.name,
+        tierId: seat.tierId,
+        status: seatStatusEnum.enumValues[0], // 'available'
+        isActive: true,
+      }));
+
+      // Create seats for second floor if it exists
+      const secondFloorSeats = seatMatrix.secondFloor
+        ? seatMatrix.secondFloor.seats.map((seat) => ({
+            busId: bus.id,
+            seatNumber: seat.name,
+            tierId: seat.tierId,
+            status: seatStatusEnum.enumValues[0], // 'available'
+            isActive: true,
+          }))
+        : [];
+
+      // Insert all seats
+      const allSeats = [...firstFloorSeats, ...secondFloorSeats];
+      await tx.insert(busSeats).values(allSeats);
+
+      return bus;
+    });
+
+    return NextResponse.json(result, { status: 201 });
   } catch (error: unknown) {
     if (error instanceof Error) {
       return NextResponse.json({ error: error.message }, { status: 400 });

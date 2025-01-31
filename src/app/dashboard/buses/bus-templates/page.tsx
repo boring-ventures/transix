@@ -29,7 +29,7 @@ export default function BusTemplatesPage() {
   const { data: companies, isLoading: companiesLoading } = useCompanies();
   const { data: templates, isLoading: templatesLoading } = useBusTemplates();
   const { data: seatTiers } = useSeatTiers();
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
+const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [viewingTemplate, setViewingTemplate] =
     useState<BusTypeTemplate | null>(null);

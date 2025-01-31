@@ -128,13 +128,22 @@ const baseBusSchema = z.object({
   plateNumber: z.string().trim().min(1, "La placa es requerida"),
   isActive: z.boolean().default(true),
   maintenanceStatus: z.enum(maintenanceStatusEnum.enumValues).default("active"),
-  seatMatrix: z.object({
-    firstFloor: z.array(z.array(z.string())),
-    secondFloor: z.array(z.array(z.string())).optional(),
-  }),
+  seatMatrix: z
+    .object({
+      firstFloor: z.array(z.array(z.string())),
+      secondFloor: z.array(z.array(z.string())).optional(),
+    })
+    .optional(),
 });
 
-export const createBusSchema = baseBusSchema;
+export const createBusSchema = z.object({
+  companyId: z.string().uuid("ID de empresa inválido"),
+  templateId: z.string().uuid("ID de plantilla inválido"),
+  plateNumber: z.string().trim().min(1, "La placa es requerida"),
+  maintenanceStatus: z.enum(maintenanceStatusEnum.enumValues).default("active"),
+  isActive: z.boolean().default(true),
+});
+
 export const updateBusSchema = baseBusSchema.partial();
 
 /**
