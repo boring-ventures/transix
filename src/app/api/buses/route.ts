@@ -10,7 +10,14 @@ export async function GET(request: Request) {
     const busId = searchParams.get("busId");
 
     if (busId) {
-      const result = await db
+      // First get the bus seats
+      const seats = await db
+        .select()
+        .from(busSeats)
+        .where(eq(busSeats.busId, busId));
+
+      // Then get the bus with all its relations
+      const [bus] = await db
         .select({
           id: buses.id,
           plateNumber: buses.plateNumber,
@@ -18,6 +25,7 @@ export async function GET(request: Request) {
           isActive: buses.isActive,
           maintenanceStatus: buses.maintenanceStatus,
           companyId: buses.companyId,
+          seatMatrix: buses.seatMatrix,
           createdAt: buses.createdAt,
           updatedAt: buses.updatedAt,
           company: {
@@ -42,14 +50,15 @@ export async function GET(request: Request) {
         .where(eq(buses.id, busId))
         .limit(1);
 
-      if (!result.length) {
+      if (!bus) {
         return NextResponse.json(
           { error: "Bus no encontrado" },
           { status: 404 }
         );
       }
 
-      return NextResponse.json(result[0]);
+      // Combine the bus data with its seats
+      return NextResponse.json({ ...bus, seats });
     }
 
     const results = await db
@@ -60,6 +69,7 @@ export async function GET(request: Request) {
         isActive: buses.isActive,
         maintenanceStatus: buses.maintenanceStatus,
         companyId: buses.companyId,
+        seatMatrix: buses.seatMatrix,
         createdAt: buses.createdAt,
         updatedAt: buses.updatedAt,
         company: {

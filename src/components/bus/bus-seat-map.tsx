@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type SeatTier = "economy" | "business" | "premium";
-type BusType = "standard" | "luxury" | "double_decker" | "mini";
+export type BusType = "standard" | "luxury" | "double_decker" | "mini";
 
 interface Seat {
   number: string;
