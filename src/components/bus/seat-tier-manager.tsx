@@ -104,7 +104,7 @@ export const SeatTierManager = ({
           title: "Tipo de asiento creado",
           description: "El tipo de asiento ha sido creado exitosamente.",
         });
-      } catch (error) {
+      } catch {
         toast({
           title: "Error",
           description: "Hubo un error al crear el tipo de asiento.",
