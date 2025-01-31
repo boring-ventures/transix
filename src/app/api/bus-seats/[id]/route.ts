@@ -1,44 +1,39 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { busSeats } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { z } from "zod";
-
-const updateSeatSchema = z.object({
-  status: z.enum(["available", "maintenance"]),
-});
+import { updateBusSeatSchema } from "@/types/bus.types";
 
 export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params; 
     const body = await request.json();
-    const { status } = updateSeatSchema.parse(body);
+    const validatedData = updateBusSeatSchema.parse(body);
 
-    const [updatedSeat] = await db
+    const updatedSeat = await db
       .update(busSeats)
       .set({
-        status,
+        ...validatedData,
         updatedAt: new Date(),
       })
-      .where(eq(busSeats.id, params.id))
+      .where(eq(busSeats.id, id))
       .returning();
 
-    if (!updatedSeat) {
+    if (!updatedSeat.length) {
       return NextResponse.json(
         { error: "Asiento no encontrado" },
         { status: 404 }
       );
     }
 
-    return NextResponse.json(updatedSeat);
-  } catch (error: unknown) {
-    if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
-    }
+    return NextResponse.json(updatedSeat[0]);
+  } catch (error) {
+    console.error("Error updating bus seat:", error);
     return NextResponse.json(
-      { error: "Error inesperado al actualizar el asiento" },
+      { error: "Error al actualizar el asiento" },
       { status: 500 }
     );
   }

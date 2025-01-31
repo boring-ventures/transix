@@ -1,4 +1,4 @@
-import { SeatTemplateMatrix, SeatTier } from "@/types/bus.types";
+import { SeatTemplateMatrix, SeatTier, BusSeat } from "@/types/bus.types";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -7,52 +7,23 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-const TIER_COLORS = {
-  default: [
-    {
-      bg: "bg-red-100",
-      border: "border-red-200",
-    },
-    {
-      bg: "bg-red-200",
-      border: "border-red-300",
-    },
-    {
-      bg: "bg-gray-100",
-      border: "border-gray-200",
-    },
-    {
-      bg: "bg-gray-200",
-      border: "border-gray-300",
-    },
-    {
-      bg: "bg-red-50",
-      border: "border-red-100",
-    },
-  ],
-  intense: [
-    {
-      bg: "bg-red-200",
-      border: "border-red-300",
-    },
-    {
-      bg: "bg-red-300",
-      border: "border-red-400",
-    },
-    {
-      bg: "bg-gray-200",
-      border: "border-gray-300",
-    },
-    {
-      bg: "bg-gray-300",
-      border: "border-gray-400",
-    },
-    {
-      bg: "bg-red-100",
-      border: "border-red-200",
-    },
-  ],
+// Define specific colors for each tier by name
+const TIER_COLOR_MAP: Record<string, { bg: string; border: string }> = {
+  "12312": { bg: "bg-red-100", border: "border-red-200" },
+  VIP: { bg: "bg-red-200", border: "border-red-300" },
+  "Tester 2": { bg: "bg-gray-100", border: "border-gray-200" },
+  Regular: { bg: "bg-gray-200", border: "border-gray-300" },
+  Basico: { bg: "bg-red-50", border: "border-red-100" },
 };
+
+// Fallback colors for any additional tiers
+const FALLBACK_COLORS = [
+  { bg: "bg-blue-100", border: "border-blue-200" },
+  { bg: "bg-green-100", border: "border-green-200" },
+  { bg: "bg-yellow-100", border: "border-yellow-200" },
+  { bg: "bg-purple-100", border: "border-purple-200" },
+  { bg: "bg-pink-100", border: "border-pink-200" },
+];
 
 interface SeatMatrixPreviewProps {
   matrix: SeatTemplateMatrix;
@@ -61,6 +32,11 @@ interface SeatMatrixPreviewProps {
   floor?: 1 | 2;
   variant?: "default" | "small";
   showLabels?: boolean;
+  // Bus-specific props
+  mode?: "template" | "bus";
+  seats?: BusSeat[];
+  onSeatClick?: (seatId: string) => void;
+  selectedSeatId?: string;
 }
 
 export const SeatMatrixPreview = ({
@@ -70,7 +46,23 @@ export const SeatMatrixPreview = ({
   floor,
   variant = "default",
   showLabels = true,
+  mode = "template",
+  seats,
+  onSeatClick,
+  selectedSeatId,
 }: SeatMatrixPreviewProps) => {
+  const getTierColor = (tier: SeatTier | undefined) => {
+    if (!tier) return { bg: "bg-gray-100", border: "border-gray-200" };
+
+    // Try to get color by tier name
+    const colorByName = TIER_COLOR_MAP[tier.name];
+    if (colorByName) return colorByName;
+
+    // Fallback to index-based color
+    const index = seatTiers.findIndex((t) => t.id === tier.id);
+    return FALLBACK_COLORS[index % FALLBACK_COLORS.length];
+  };
+
   const renderFloor = (floorKey: "firstFloor" | "secondFloor") => {
     const floorData = matrix[floorKey];
     if (!floorData) return null;
@@ -81,42 +73,50 @@ export const SeatMatrixPreview = ({
     }
 
     const sizeClasses = {
-      default: "w-8 h-8 gap-[2px]",
-      small: "w-3 h-3 gap-[1px]",
+      default: mode === "bus" ? "w-10 h-10" : "w-8 h-8",
+      small: "w-3 h-3",
     };
 
     const labelSizes = {
-      default: "text-[10px]",
+      default: mode === "bus" ? "text-[12px]" : "text-[10px]",
       small: "text-[6px]",
+    };
+
+    const gapSizes = {
+      default: mode === "bus" ? "gap-[3px]" : "gap-[2px]",
+      small: "gap-[1px]",
     };
 
     return (
       <div
-        className={cn(
-          "grid",
-          variant === "default" ? "gap-[3px]" : "gap-[1px]"
-        )}
+        className={cn("grid", variant === "small" ? "gap-[1px]" : "gap-[3px]")}
       >
         {rows.map((row, rowIndex) => (
-          <div
-            key={rowIndex}
-            className={cn(
-              "flex",
-              variant === "default" ? "gap-[2px]" : "gap-[1px]"
-            )}
-          >
+          <div key={rowIndex} className={cn("flex", gapSizes[variant])}>
             {row.map((seat) => {
-              const tierIndex = seat.tierId
-                ? seatTiers?.findIndex((t) => t.id === seat.tierId)
-                : -1;
-              const colorClasses =
-                tierIndex >= 0
-                  ? TIER_COLORS[variant === "default" ? "default" : "intense"][
-                      tierIndex % TIER_COLORS.default.length
-                    ]
-                  : { bg: "bg-gray-100", border: "border-gray-200" };
-
               const seatTier = seatTiers.find((t) => t.id === seat.tierId);
+              const busSeat =
+                mode === "bus"
+                  ? seats?.find((s) => s.seatNumber === seat.name)
+                  : undefined;
+              const isSelected =
+                mode === "bus" && busSeat?.id === selectedSeatId;
+
+              const colorClasses = getTierColor(seatTier);
+
+              const getStatusColor = (
+                status: "available" | "maintenance" | null | undefined
+              ) => {
+                if (!status) return `${colorClasses.bg} ${colorClasses.border}`;
+                switch (status) {
+                  case "maintenance":
+                    return "bg-yellow-100 border-yellow-300";
+                  case "available":
+                    return `${colorClasses.bg} ${colorClasses.border}`;
+                  default:
+                    return `${colorClasses.bg} ${colorClasses.border}`;
+                }
+              };
 
               return (
                 <TooltipProvider key={seat.id}>
@@ -124,14 +124,22 @@ export const SeatMatrixPreview = ({
                     <TooltipTrigger asChild>
                       <div
                         className={cn(
-                          "relative border rounded-sm group cursor-default transition-colors duration-200",
+                          "relative border rounded-sm group transition-colors duration-200",
                           sizeClasses[variant],
-                          colorClasses.bg,
-                          colorClasses.border,
-                          variant === "default" && "hover:border-primary"
+                          mode === "bus" && busSeat
+                            ? getStatusColor(busSeat.status)
+                            : `${colorClasses.bg} ${colorClasses.border}`,
+                          variant !== "small" && "hover:bg-opacity-80",
+                          isSelected && "ring-2 ring-primary",
+                          mode === "bus" && "cursor-pointer hover:shadow-sm"
                         )}
+                        onClick={() => {
+                          if (mode === "bus" && busSeat && onSeatClick) {
+                            onSeatClick(busSeat.id);
+                          }
+                        }}
                       >
-                        {variant === "default" && showLabels && (
+                        {showLabels && (
                           <span
                             className={cn(
                               "absolute inset-0 flex items-center justify-center font-medium text-muted-foreground",
@@ -145,26 +153,35 @@ export const SeatMatrixPreview = ({
                     </TooltipTrigger>
                     <TooltipContent
                       side="top"
-                      className="text-xs bg-gray-200 border-red-500"
+                      className="text-xs bg-white border shadow-sm"
                     >
                       <div className="space-y-1">
                         <p className="font-medium text-gray-900">
                           Asiento {seat.name}
                         </p>
-                        {seatTier ? (
+                        {seatTier && (
                           <>
                             <p className="text-gray-700">
-                              Tipo de asiento: {seatTier.name}
+                              Tipo: {seatTier.name}
                             </p>
                             <p className="text-gray-700">
                               Precio: $
                               {parseFloat(seatTier.basePrice).toFixed(2)}
                             </p>
                           </>
-                        ) : (
-                          <p className="text-gray-700">
-                            Sin tipo de asiento asignado
-                          </p>
+                        )}
+                        {mode === "bus" && busSeat && (
+                          <>
+                            <p className="text-gray-700">
+                              Estado:{" "}
+                              {busSeat.status === "available"
+                                ? "Disponible"
+                                : "Mantenimiento"}
+                            </p>
+                            <p className="text-xs text-gray-500 font-mono">
+                              ID: {busSeat.id}
+                            </p>
+                          </>
                         )}
                       </div>
                     </TooltipContent>
@@ -182,7 +199,7 @@ export const SeatMatrixPreview = ({
     <div
       className={cn(
         "flex items-center overflow-auto p-2",
-        variant === "default" ? "gap-4" : "gap-2",
+        variant === "small" ? "gap-2" : "gap-4",
         className
       )}
     >

@@ -32,7 +32,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useUpdateBus } from "@/hooks/useBuses";
-import { maintenanceStatusEnum, seatStatusEnum } from "@/db/schema";
+import { maintenanceStatusEnum } from "@/db/schema";
 import { Company } from "@/types/company.types";
 import { SeatMatrixPreview } from "./seat-matrix-preview";
 import { useSeatTiers } from "@/hooks/useSeatTiers";
@@ -41,7 +41,7 @@ import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useUpdateSeatStatus } from "@/hooks/useBusSeats";
+import { EditSeatModal } from "./edit-seat-modal";
 
 interface EditBusModalProps {
   isOpen: boolean;
@@ -60,8 +60,10 @@ export const EditBusModal = ({
   const updateBus = useUpdateBus();
   const { data: seatTiers } = useSeatTiers();
   const seatMatrix = bus.seatMatrix as SeatTemplateMatrix;
-  const updateSeatStatus = useUpdateSeatStatus();
-  const [selectedSeatId, setSelectedSeatId] = useState<string | null>(null);
+  const [selectedSeatId, setSelectedSeatId] = useState<string | undefined>(
+    undefined
+  );
+  const [isEditSeatModalOpen, setIsEditSeatModalOpen] = useState(false);
 
   const editForm = useForm<UpdateBusInput>({
     resolver: zodResolver(updateBusSchema),
@@ -107,203 +109,181 @@ export const EditBusModal = ({
     }
   };
 
-  const handleSeatStatusChange = async (status: string) => {
-    if (!selectedSeatId) return;
+  const selectedSeat = bus.seats?.find((seat) => seat.id === selectedSeatId);
+  const selectedSeatTier = selectedSeat
+    ? seatTiers?.find((tier) => tier.id === selectedSeat.tierId)
+    : undefined;
 
-    try {
-      await updateSeatStatus.mutateAsync({
-        seatId: selectedSeatId,
-        status,
-      });
-      toast({
-        title: "Estado actualizado",
-        description: "El estado del asiento ha sido actualizado exitosamente.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Hubo un error al actualizar el estado del asiento.",
-        variant: "destructive",
-      });
-    }
+  const handleSeatClick = (seatId: string) => {
+    setSelectedSeatId(seatId);
+    setIsEditSeatModalOpen(true);
   };
 
-  const selectedSeat = bus.seats?.find((seat) => seat.id === selectedSeatId);
-
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col p-0">
-        <DialogHeader className="px-6 pt-6">
-          <DialogTitle>Editar Bus</DialogTitle>
-        </DialogHeader>
-        <Form {...editForm}>
-          <form
-            onSubmit={editForm.handleSubmit(onSubmit)}
-            className="flex-1 overflow-hidden"
-          >
-            <Tabs defaultValue="details" className="flex-1 flex flex-col">
-              <div className="border-b px-6">
-                <TabsList className="w-full justify-start gap-6 rounded-none border-b-0 pl-0">
-                  <TabsTrigger
-                    value="details"
-                    className="relative rounded-none border-b-2 border-b-transparent data-[state=active]:border-b-primary"
-                  >
-                    Detalles
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="seats"
-                    className="relative rounded-none border-b-2 border-b-transparent data-[state=active]:border-b-primary"
-                  >
-                    Asientos
-                  </TabsTrigger>
-                </TabsList>
-              </div>
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col p-0">
+          <DialogHeader className="px-6 pt-6">
+            <DialogTitle>Editar Bus</DialogTitle>
+          </DialogHeader>
+          <Form {...editForm}>
+            <form
+              onSubmit={editForm.handleSubmit(onSubmit)}
+              className="flex-1 overflow-hidden"
+            >
+              <Tabs defaultValue="details" className="flex-1 flex flex-col">
+                <div className="border-b px-6">
+                  <TabsList className="w-full justify-start gap-6 rounded-none border-b-0 pl-0">
+                    <TabsTrigger
+                      value="details"
+                      className="relative rounded-none border-b-2 border-b-transparent data-[state=active]:border-b-primary"
+                    >
+                      Detalles
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="seats"
+                      className="relative rounded-none border-b-2 border-b-transparent data-[state=active]:border-b-primary"
+                    >
+                      Asientos
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
 
-              <ScrollArea className="flex-1">
-                <TabsContent value="details" className="m-0">
-                  <div className="p-6 space-y-6">
-                    <h2 className="text-lg font-semibold">
-                      Información General
-                    </h2>
-                    <div className="space-y-4">
-                      <FormField
-                        control={editForm.control}
-                        name="plateNumber"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Número de Placa</FormLabel>
-                            <FormControl>
-                              <Input placeholder="ABC-123" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                <ScrollArea className="flex-1">
+                  <TabsContent value="details" className="m-0">
+                    <div className="p-6 space-y-6">
+                      <h2 className="text-lg font-semibold">
+                        Información General
+                      </h2>
+                      <div className="space-y-4">
+                        <FormField
+                          control={editForm.control}
+                          name="plateNumber"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Número de Placa</FormLabel>
+                              <FormControl>
+                                <Input placeholder="ABC-123" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-                      <FormField
-                        control={editForm.control}
-                        name="companyId"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Compañía</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Seleccionar compañía" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {companies.map((company) => (
-                                  <SelectItem
-                                    key={company.id}
-                                    value={company.id}
-                                  >
-                                    {company.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={editForm.control}
-                        name="maintenanceStatus"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Estado de Mantenimiento</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value || "active"}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Seleccionar estado" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {maintenanceStatusEnum.enumValues.map(
-                                  (status) => (
-                                    <SelectItem key={status} value={status}>
-                                      {status === "active"
-                                        ? "Activo"
-                                        : status === "in_maintenance"
-                                        ? "En Mantenimiento"
-                                        : "Retirado"}
+                        <FormField
+                          control={editForm.control}
+                          name="companyId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Compañía</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Seleccionar compañía" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {companies.map((company) => (
+                                    <SelectItem
+                                      key={company.id}
+                                      value={company.id}
+                                    >
+                                      {company.name}
                                     </SelectItem>
-                                  )
-                                )}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-medium text-muted-foreground">
-                        Información Adicional
-                      </h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <h4 className="text-sm font-medium text-muted-foreground mb-1">
-                            Plantilla
-                          </h4>
-                          <p className="text-sm">
-                            {bus.template?.name || "N/A"}
-                          </p>
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-medium text-muted-foreground mb-1">
-                            Capacidad Total
-                          </h4>
-                          <p className="text-sm">
-                            {bus.template?.totalCapacity || 0} asientos
-                          </p>
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-medium text-muted-foreground mb-1">
-                            Fecha de Creación
-                          </h4>
-                          <p className="text-sm">
-                            {bus.createdAt
-                              ? new Date(bus.createdAt).toLocaleDateString()
-                              : "N/A"}
-                          </p>
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-medium text-muted-foreground mb-1">
-                            Última Actualización
-                          </h4>
-                          <p className="text-sm">
-                            {bus.updatedAt
-                              ? new Date(bus.updatedAt).toLocaleDateString()
-                              : "N/A"}
-                          </p>
+                        <FormField
+                          control={editForm.control}
+                          name="maintenanceStatus"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Estado de Mantenimiento</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value || "active"}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Seleccionar estado" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {maintenanceStatusEnum.enumValues.map(
+                                    (status) => (
+                                      <SelectItem key={status} value={status}>
+                                        {status === "active"
+                                          ? "Activo"
+                                          : status === "in_maintenance"
+                                          ? "En Mantenimiento"
+                                          : "Retirado"}
+                                      </SelectItem>
+                                    )
+                                  )}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="space-y-4">
+                        <h3 className="text-sm font-medium text-muted-foreground">
+                          Información Adicional
+                        </h3>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <h4 className="text-sm font-medium text-muted-foreground mb-1">
+                              Plantilla
+                            </h4>
+                            <p className="text-sm">
+                              {bus.template?.name || "N/A"}
+                            </p>
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-medium text-muted-foreground mb-1">
+                              Capacidad Total
+                            </h4>
+                            <p className="text-sm">
+                              {bus.template?.totalCapacity || 0} asientos
+                            </p>
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-medium text-muted-foreground mb-1">
+                              Fecha de Creación
+                            </h4>
+                            <p className="text-sm">
+                              {bus.createdAt
+                                ? new Date(bus.createdAt).toLocaleDateString()
+                                : "N/A"}
+                            </p>
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-medium text-muted-foreground mb-1">
+                              Última Actualización
+                            </h4>
+                            <p className="text-sm">
+                              {bus.updatedAt
+                                ? new Date(bus.updatedAt).toLocaleDateString()
+                                : "N/A"}
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </TabsContent>
+                  </TabsContent>
 
-                <TabsContent value="seats" className="m-0">
-                  <div className="p-6 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-lg font-semibold">
-                        Vista Superior del Bus
-                      </h2>
-                    </div>
-
-                    <div className="flex flex-col">
-                      <div className="flex items-center mb-4">
-                        <h3 className="text-base font-medium">
-                          Distribución de Asientos
-                        </h3>
+                  <TabsContent value="seats" className="m-0">
+                    <div className="p-6 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h2 className="text-lg font-semibold">
+                          Vista Superior del Bus
+                        </h2>
                       </div>
 
                       <div className="flex gap-6">
@@ -326,20 +306,17 @@ export const EditBusModal = ({
                                 Primer Piso
                               </h4>
                               <div className="bg-gray-100 rounded-lg flex items-center justify-center min-h-[350px] w-full">
-                                <div className="w-full h-full flex items-center justify-center p-8">
-                                  <div className="w-fit max-w-full max-h-full">
+                                <div className="w-full h-full flex items-center justify-center p-4">
+                                  <div className="w-full h-full flex items-center justify-center">
                                     <SeatMatrixPreview
                                       matrix={seatMatrix}
                                       seatTiers={seatTiers || []}
-                                      className="justify-center"
+                                      className="justify-center scale-90 transform origin-center"
                                       floor={1}
-                                      variant="bus"
-                                      seats={bus.seats?.map((seat) => ({
-                                        id: seat.id,
-                                        seatNumber: seat.seatNumber,
-                                        status: seat.status || "available",
-                                      }))}
-                                      onSeatClick={setSelectedSeatId}
+                                      mode="bus"
+                                      variant="default"
+                                      seats={bus.seats}
+                                      onSeatClick={handleSeatClick}
                                       selectedSeatId={selectedSeatId}
                                     />
                                   </div>
@@ -353,20 +330,17 @@ export const EditBusModal = ({
                                   Segundo Piso
                                 </h4>
                                 <div className="bg-gray-100 rounded-lg flex items-center justify-center min-h-[350px] w-full">
-                                  <div className="w-full h-full flex items-center justify-center p-8">
-                                    <div className="w-fit max-w-full max-h-full">
+                                  <div className="w-full h-full flex items-center justify-center p-4">
+                                    <div className="w-full h-full flex items-center justify-center">
                                       <SeatMatrixPreview
                                         matrix={seatMatrix}
                                         seatTiers={seatTiers || []}
-                                        className="justify-center"
+                                        className="justify-center scale-90 transform origin-center"
                                         floor={2}
-                                        variant="bus"
-                                        seats={bus.seats?.map((seat) => ({
-                                          id: seat.id,
-                                          seatNumber: seat.seatNumber,
-                                          status: seat.status || "available",
-                                        }))}
-                                        onSeatClick={setSelectedSeatId}
+                                        mode="bus"
+                                        variant="default"
+                                        seats={bus.seats}
+                                        onSeatClick={handleSeatClick}
                                         selectedSeatId={selectedSeatId}
                                       />
                                     </div>
@@ -389,66 +363,8 @@ export const EditBusModal = ({
                           </div>
                         </div>
 
-                        <div className="w-80 space-y-6">
-                          {/* Detalles del Asiento Seleccionado */}
-                          {selectedSeat && (
-                            <Card>
-                              <CardHeader>
-                                <CardTitle className="text-lg">
-                                  Detalles del Asiento
-                                </CardTitle>
-                              </CardHeader>
-                              <CardContent className="space-y-4">
-                                <div className="space-y-2">
-                                  <div>
-                                    <span className="text-sm font-medium">
-                                      ID:
-                                    </span>
-                                    <p className="text-sm font-mono">
-                                      {selectedSeat.id}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <span className="text-sm font-medium">
-                                      Número:
-                                    </span>
-                                    <p className="text-sm">
-                                      {selectedSeat.seatNumber}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <span className="text-sm font-medium">
-                                      Estado:
-                                    </span>
-                                    <Select
-                                      value={selectedSeat.status || "available"}
-                                      onValueChange={handleSeatStatusChange}
-                                    >
-                                      <SelectTrigger className="w-full mt-1">
-                                        <SelectValue placeholder="Seleccionar estado" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {seatStatusEnum.enumValues.map(
-                                          (status) => (
-                                            <SelectItem
-                                              key={status}
-                                              value={status}
-                                            >
-                                              {status === "available"
-                                                ? "Disponible"
-                                                : "Mantenimiento"}
-                                            </SelectItem>
-                                          )
-                                        )}
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          )}
-
-                          {/* Leyenda de Tipos de Asiento */}
+                        {/* Legend Card */}
+                        <div className="w-80">
                           <Card>
                             <CardHeader>
                               <CardTitle className="text-lg">
@@ -497,22 +413,34 @@ export const EditBusModal = ({
                         </div>
                       </div>
                     </div>
-                  </div>
-                </TabsContent>
-              </ScrollArea>
-            </Tabs>
+                  </TabsContent>
+                </ScrollArea>
+              </Tabs>
 
-            <div className="flex items-center justify-end gap-4 p-6 border-t bg-muted/50">
-              <Button type="button" variant="outline" onClick={onClose}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={updateBus.isPending}>
-                Actualizar Bus
-              </Button>
-            </div>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+              <div className="flex items-center justify-end gap-4 p-6 border-t bg-muted/50">
+                <Button type="button" variant="outline" onClick={onClose}>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={updateBus.isPending}>
+                  Actualizar Bus
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {selectedSeat && (
+        <EditSeatModal
+          isOpen={isEditSeatModalOpen}
+          onClose={() => {
+            setIsEditSeatModalOpen(false);
+            setSelectedSeatId(undefined);
+          }}
+          seat={selectedSeat}
+          seatTier={selectedSeatTier}
+        />
+      )}
+    </>
   );
 };

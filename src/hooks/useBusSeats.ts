@@ -10,7 +10,7 @@ export function useBusSeats(busId: string) {
   return useQuery({
     queryKey: ["bus-seats", busId],
     queryFn: async () => {
-      const response = await fetch(`/api/buses/${busId}/seats`);
+      const response = await fetch(`/api/bus-seats?busId=${busId}`);
       if (!response.ok) {
         throw new Error("Error al obtener los asientos del bus");
       }
@@ -38,7 +38,7 @@ export function useUpdateSeatStatus() {
 
       return response.json() as Promise<BusSeat>;
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({
         queryKey: ["bus-seats", data.busId],
       });
