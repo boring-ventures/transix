@@ -10,12 +10,13 @@ export function useBusSeats(busId: string) {
   return useQuery({
     queryKey: ["bus-seats", busId],
     queryFn: async () => {
-      const response = await fetch(`/api/bus-seats?busId=${busId}`);
+      const response = await fetch(`/api/buses/${busId}/seats`);
       if (!response.ok) {
         throw new Error("Error al obtener los asientos del bus");
       }
       return response.json() as Promise<BusSeat[]>;
     },
+    enabled: !!busId,
   });
 }
 

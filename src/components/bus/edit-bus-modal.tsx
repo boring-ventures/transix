@@ -42,6 +42,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EditSeatModal } from "./edit-seat-modal";
+import { useBusSeats } from "@/hooks/useBusSeats";
 
 interface EditBusModalProps {
   isOpen: boolean;
@@ -59,6 +60,7 @@ export const EditBusModal = ({
   const { toast } = useToast();
   const updateBus = useUpdateBus();
   const { data: seatTiers } = useSeatTiers();
+  const { data: busSeats } = useBusSeats(bus.id);
   const seatMatrix = bus.seatMatrix as SeatTemplateMatrix;
   const [selectedSeatId, setSelectedSeatId] = useState<string | undefined>(
     undefined
@@ -109,7 +111,7 @@ export const EditBusModal = ({
     }
   };
 
-  const selectedSeat = bus.seats?.find((seat) => seat.id === selectedSeatId);
+  const selectedSeat = busSeats?.find((seat) => seat.id === selectedSeatId);
   const selectedSeatTier = selectedSeat
     ? seatTiers?.find((tier) => tier.id === selectedSeat.tierId)
     : undefined;
@@ -315,7 +317,7 @@ export const EditBusModal = ({
                                       floor={1}
                                       mode="bus"
                                       variant="default"
-                                      seats={bus.seats}
+                                      seats={busSeats}
                                       onSeatClick={handleSeatClick}
                                       selectedSeatId={selectedSeatId}
                                     />
@@ -339,7 +341,7 @@ export const EditBusModal = ({
                                         floor={2}
                                         mode="bus"
                                         variant="default"
-                                        seats={bus.seats}
+                                        seats={busSeats}
                                         onSeatClick={handleSeatClick}
                                         selectedSeatId={selectedSeatId}
                                       />
