@@ -6,10 +6,9 @@ import { updateBusSeatSchema } from "@/types/bus.types";
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params; 
     const body = await request.json();
     const validatedData = updateBusSeatSchema.parse(body);
 
@@ -19,7 +18,7 @@ export async function PATCH(
         ...validatedData,
         updatedAt: new Date(),
       })
-      .where(eq(busSeats.id, id))
+      .where(eq(busSeats.id, params.id))
       .returning();
 
     if (!updatedSeat.length) {

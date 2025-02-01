@@ -1,9 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { BusSeat } from "@/types/bus.types";
+import type { BusSeat, UpdateBusSeatInput } from "@/types/bus.types";
 
 interface UpdateSeatStatusInput {
   seatId: string;
-  status: string;
+  status?: string;
+  tierId?: string;
+}
+
+interface BulkUpdateSeatsInput {
+  seatIds: string[];
+  data: UpdateBusSeatInput;
 }
 
 export function useBusSeats(busId: string) {
@@ -24,17 +30,17 @@ export function useUpdateSeatStatus() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ seatId, status }: UpdateSeatStatusInput) => {
+    mutationFn: async ({ seatId, status, tierId }: UpdateSeatStatusInput) => {
       const response = await fetch(`/api/bus-seats/${seatId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, tierId }),
       });
 
       if (!response.ok) {
-        throw new Error("Error al actualizar el estado del asiento");
+        throw new Error("Error al actualizar el asiento");
       }
 
       return response.json() as Promise<BusSeat>;
@@ -43,6 +49,35 @@ export function useUpdateSeatStatus() {
       queryClient.invalidateQueries({
         queryKey: ["bus-seats", data.busId],
       });
+    },
+  });
+}
+
+export function useBulkUpdateSeats() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ seatIds, data }: BulkUpdateSeatsInput) => {
+      const response = await fetch(`/api/bus-seats`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ seatIds, data }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Error al actualizar los asientos");
+      }
+
+      return response.json() as Promise<BusSeat[]>;
+    },
+    onSuccess: (data) => {
+      if (data.length > 0) {
+        queryClient.invalidateQueries({
+          queryKey: ["bus-seats", data[0].busId],
+        });
+      }
     },
   });
 } 

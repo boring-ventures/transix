@@ -42,7 +42,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EditSeatModal } from "./edit-seat-modal";
-import { useBusSeats } from "@/hooks/useBusSeats";
+import { useBusSeats, useBulkUpdateSeats } from "@/hooks/useBusSeats";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ChevronDown } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface EditBusModalProps {
   isOpen: boolean;
@@ -60,12 +69,15 @@ export const EditBusModal = ({
   const { toast } = useToast();
   const updateBus = useUpdateBus();
   const { data: seatTiers } = useSeatTiers();
-  const { data: busSeats } = useBusSeats(bus.id);
+  const { data: busSeats, refetch: refetchBusSeats } = useBusSeats(bus.id);
+  const bulkUpdateSeats = useBulkUpdateSeats();
   const seatMatrix = bus.seatMatrix as SeatTemplateMatrix;
   const [selectedSeatId, setSelectedSeatId] = useState<string | undefined>(
     undefined
   );
+  const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
   const [isEditSeatModalOpen, setIsEditSeatModalOpen] = useState(false);
+  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
 
   const editForm = useForm<UpdateBusInput>({
     resolver: zodResolver(updateBusSchema),
@@ -117,8 +129,79 @@ export const EditBusModal = ({
     : undefined;
 
   const handleSeatClick = (seatId: string) => {
-    setSelectedSeatId(seatId);
-    setIsEditSeatModalOpen(true);
+    if (isMultiSelectMode) {
+      setSelectedSeats((prev) =>
+        prev.includes(seatId)
+          ? prev.filter((id) => id !== seatId)
+          : [...prev, seatId]
+      );
+    } else {
+      setSelectedSeatId(seatId);
+      setIsEditSeatModalOpen(true);
+    }
+  };
+
+  const handleBulkStatusUpdate = async (
+    status: "available" | "maintenance"
+  ) => {
+    if (selectedSeats.length === 0) return;
+
+    try {
+      await bulkUpdateSeats.mutateAsync({
+        seatIds: selectedSeats,
+        data: { status },
+      });
+      setSelectedSeats([]);
+      setIsMultiSelectMode(false);
+      await refetchBusSeats();
+      toast({
+        title: "Asientos actualizados",
+        description: "Los asientos han sido actualizados exitosamente.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Hubo un error al actualizar los asientos.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleBulkTierUpdate = async (tierId: string) => {
+    if (selectedSeats.length === 0) return;
+
+    try {
+      await bulkUpdateSeats.mutateAsync({
+        seatIds: selectedSeats,
+        data: { tierId },
+      });
+      setSelectedSeats([]);
+      setIsMultiSelectMode(false);
+      await refetchBusSeats();
+      toast({
+        title: "Asientos actualizados",
+        description: "Los niveles han sido actualizados exitosamente.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Hubo un error al actualizar los asientos.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleMultiSelectToggle = (checked: boolean) => {
+    setIsMultiSelectMode(checked);
+    if (!checked) {
+      setSelectedSeats([]);
+    }
   };
 
   return (
@@ -283,9 +366,62 @@ export const EditBusModal = ({
                   <TabsContent value="seats" className="m-0">
                     <div className="p-6 space-y-4">
                       <div className="flex items-center justify-between">
-                        <h2 className="text-lg font-semibold">
-                          Vista Superior del Bus
-                        </h2>
+                        <div className="flex items-center gap-4">
+                          <h2 className="text-lg font-semibold">
+                            Vista Superior del Bus
+                          </h2>
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              id="multi-select"
+                              checked={isMultiSelectMode}
+                              onCheckedChange={handleMultiSelectToggle}
+                            />
+                            <Label htmlFor="multi-select">
+                              Selección múltiple
+                            </Label>
+                          </div>
+                        </div>
+                        {selectedSeats.length > 0 && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground">
+                              {selectedSeats.length} asientos seleccionados
+                            </span>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                  Acciones{" "}
+                                  <ChevronDown className="ml-2 h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent>
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    handleBulkStatusUpdate("available")
+                                  }
+                                >
+                                  Marcar como disponibles
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    handleBulkStatusUpdate("maintenance")
+                                  }
+                                >
+                                  Marcar como mantenimiento
+                                </DropdownMenuItem>
+                                {seatTiers?.map((tier) => (
+                                  <DropdownMenuItem
+                                    key={tier.id}
+                                    onClick={() =>
+                                      handleBulkTierUpdate(tier.id)
+                                    }
+                                  >
+                                    Cambiar a nivel: {tier.name}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex gap-6">
@@ -320,6 +456,7 @@ export const EditBusModal = ({
                                       seats={busSeats}
                                       onSeatClick={handleSeatClick}
                                       selectedSeatId={selectedSeatId}
+                                      selectedSeats={selectedSeats}
                                     />
                                   </div>
                                 </div>
@@ -344,6 +481,7 @@ export const EditBusModal = ({
                                         seats={busSeats}
                                         onSeatClick={handleSeatClick}
                                         selectedSeatId={selectedSeatId}
+                                        selectedSeats={selectedSeats}
                                       />
                                     </div>
                                   </div>
@@ -438,6 +576,7 @@ export const EditBusModal = ({
           onClose={() => {
             setIsEditSeatModalOpen(false);
             setSelectedSeatId(undefined);
+            refetchBusSeats();
           }}
           seat={selectedSeat}
           seatTier={selectedSeatTier}

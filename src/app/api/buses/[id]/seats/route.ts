@@ -19,6 +19,7 @@ export async function GET(
   } catch (error) {
     console.error("Error fetching bus seats:", error);
     return NextResponse.json(
+      { error: "Error al obtener los asientos del bus" },
       { status: 500 }
     );
   }

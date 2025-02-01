@@ -3,6 +3,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { BusSeat, SeatTier } from "@/types/bus.types";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,8 @@ import { useToast } from "@/hooks/use-toast";
 import { seatStatusEnum } from "@/db/schema";
 import { Card, CardContent } from "@/components/ui/card";
 import { useUpdateSeatStatus } from "@/hooks/useBusSeats";
+import { Badge } from "@/components/ui/badge";
+import { useSeatTiers } from "@/hooks/useSeatTiers";
 
 interface EditSeatModalProps {
   isOpen: boolean;
@@ -32,25 +35,50 @@ export const EditSeatModal = ({
   seatTier,
 }: EditSeatModalProps) => {
   const { toast } = useToast();
-  const updateSeatStatus = useUpdateSeatStatus();
+  const updateSeat = useUpdateSeatStatus();
+  const { data: seatTiers } = useSeatTiers();
 
   const handleStatusChange = async (status: string) => {
     try {
-      await updateSeatStatus.mutateAsync({
+      await updateSeat.mutateAsync({
         seatId: seat.id,
         status,
       });
       toast({
-        title: "Estado actualizado",
+        title: "Asiento actualizado",
         description: "El estado del asiento ha sido actualizado exitosamente.",
       });
+      onClose();
     } catch (error) {
       toast({
         title: "Error",
         description:
           error instanceof Error
             ? error.message
-            : "Hubo un error al actualizar el estado del asiento.",
+            : "Hubo un error al actualizar el asiento.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleTierChange = async (tierId: string) => {
+    try {
+      await updateSeat.mutateAsync({
+        seatId: seat.id,
+        tierId,
+      });
+      toast({
+        title: "Asiento actualizado",
+        description: "El nivel del asiento ha sido actualizado exitosamente.",
+      });
+      onClose();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Hubo un error al actualizar el asiento.",
         variant: "destructive",
       });
     }
@@ -60,63 +88,84 @@ export const EditSeatModal = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Editar Asiento {seat.seatNumber}</DialogTitle>
+          <DialogTitle>Editar Asiento</DialogTitle>
         </DialogHeader>
+
         <div className="space-y-6">
-          <Card>
-            <CardContent className="pt-6 space-y-4">
-              <div className="space-y-2">
-                <div>
-                  <span className="text-sm font-medium">ID:</span>
-                  <p className="text-sm font-mono">{seat.id}</p>
-                </div>
-                <div>
-                  <span className="text-sm font-medium">Número:</span>
-                  <p className="text-sm">{seat.seatNumber}</p>
-                </div>
-                {seatTier && (
-                  <>
-                    <div>
-                      <span className="text-sm font-medium">Tipo:</span>
-                      <p className="text-sm">{seatTier.name}</p>
-                    </div>
-                    <div>
-                      <span className="text-sm font-medium">Precio Base:</span>
-                      <p className="text-sm">
-                        ${parseFloat(seatTier.basePrice).toFixed(2)}
-                      </p>
-                    </div>
-                  </>
-                )}
-                <div>
-                  <span className="text-sm font-medium">Estado:</span>
-                  <Select
-                    value={seat.status || "available"}
-                    onValueChange={handleStatusChange}
-                  >
-                    <SelectTrigger className="w-full mt-1">
-                      <SelectValue placeholder="Seleccionar estado" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {seatStatusEnum.enumValues.map((status) => (
-                        <SelectItem key={status} value={status}>
-                          {status === "available"
-                            ? "Disponible"
-                            : "Mantenimiento"}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium">Información del Asiento</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <span className="text-sm text-muted-foreground">Número</span>
+                <p className="text-sm font-medium">{seat.seatNumber}</p>
               </div>
-            </CardContent>
-          </Card>
-          <div className="flex justify-end">
-            <Button variant="outline" onClick={onClose}>
-              Cerrar
-            </Button>
+              <div>
+                <span className="text-sm text-muted-foreground">Estado</span>
+                <Badge
+                  variant="outline"
+                  className={
+                    seat.status === "maintenance"
+                      ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-100"
+                      : "bg-green-100 text-green-800 hover:bg-green-100"
+                  }
+                >
+                  {seat.status === "maintenance"
+                    ? "Mantenimiento"
+                    : "Disponible"}
+                </Badge>
+              </div>
+              <div className="col-span-2">
+                <span className="text-sm text-muted-foreground">Nivel</span>
+                <p className="text-sm font-medium">
+                  {seatTier?.name || "Sin nivel"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Estado</label>
+              <Select
+                defaultValue={seat.status}
+                onValueChange={handleStatusChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="available">Disponible</SelectItem>
+                  <SelectItem value="maintenance">Mantenimiento</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nivel</label>
+              <Select
+                defaultValue={seat.tierId}
+                onValueChange={handleTierChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar nivel" />
+                </SelectTrigger>
+                <SelectContent>
+                  {seatTiers?.map((tier) => (
+                    <SelectItem key={tier.id} value={tier.id}>
+                      {tier.name} - ${parseFloat(tier.basePrice).toFixed(2)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

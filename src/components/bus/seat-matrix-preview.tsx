@@ -37,6 +37,7 @@ interface SeatMatrixPreviewProps {
   seats?: BusSeat[];
   onSeatClick?: (seatId: string) => void;
   selectedSeatId?: string;
+  selectedSeats?: string[];
 }
 
 export const SeatMatrixPreview = ({
@@ -50,8 +51,12 @@ export const SeatMatrixPreview = ({
   seats,
   onSeatClick,
   selectedSeatId,
+  selectedSeats = [],
 }: SeatMatrixPreviewProps) => {
-  const getTierColor = (tier: SeatTier | undefined) => {
+  const getTierColor = (tierId: string | undefined) => {
+    if (!tierId) return { bg: "bg-gray-100", border: "border-gray-200" };
+
+    const tier = seatTiers.find((t) => t.id === tierId);
     if (!tier) return { bg: "bg-gray-100", border: "border-gray-200" };
 
     // Try to get color by tier name
@@ -94,15 +99,18 @@ export const SeatMatrixPreview = ({
         {rows.map((row, rowIndex) => (
           <div key={rowIndex} className={cn("flex", gapSizes[variant])}>
             {row.map((seat) => {
-              const seatTier = seatTiers.find((t) => t.id === seat.tierId);
               const busSeat =
                 mode === "bus"
                   ? seats?.find((s) => s.seatNumber === seat.name)
                   : undefined;
-              const isSelected =
-                mode === "bus" && busSeat?.id === selectedSeatId;
 
-              const colorClasses = getTierColor(seatTier);
+              const isSelected =
+                mode === "bus" &&
+                (busSeat?.id === selectedSeatId ||
+                  (busSeat && selectedSeats.includes(busSeat.id)));
+
+              // Use the bus seat's tier if available, otherwise use the template's tier
+              const colorClasses = getTierColor(busSeat?.tierId || seat.tierId);
 
               const getStatusColor = (
                 status: "available" | "maintenance" | null | undefined
@@ -118,6 +126,10 @@ export const SeatMatrixPreview = ({
                 }
               };
 
+              const seatTier = seatTiers.find(
+                (t) => t.id === (busSeat?.tierId || seat.tierId)
+              );
+
               return (
                 <TooltipProvider key={seat.id}>
                   <Tooltip delayDuration={300}>
@@ -131,7 +143,9 @@ export const SeatMatrixPreview = ({
                             : `${colorClasses.bg} ${colorClasses.border}`,
                           variant !== "small" && "hover:bg-opacity-80",
                           isSelected && "ring-2 ring-primary",
-                          mode === "bus" && "cursor-pointer hover:shadow-sm"
+                          mode === "bus" && "cursor-pointer hover:shadow-sm",
+                          selectedSeats.length > 0 &&
+                            "hover:ring-2 hover:ring-primary/50"
                         )}
                         onClick={() => {
                           if (mode === "bus" && busSeat && onSeatClick) {
