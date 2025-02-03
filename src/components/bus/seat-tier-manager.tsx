@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useCreateSeatTier } from "@/hooks/useSeatTiers";
 import { SeatTier, CreateSeatTierInput } from "@/types/bus.types";
 import { cn } from "@/lib/utils";
+import { getTierColor } from "@/lib/seat-tier-colors";
 
 interface SeatTierManagerProps {
   companyId: string;
@@ -29,29 +30,6 @@ interface SeatTierManagerProps {
     companyId: string;
   }[];
 }
-
-const TIER_COLORS = [
-  {
-    bg: "bg-red-100",
-    border: "border-red-200",
-  },
-  {
-    bg: "bg-red-200",
-    border: "border-red-300",
-  },
-  {
-    bg: "bg-gray-100",
-    border: "border-gray-200",
-  },
-  {
-    bg: "bg-gray-200",
-    border: "border-gray-300",
-  },
-  {
-    bg: "bg-red-50",
-    border: "border-red-100",
-  },
-];
 
 export const SeatTierManager = ({
   companyId,
@@ -193,7 +171,7 @@ export const SeatTierManager = ({
 
       <div className="space-y-2">
         {existingTiers.map((tier, index) => {
-          const colorClasses = TIER_COLORS[index % TIER_COLORS.length];
+          const colorClasses = getTierColor(index);
           return (
             <div
               key={tier.id}

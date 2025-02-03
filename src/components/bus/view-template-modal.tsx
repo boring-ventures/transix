@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { getTierColor } from "@/lib/seat-tier-colors";
 
 interface ViewTemplateModalProps {
   isOpen: boolean;
@@ -142,23 +143,18 @@ export const ViewTemplateModal = ({
                       </h3>
                       <div className="flex flex-col gap-2">
                         {seatTiers?.map((tier, index) => {
-                          const colorVariants = {
-                            first: "bg-red-100 border-red-200",
-                            second: "bg-red-200 border-red-300",
-                            third: "bg-gray-100 border-gray-200",
-                            fourth: "bg-gray-200 border-gray-300",
-                            fifth: "bg-red-50 border-red-100",
-                          };
-                          const colors = Object.values(colorVariants);
-                          const colorClass = colors[index % colors.length];
-
+                          const colorClass = getTierColor(index);
                           return (
                             <div
                               key={tier.id}
                               className="flex items-center gap-2 px-3 py-1.5 border rounded-lg"
                             >
                               <div
-                                className={`w-4 h-4 rounded-full border ${colorClass}`}
+                                className={cn(
+                                  "w-4 h-4 rounded-full border",
+                                  colorClass.bg,
+                                  colorClass.border
+                                )}
                               />
                               <div className="flex flex-col">
                                 <span className="text-sm font-medium">

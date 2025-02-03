@@ -1,29 +1,12 @@
 import { SeatTemplateMatrix, SeatTier, BusSeat } from "@/types/bus.types";
 import { cn } from "@/lib/utils";
+import { getTierColor } from "@/lib/seat-tier-colors";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-
-// Define specific colors for each tier by name
-const TIER_COLOR_MAP: Record<string, { bg: string; border: string }> = {
-  "12312": { bg: "bg-red-100", border: "border-red-200" },
-  VIP: { bg: "bg-red-200", border: "border-red-300" },
-  "Tester 2": { bg: "bg-gray-100", border: "border-gray-200" },
-  Regular: { bg: "bg-gray-200", border: "border-gray-300" },
-  Basico: { bg: "bg-red-50", border: "border-red-100" },
-};
-
-// Fallback colors for any additional tiers
-const FALLBACK_COLORS = [
-  { bg: "bg-red-100", border: "border-red-200" },
-  { bg: "bg-red-200", border: "border-red-300" },
-  { bg: "bg-gray-100", border: "border-gray-200" },
-  { bg: "bg-gray-200", border: "border-gray-300" },
-  { bg: "bg-red-50", border: "border-red-100" },
-];
 
 interface SeatMatrixPreviewProps {
   matrix: SeatTemplateMatrix;
@@ -53,19 +36,14 @@ export const SeatMatrixPreview = ({
   selectedSeatId,
   selectedSeats = [],
 }: SeatMatrixPreviewProps) => {
-  const getTierColor = (tierId: string | undefined) => {
+  const getTierColorClasses = (tierId: string | undefined) => {
     if (!tierId) return { bg: "bg-gray-100", border: "border-gray-200" };
 
-    const tier = seatTiers.find((t) => t.id === tierId);
-    if (!tier) return { bg: "bg-gray-100", border: "border-gray-200" };
+    const tierIndex = seatTiers.findIndex((t) => t.id === tierId);
+    if (tierIndex === -1)
+      return { bg: "bg-gray-100", border: "border-gray-200" };
 
-    // Try to get color by tier name
-    const colorByName = TIER_COLOR_MAP[tier.name];
-    if (colorByName) return colorByName;
-
-    // Fallback to index-based color
-    const index = seatTiers.findIndex((t) => t.id === tier.id);
-    return FALLBACK_COLORS[index % FALLBACK_COLORS.length];
+    return getTierColor(tierIndex);
   };
 
   const renderFloor = (floorKey: "firstFloor" | "secondFloor") => {
@@ -110,7 +88,9 @@ export const SeatMatrixPreview = ({
                   (busSeat && selectedSeats.includes(busSeat.id)));
 
               // Use the bus seat's tier if available, otherwise use the template's tier
-              const colorClasses = getTierColor(busSeat?.tierId || seat.tierId);
+              const colorClasses = getTierColorClasses(
+                busSeat?.tierId || seat.tierId
+              );
 
               const getStatusColor = (
                 status: "available" | "maintenance" | null | undefined
