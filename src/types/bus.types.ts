@@ -23,7 +23,7 @@ export type BusWithRelations = Bus & {
 export type SeatPosition = {
   id: string;
   name: string;
-  tierId?: string;
+  tierId: string;
   row: number;
   column: number;
 };
@@ -58,7 +58,7 @@ export const busTypeTemplateSchema = z.object({
       seats: z.array(z.object({
         id: z.string(),
         name: z.string(),
-        tierId: z.string().uuid("ID de nivel inválido").optional(),
+        tierId: z.string().uuid("ID de nivel inválido"),
         row: z.number(),
         column: z.number(),
       })),
@@ -71,25 +71,16 @@ export const busTypeTemplateSchema = z.object({
       seats: z.array(z.object({
         id: z.string(),
         name: z.string(),
-        tierId: z.string().uuid("ID de nivel inválido").optional(),
+        tierId: z.string().uuid("ID de nivel inválido"),
         row: z.number(),
         column: z.number(),
       })),
     }).optional(),
   }),
-  seatTiers: z.array(z.object({
-    id: z.string().uuid("ID de nivel inválido"),
-    name: z.string().min(1, "El nombre es requerido").trim(),
-    description: z.string().optional(),
-    basePrice: z.number().min(0, "El precio base debe ser mayor o igual a 0"),
-    isActive: z.boolean().default(true),
-    companyId: z.string().uuid("ID de empresa inválido"),
-  })),
   isActive: z.boolean().default(true),
 });
 
 export const createBusTypeTemplateSchema = busTypeTemplateSchema.superRefine((data, ctx) => {
-  // Remove the seat tiers validation since we're using existing tiers
   // Validate first floor seats have tiers
   const firstFloorUnassigned = data.seatTemplateMatrix.firstFloor.seats.some(
     seat => !seat.tierId
