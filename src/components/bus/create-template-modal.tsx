@@ -284,18 +284,18 @@ export const CreateTemplateModal = ({
             <div className="grid grid-cols-2 gap-6 p-6 h-full">
               {/* Left Column - Bus Details and Seat Tiers */}
               <div className="space-y-6 overflow-auto pr-2">
-                <div className="space-y-4">
+                <div className="space-y-4 px-1">
                   <FormField
                     control={createForm.control}
                     name="companyId"
                     render={({ field }) => (
-                      <FormItem>
+                      <FormItem className="pb-1">
                         <FormLabel>Empresa</FormLabel>
                         <Select
                           onValueChange={field.onChange}
                           value={field.value}
                         >
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder="Seleccionar empresa" />
                           </SelectTrigger>
                           <SelectContent>
@@ -314,10 +314,10 @@ export const CreateTemplateModal = ({
                     control={createForm.control}
                     name="name"
                     render={({ field }) => (
-                      <FormItem>
+                      <FormItem className="pb-1">
                         <FormLabel>Nombre</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input {...field} className="w-full" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -327,10 +327,10 @@ export const CreateTemplateModal = ({
                     control={createForm.control}
                     name="description"
                     render={({ field }) => (
-                      <FormItem>
+                      <FormItem className="pb-1">
                         <FormLabel>Descripción</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input {...field} className="w-full" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
