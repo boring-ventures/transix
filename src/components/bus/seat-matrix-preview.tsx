@@ -18,11 +18,11 @@ const TIER_COLOR_MAP: Record<string, { bg: string; border: string }> = {
 
 // Fallback colors for any additional tiers
 const FALLBACK_COLORS = [
-  { bg: "bg-blue-100", border: "border-blue-200" },
-  { bg: "bg-green-100", border: "border-green-200" },
-  { bg: "bg-yellow-100", border: "border-yellow-200" },
-  { bg: "bg-purple-100", border: "border-purple-200" },
-  { bg: "bg-pink-100", border: "border-pink-200" },
+  { bg: "bg-red-100", border: "border-red-200" },
+  { bg: "bg-red-200", border: "border-red-300" },
+  { bg: "bg-gray-100", border: "border-gray-200" },
+  { bg: "bg-gray-200", border: "border-gray-300" },
+  { bg: "bg-red-50", border: "border-red-100" },
 ];
 
 interface SeatMatrixPreviewProps {
