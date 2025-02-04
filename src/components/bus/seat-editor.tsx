@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SeatTier, SeatTemplateMatrix, SeatPosition } from "@/types/bus.types";
+import { cn } from "@/lib/utils";
 
 interface SeatEditorProps {
   value: SeatTemplateMatrix;
@@ -22,6 +23,9 @@ interface SeatEditorProps {
   onTierSelect: (floor: "firstFloor" | "secondFloor", tierId: string) => void;
   seatTiers: SeatTier[];
   onSecondFloorToggle: (checked: boolean) => void;
+  emptyStyle?: "dashed" | "solid";
+  selectedSeats?: string[];
+  isMultiSelectMode?: boolean;
 }
 
 const TIER_COLORS = [
@@ -60,6 +64,9 @@ export const SeatEditor = ({
   onTierSelect,
   seatTiers,
   onSecondFloorToggle,
+  emptyStyle,
+  selectedSeats = [],
+  isMultiSelectMode = false,
 }: SeatEditorProps) => {
   const [firstFloorConfig, setFirstFloorConfig] = useState({
     rows: value.firstFloor.dimensions.rows,
@@ -95,7 +102,8 @@ export const SeatEditor = ({
             name,
             row,
             column: col,
-            tierId: existingSeat?.tierId,
+            tierId: existingSeat?.tierId || "",
+            isEmpty: existingSeat?.isEmpty || false,
           });
         }
       }
@@ -195,18 +203,33 @@ export const SeatEditor = ({
           const tierIndex = seat.tierId
             ? seatTiers?.findIndex((t) => t.id === seat.tierId)
             : -1;
-          const colorClasses =
-            tierIndex >= 0
-              ? TIER_COLORS[tierIndex % TIER_COLORS.length]
-              : { bg: "hover:bg-gray-50", border: "" };
+          const colorClasses = seat.isEmpty
+            ? {
+                bg: "hover:bg-gray-50",
+                border:
+                  emptyStyle === "dashed" ? "border-dashed" : "border-gray-200",
+              }
+            : tierIndex >= 0
+            ? TIER_COLORS[tierIndex % TIER_COLORS.length]
+            : { bg: "hover:bg-gray-50", border: "" };
+
+          const isSelected = selectedSeats.includes(seat.id);
 
           return (
             <div
               key={seat.id}
-              className={`w-8 h-8 border rounded flex items-center justify-center text-xs cursor-pointer ${colorClasses.bg} ${colorClasses.border}`}
+              className={cn(
+                "w-8 h-8 border rounded flex items-center justify-center text-xs cursor-pointer relative",
+                colorClasses.bg,
+                colorClasses.border,
+                seat.isEmpty && "opacity-50",
+                isSelected &&
+                  isMultiSelectMode &&
+                  "ring-2 ring-primary ring-offset-2"
+              )}
               onClick={() => onSeatClick?.(seat.id, floor)}
             >
-              {seat.name}
+              {!seat.isEmpty && seat.name}
             </div>
           );
         })}
@@ -236,7 +259,7 @@ export const SeatEditor = ({
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h4 className="font-medium">Vista Previa</h4>
-        {hasSecondFloor && (
+        {value.secondFloor && (
           <div className="flex space-x-2">
             <Button
               type="button"
@@ -427,7 +450,7 @@ export const SeatEditor = ({
           <div className="flex items-center space-x-2">
             <input
               type="checkbox"
-              checked={hasSecondFloor}
+              checked={!!value.secondFloor}
               onChange={(e) => onSecondFloorToggle(e.target.checked)}
             />
             <FormLabel>Incluir segundo piso</FormLabel>

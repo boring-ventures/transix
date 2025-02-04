@@ -77,6 +77,13 @@ export const SeatMatrixPreview = ({
         {rows.map((row, rowIndex) => (
           <div key={rowIndex} className={cn("flex", gapSizes[variant])}>
             {row.map((seat) => {
+              // Skip rendering empty seats in preview mode
+              if (mode === "template" && seat.isEmpty) {
+                return (
+                  <div key={seat.id} className={cn(sizeClasses[variant])} />
+                );
+              }
+
               const busSeat =
                 mode === "bus"
                   ? seats?.find((s) => s.seatNumber === seat.name)

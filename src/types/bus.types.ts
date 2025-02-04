@@ -23,9 +23,10 @@ export type BusWithRelations = Bus & {
 export type SeatPosition = {
   id: string;
   name: string;
-  tierId: string;
+  tierId?: string;
   row: number;
   column: number;
+  isEmpty?: boolean;
 };
 
 export type FloorMatrix = {
@@ -55,53 +56,65 @@ export const busTypeTemplateSchema = z.object({
         rows: z.number(),
         seatsPerRow: z.number(),
       }),
-      seats: z.array(z.object({
-        id: z.string(),
-        name: z.string(),
-        tierId: z.string().uuid("ID de nivel inválido"),
-        row: z.number(),
-        column: z.number(),
-      })),
+      seats: z.array(
+        z.object({
+          id: z.string(),
+          name: z.string(),
+          tierId: z.union([
+            z.string().uuid("ID de nivel inválido"),
+            z.literal("")
+          ]),
+          row: z.number(),
+          column: z.number(),
+          isEmpty: z.boolean().default(false),
+        })
+      ),
     }),
     secondFloor: z.object({
       dimensions: z.object({
         rows: z.number(),
         seatsPerRow: z.number(),
       }),
-      seats: z.array(z.object({
-        id: z.string(),
-        name: z.string(),
-        tierId: z.string().uuid("ID de nivel inválido"),
-        row: z.number(),
-        column: z.number(),
-      })),
+      seats: z.array(
+        z.object({
+          id: z.string(),
+          name: z.string(),
+          tierId: z.union([
+            z.string().uuid("ID de nivel inválido"),
+            z.literal("")
+          ]),
+          row: z.number(),
+          column: z.number(),
+          isEmpty: z.boolean().default(false),
+        })
+      ),
     }).optional(),
   }),
   isActive: z.boolean().default(true),
 });
 
 export const createBusTypeTemplateSchema = busTypeTemplateSchema.superRefine((data, ctx) => {
-  // Validate first floor seats have tiers
+  // Validate first floor seats have tiers (only for non-empty seats)
   const firstFloorUnassigned = data.seatTemplateMatrix.firstFloor.seats.some(
-    seat => !seat.tierId
+    seat => !seat.isEmpty && (!seat.tierId || seat.tierId === "")
   );
   if (firstFloorUnassigned) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      message: "Todos los asientos del primer piso deben tener un nivel asignado",
+      message: "Todos los asientos activos del primer piso deben tener un nivel asignado",
       path: ["seatTemplateMatrix", "firstFloor", "seats"],
     });
   }
 
-  // Validate second floor seats have tiers if present
+  // Validate second floor seats have tiers if present (only for non-empty seats)
   if (data.seatTemplateMatrix.secondFloor) {
     const secondFloorUnassigned = data.seatTemplateMatrix.secondFloor.seats.some(
-      seat => !seat.tierId
+      seat => !seat.isEmpty && (!seat.tierId || seat.tierId === "")
     );
     if (secondFloorUnassigned) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Todos los asientos del segundo piso deben tener un nivel asignado",
+        message: "Todos los asientos activos del segundo piso deben tener un nivel asignado",
         path: ["seatTemplateMatrix", "secondFloor", "seats"],
       });
     }

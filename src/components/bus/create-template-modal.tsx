@@ -39,6 +39,16 @@ import { ManageSeatTiersModal } from "./manage-seat-tiers-modal";
 import { Company } from "@/types/company.types";
 import { cn } from "@/lib/utils";
 import { getTierColor } from "@/lib/seat-tier-colors";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ChevronDown } from "lucide-react";
+import { EditTemplateSeatModal } from "./edit-template-seat-modal";
 
 interface CreateTemplateModalProps {
   isOpen: boolean;
@@ -63,6 +73,7 @@ const generateSeats = (
         row,
         column: col,
         tierId: existingSeat?.tierId || "",
+        isEmpty: existingSeat?.isEmpty || false,
       });
     }
   }
@@ -78,6 +89,12 @@ export const CreateTemplateModal = ({
   const createBusTemplate = useCreateBusTemplate();
   const { data: seatTiers } = useSeatTiers();
   const [isSeatTierModalOpen, setIsSeatTierModalOpen] = useState(false);
+  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
+  const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
+  const [selectedSeatId, setSelectedSeatId] = useState<string | null>(null);
+  const [selectedFloor, setSelectedFloor] = useState<
+    "firstFloor" | "secondFloor"
+  >("firstFloor");
 
   const [firstFloorConfig, setFirstFloorConfig] = useState({
     rows: 4,
@@ -85,7 +102,7 @@ export const CreateTemplateModal = ({
   });
 
   const createForm = useForm<CreateBusTypeTemplateInput>({
-    resolver: zodResolver(busTypeTemplateSchema),
+    resolver: zodResolver(createBusTypeTemplateSchema),
     defaultValues: {
       name: "",
       description: "",
@@ -99,6 +116,15 @@ export const CreateTemplateModal = ({
       },
       isActive: true,
     },
+    mode: "onChange",
+  });
+
+  // Add form state logging
+  console.log("Form State:", {
+    values: createForm.getValues(),
+    errors: createForm.formState.errors,
+    isDirty: createForm.formState.isDirty,
+    isValid: createForm.formState.isValid,
   });
 
   const [selectedTierIds, setSelectedTierIds] = useState<{
@@ -126,12 +152,12 @@ export const CreateTemplateModal = ({
       // Calculate total capacity
       const totalCapacity = calculateTotalCapacity(newMatrix);
 
-      // Update form values
-      createForm.setValue("seatTemplateMatrix", newMatrix, {
-        shouldValidate: true,
+      // Update form values without validation
+      createForm.setValue("seatTemplateMatrix", newMatrix as any, {
+        shouldValidate: false,
       });
       createForm.setValue("totalCapacity", totalCapacity, {
-        shouldValidate: true,
+        shouldValidate: false,
       });
     },
     [createForm, calculateTotalCapacity]
@@ -141,32 +167,121 @@ export const CreateTemplateModal = ({
     seatId: string,
     floor: "firstFloor" | "secondFloor"
   ) => {
-    const selectedTierId = selectedTierIds[floor];
-    if (!selectedTierId) {
-      toast({
-        title: "Selecciona un nivel",
-        description: "Por favor selecciona un nivel de asiento primero.",
-        variant: "destructive",
-      });
+    if (isMultiSelectMode) {
+      setSelectedSeats((prev) =>
+        prev.includes(seatId)
+          ? prev.filter((id) => id !== seatId)
+          : [...prev, seatId]
+      );
       return;
     }
 
+    setSelectedSeatId(seatId);
+    setSelectedFloor(floor);
+  };
+
+  const handleSeatUpdate = (seatId: string, updates: Partial<SeatPosition>) => {
     const currentMatrix = createForm.getValues("seatTemplateMatrix");
-    if (!currentMatrix[floor]) return;
+    const floorData = currentMatrix[selectedFloor];
+    if (!floorData) return;
+
+    const seatIndex = floorData.seats.findIndex((s) => s.id === seatId);
+    if (seatIndex === -1) return;
+
+    const updatedSeats = [...floorData.seats];
+    updatedSeats[seatIndex] = {
+      ...updatedSeats[seatIndex],
+      ...updates,
+    };
 
     const updatedMatrix = {
       ...currentMatrix,
-      [floor]: {
-        ...currentMatrix[floor],
-        seats: currentMatrix[floor].seats.map((seat) =>
-          seat.id === seatId ? { ...seat, tierId: selectedTierId } : seat
-        ),
+      [selectedFloor]: {
+        ...floorData,
+        seats: updatedSeats,
       },
     };
 
     createForm.setValue("seatTemplateMatrix", updatedMatrix, {
-      shouldValidate: true,
+      shouldValidate: false,
     });
+    setSelectedSeatId(null);
+  };
+
+  const handleBulkAction = (
+    action: "empty" | "fill" | "tier",
+    tierId?: string
+  ) => {
+    if (selectedSeats.length === 0) return;
+
+    const currentMatrix = createForm.getValues("seatTemplateMatrix");
+    const updatedMatrix = {
+      firstFloor: {
+        ...currentMatrix.firstFloor,
+        seats: currentMatrix.firstFloor.seats.map((seat) => {
+          if (!selectedSeats.includes(seat.id)) return seat;
+
+          switch (action) {
+            case "empty":
+              return {
+                ...seat,
+                isEmpty: true,
+                tierId: "",
+              };
+            case "fill":
+              return {
+                ...seat,
+                isEmpty: false,
+                tierId: selectedTierIds.firstFloor || "",
+              };
+            case "tier":
+              return {
+                ...seat,
+                isEmpty: false,
+                tierId: tierId || "",
+              };
+            default:
+              return seat;
+          }
+        }),
+      },
+      ...(currentMatrix.secondFloor && {
+        secondFloor: {
+          ...currentMatrix.secondFloor,
+          seats: currentMatrix.secondFloor.seats.map((seat) => {
+            if (!selectedSeats.includes(seat.id)) return seat;
+
+            switch (action) {
+              case "empty":
+                return {
+                  ...seat,
+                  isEmpty: true,
+                  tierId: "",
+                };
+              case "fill":
+                return {
+                  ...seat,
+                  isEmpty: false,
+                  tierId: selectedTierIds.secondFloor || "",
+                };
+              case "tier":
+                return {
+                  ...seat,
+                  isEmpty: false,
+                  tierId: tierId || "",
+                };
+              default:
+                return seat;
+            }
+          }),
+        },
+      }),
+    } as SeatTemplateMatrix;
+
+    createForm.setValue("seatTemplateMatrix", updatedMatrix, {
+      shouldValidate: false,
+    });
+    setSelectedSeats([]);
   };
 
   const handleSecondFloorToggle = useCallback(
@@ -175,7 +290,7 @@ export const CreateTemplateModal = ({
         // Check if first floor seats have tiers assigned
         const currentMatrix = createForm.getValues("seatTemplateMatrix");
         const unassignedSeats = currentMatrix.firstFloor.seats.some(
-          (seat) => !seat.tierId
+          (seat) => !seat.isEmpty && !seat.tierId
         );
 
         if (unassignedSeats) {
@@ -202,6 +317,7 @@ export const CreateTemplateModal = ({
               id: `2${seat.name}`,
               name: `2${seat.name}`,
               tierId: seat.tierId,
+              isEmpty: seat.isEmpty,
             })),
           },
         };
@@ -212,7 +328,7 @@ export const CreateTemplateModal = ({
         }));
 
         createForm.setValue("seatTemplateMatrix", updatedMatrix, {
-          shouldValidate: true,
+          shouldValidate: false,
         });
       } else {
         const currentMatrix = createForm.getValues("seatTemplateMatrix");
@@ -220,7 +336,7 @@ export const CreateTemplateModal = ({
           firstFloor: currentMatrix.firstFloor,
         };
         createForm.setValue("seatTemplateMatrix", newMatrix, {
-          shouldValidate: true,
+          shouldValidate: false,
         });
 
         setSelectedTierIds((prev) => ({
@@ -247,6 +363,9 @@ export const CreateTemplateModal = ({
 
   const onSubmit = async (formData: CreateBusTypeTemplateInput) => {
     try {
+      // Log the form data being submitted
+      console.log("Submitting form data:", JSON.stringify(formData, null, 2));
+
       // Ensure companyId is selected
       if (!formData.companyId) {
         toast({
@@ -257,14 +376,42 @@ export const CreateTemplateModal = ({
         return;
       }
 
+      // Log seat assignments before validation
+      console.log("Seat assignments:", {
+        firstFloor: formData.seatTemplateMatrix.firstFloor.seats.map((s) => ({
+          id: s.id,
+          isEmpty: s.isEmpty,
+          tierId: s.tierId,
+        })),
+        secondFloor: formData.seatTemplateMatrix.secondFloor?.seats.map(
+          (s) => ({
+            id: s.id,
+            isEmpty: s.isEmpty,
+            tierId: s.tierId,
+          })
+        ),
+      });
+
       // Validate with submission schema manually
       const result = createBusTypeTemplateSchema.safeParse(formData);
+
+      // Log validation result
+      console.log("Validation result:", {
+        success: result.success,
+        errors: !result.success ? result.error.format() : null,
+      });
+
       if (!result.success) {
         const errors = result.error.errors;
         errors.forEach((error) => {
+          console.log("Validation error:", {
+            path: error.path,
+            message: error.message,
+            code: error.code,
+          });
           toast({
             title: "Error de validación",
-            description: error.message,
+            description: `${error.path.join(".")}: ${error.message}`,
             variant: "destructive",
           });
         });
@@ -294,6 +441,12 @@ export const CreateTemplateModal = ({
       });
     }
   };
+
+  const selectedSeat =
+    selectedSeatId &&
+    createForm
+      .getValues("seatTemplateMatrix")
+      [selectedFloor]?.seats.find((s) => s.id === selectedSeatId);
 
   return (
     <>
@@ -413,23 +566,84 @@ export const CreateTemplateModal = ({
                       <FormItem>
                         <FormLabel>Configuración de Asientos</FormLabel>
                         <FormControl>
-                          <div className="border rounded-lg p-4 bg-background">
-                            <SeatEditor
-                              value={field.value}
-                              onChange={handleMatrixChange}
-                              onSeatClick={(seatId, floor) =>
-                                handleSeatClick(seatId, floor)
-                              }
-                              selectedTierIds={selectedTierIds}
-                              onTierSelect={(floor, tierId) =>
-                                setSelectedTierIds((prev) => ({
-                                  ...prev,
-                                  [floor]: tierId,
-                                }))
-                              }
-                              seatTiers={seatTiers || []}
-                              onSecondFloorToggle={handleSecondFloorToggle}
-                            />
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-2">
+                                  <Switch
+                                    id="multi-select"
+                                    checked={isMultiSelectMode}
+                                    onCheckedChange={(checked) => {
+                                      setIsMultiSelectMode(checked);
+                                      if (!checked) setSelectedSeats([]);
+                                    }}
+                                  />
+                                  <Label htmlFor="multi-select">
+                                    Selección múltiple
+                                  </Label>
+                                </div>
+                              </div>
+                              {selectedSeats.length > 0 && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm text-muted-foreground">
+                                    {selectedSeats.length} asientos
+                                    seleccionados
+                                  </span>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="outline" size="sm">
+                                        Acciones{" "}
+                                        <ChevronDown className="ml-2 h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem
+                                        onClick={() =>
+                                          handleBulkAction("empty")
+                                        }
+                                      >
+                                        Marcar como espacio vacío
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() => handleBulkAction("fill")}
+                                      >
+                                        Marcar como asiento
+                                      </DropdownMenuItem>
+                                      {seatTiers?.map((tier) => (
+                                        <DropdownMenuItem
+                                          key={tier.id}
+                                          onClick={() =>
+                                            handleBulkAction("tier", tier.id)
+                                          }
+                                        >
+                                          Asignar nivel: {tier.name}
+                                        </DropdownMenuItem>
+                                      ))}
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="border rounded-lg p-4 bg-background">
+                              <SeatEditor
+                                value={field.value}
+                                onChange={handleMatrixChange}
+                                onSeatClick={handleSeatClick}
+                                selectedTierIds={selectedTierIds}
+                                onTierSelect={(floor, tierId) =>
+                                  setSelectedTierIds((prev) => ({
+                                    ...prev,
+                                    [floor]: tierId,
+                                  }))
+                                }
+                                seatTiers={seatTiers || []}
+                                onSecondFloorToggle={handleSecondFloorToggle}
+                                emptyStyle="dashed"
+                                selectedSeats={selectedSeats}
+                                isMultiSelectMode={isMultiSelectMode}
+                              />
+                            </div>
                           </div>
                         </FormControl>
                         <FormMessage />
@@ -449,6 +663,16 @@ export const CreateTemplateModal = ({
           </Form>
         </DialogContent>
       </Dialog>
+
+      {selectedSeat && (
+        <EditTemplateSeatModal
+          isOpen={!!selectedSeatId}
+          onClose={() => setSelectedSeatId(null)}
+          seat={selectedSeat}
+          seatTiers={seatTiers || []}
+          onUpdate={handleSeatUpdate}
+        />
+      )}
 
       <ManageSeatTiersModal
         isOpen={isSeatTierModalOpen}

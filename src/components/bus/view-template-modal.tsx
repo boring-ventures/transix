@@ -32,6 +32,14 @@ export const ViewTemplateModal = ({
   const company = companies.find((c) => c.id === template.companyId);
   const seatMatrix = template.seatTemplateMatrix as SeatTemplateMatrix;
 
+  // Calculate active seats (non-empty) for each floor
+  const firstFloorActiveSeats = seatMatrix.firstFloor.seats.filter(
+    (s) => !s.isEmpty
+  ).length;
+  const secondFloorActiveSeats =
+    seatMatrix.secondFloor?.seats.filter((s) => !s.isEmpty).length || 0;
+  const totalActiveSeats = firstFloorActiveSeats + secondFloorActiveSeats;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col p-0">
@@ -65,10 +73,13 @@ export const ViewTemplateModal = ({
                 </div>
 
                 <div className="flex flex-col">
-                  <div className="flex items-center mb-4">
+                  <div className="flex items-center justify-between mb-4">
                     <h3 className="text-base font-medium">
                       Distribución de Asientos
                     </h3>
+                    <Badge variant="secondary">
+                      {totalActiveSeats} asientos activos
+                    </Badge>
                   </div>
 
                   <div className="flex gap-6">
@@ -85,9 +96,12 @@ export const ViewTemplateModal = ({
                               "max-w-2xl mx-auto w-full"
                           )}
                         >
-                          <h4 className="text-sm font-medium mb-2">
-                            Primer Piso
-                          </h4>
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="text-sm font-medium">Primer Piso</h4>
+                            <span className="text-sm text-muted-foreground">
+                              {firstFloorActiveSeats} asientos
+                            </span>
+                          </div>
                           <div className="bg-gray-100 rounded-lg flex items-center justify-center min-h-[350px] w-full">
                             <div className="w-full h-full flex items-center justify-center p-8">
                               <div className="w-fit max-w-full max-h-full">
@@ -104,9 +118,14 @@ export const ViewTemplateModal = ({
 
                         {seatMatrix.secondFloor && (
                           <div>
-                            <h4 className="text-sm font-medium mb-2">
-                              Segundo Piso
-                            </h4>
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="text-sm font-medium">
+                                Segundo Piso
+                              </h4>
+                              <span className="text-sm text-muted-foreground">
+                                {secondFloorActiveSeats} asientos
+                              </span>
+                            </div>
                             <div className="bg-gray-100 rounded-lg flex items-center justify-center min-h-[350px] w-full">
                               <div className="w-full h-full flex items-center justify-center p-8">
                                 <div className="w-fit max-w-full max-h-full">
@@ -194,7 +213,9 @@ export const ViewTemplateModal = ({
                     <h4 className="text-sm font-medium text-muted-foreground mb-1">
                       Capacidad Total
                     </h4>
-                    <p className="text-lg">{template.totalCapacity} asientos</p>
+                    <p className="text-lg">
+                      {totalActiveSeats} asientos activos
+                    </p>
                   </div>
                   <div>
                     <h4 className="text-sm font-medium text-muted-foreground mb-1">
