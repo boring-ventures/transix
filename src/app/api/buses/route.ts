@@ -103,17 +103,32 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const busData = createBusSchema.parse(body);
+    
+    // First validate the incoming data with our schema
+    const validatedData = createBusSchema.parse(body);
 
-    // Get the template data
+    // Verify that the template exists and is valid
     const [template] = await db
       .select()
       .from(busTypeTemplates)
-      .where(eq(busTypeTemplates.id, busData.templateId));
+      .where(eq(busTypeTemplates.id, validatedData.templateId));
 
     if (!template) {
       return NextResponse.json(
         { error: "Plantilla no encontrada" },
+        { status: 404 }
+      );
+    }
+
+    // Verify that the company exists
+    const [company] = await db
+      .select()
+      .from(companies)
+      .where(eq(companies.id, validatedData.companyId));
+
+    if (!company) {
+      return NextResponse.json(
+        { error: "Empresa no encontrada" },
         { status: 404 }
       );
     }
@@ -124,14 +139,18 @@ export async function POST(request: Request) {
       const [bus] = await tx
         .insert(buses)
         .values({
-          companyId: busData.companyId,
-          templateId: busData.templateId,
-          plateNumber: busData.plateNumber,
-          maintenanceStatus: busData.maintenanceStatus || "active",
+          companyId: validatedData.companyId,
+          templateId: validatedData.templateId,
+          plateNumber: validatedData.plateNumber,
+          maintenanceStatus: validatedData.maintenanceStatus,
           isActive: true,
           seatMatrix: template.seatTemplateMatrix, // Use the template's seat matrix
         })
         .returning();
+
+      if (!bus) {
+        throw new Error("Error al crear el bus");
+      }
 
       // Create bus seats based on the template's seat configuration
       const seatMatrix = template.seatTemplateMatrix as {
@@ -140,6 +159,7 @@ export async function POST(request: Request) {
             id: string;
             name: string;
             tierId: string;
+            isEmpty: boolean;
           }>;
         };
         secondFloor?: {
@@ -147,42 +167,55 @@ export async function POST(request: Request) {
             id: string;
             name: string;
             tierId: string;
+            isEmpty: boolean;
           }>;
         };
       };
 
-      // Create seats for first floor
-      const firstFloorSeats = seatMatrix.firstFloor.seats.map((seat) => ({
-        busId: bus.id,
-        seatNumber: seat.name,
-        tierId: seat.tierId,
-        status: seatStatusEnum.enumValues[0], // 'available'
-        isActive: true,
-      }));
+      // Create seats for first floor (only for non-empty seats)
+      const firstFloorSeats = seatMatrix.firstFloor.seats
+        .filter(seat => !seat.isEmpty)
+        .map((seat) => ({
+          busId: bus.id,
+          seatNumber: seat.name,
+          tierId: seat.tierId,
+          status: seatStatusEnum.enumValues[0], // 'available'
+          isActive: true,
+        }));
 
-      // Create seats for second floor if it exists
+      // Create seats for second floor if it exists (only for non-empty seats)
       const secondFloorSeats = seatMatrix.secondFloor
-        ? seatMatrix.secondFloor.seats.map((seat) => ({
-            busId: bus.id,
-            seatNumber: seat.name,
-            tierId: seat.tierId,
-            status: seatStatusEnum.enumValues[0], // 'available'
-            isActive: true,
-          }))
+        ? seatMatrix.secondFloor.seats
+            .filter(seat => !seat.isEmpty)
+            .map((seat) => ({
+              busId: bus.id,
+              seatNumber: seat.name,
+              tierId: seat.tierId,
+              status: seatStatusEnum.enumValues[0], // 'available'
+              isActive: true,
+            }))
         : [];
 
       // Insert all seats
       const allSeats = [...firstFloorSeats, ...secondFloorSeats];
-      await tx.insert(busSeats).values(allSeats);
+      if (allSeats.length > 0) {
+        await tx.insert(busSeats).values(allSeats);
+      }
 
       return bus;
     });
 
     return NextResponse.json(result, { status: 201 });
   } catch (error: unknown) {
+    console.error("Error creating bus:", error);
+    
     if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json(
+        { error: error.message },
+        { status: 400 }
+      );
     }
+    
     return NextResponse.json(
       { error: "Error inesperado al crear el bus" },
       { status: 500 }

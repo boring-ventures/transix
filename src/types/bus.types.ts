@@ -23,10 +23,10 @@ export type BusWithRelations = Bus & {
 export type SeatPosition = {
   id: string;
   name: string;
-  tierId?: string;
+  tierId: string;
   row: number;
   column: number;
-  isEmpty?: boolean;
+  isEmpty: boolean;
 };
 
 export type FloorMatrix = {
@@ -141,8 +141,8 @@ const baseBusSchema = z.object({
 });
 
 export const createBusSchema = z.object({
-  companyId: z.string().uuid("ID de empresa inválido"),
-  templateId: z.string().uuid("ID de plantilla inválido"),
+  companyId: z.string().min(1, "La empresa es requerida"),
+  templateId: z.string().min(1, "La plantilla es requerida"),
   plateNumber: z.string().trim().min(1, "La placa es requerida"),
   maintenanceStatus: z.enum(maintenanceStatusEnum.enumValues).default("active"),
   isActive: z.boolean().default(true),

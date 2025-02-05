@@ -20,7 +20,6 @@ import {
   createBusTypeTemplateSchema,
   SeatTemplateMatrix,
   SeatPosition,
-  busTypeTemplateSchema,
 } from "@/types/bus.types";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -153,9 +152,13 @@ export const CreateTemplateModal = ({
       const totalCapacity = calculateTotalCapacity(newMatrix);
 
       // Update form values without validation
-      createForm.setValue("seatTemplateMatrix", newMatrix as any, {
-        shouldValidate: false,
-      });
+      createForm.setValue(
+        "seatTemplateMatrix",
+        newMatrix as SeatTemplateMatrix,
+        {
+          shouldValidate: false,
+        }
+      );
       createForm.setValue("totalCapacity", totalCapacity, {
         shouldValidate: false,
       });
