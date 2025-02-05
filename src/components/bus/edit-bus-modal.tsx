@@ -129,6 +129,9 @@ export const EditBusModal = ({
     : undefined;
 
   const handleSeatClick = (seatId: string) => {
+    const seat = busSeats?.find((s) => s.id === seatId);
+    if (!seat) return;
+
     if (isMultiSelectMode) {
       setSelectedSeats((prev) =>
         prev.includes(seatId)
@@ -146,9 +149,15 @@ export const EditBusModal = ({
   ) => {
     if (selectedSeats.length === 0) return;
 
+    const validSeats = selectedSeats.filter((seatId) =>
+      busSeats?.some((s) => s.id === seatId)
+    );
+
+    if (validSeats.length === 0) return;
+
     try {
       await bulkUpdateSeats.mutateAsync({
-        seatIds: selectedSeats,
+        seatIds: validSeats,
         data: { status },
       });
       setSelectedSeats([]);
@@ -173,9 +182,15 @@ export const EditBusModal = ({
   const handleBulkTierUpdate = async (tierId: string) => {
     if (selectedSeats.length === 0) return;
 
+    const validSeats = selectedSeats.filter((seatId) =>
+      busSeats?.some((s) => s.id === seatId)
+    );
+
+    if (validSeats.length === 0) return;
+
     try {
       await bulkUpdateSeats.mutateAsync({
-        seatIds: selectedSeats,
+        seatIds: validSeats,
         data: { tierId },
       });
       setSelectedSeats([]);

@@ -77,13 +77,6 @@ export const SeatMatrixPreview = ({
         {rows.map((row, rowIndex) => (
           <div key={rowIndex} className={cn("flex", gapSizes[variant])}>
             {row.map((seat) => {
-              // Skip rendering empty seats in preview mode
-              if (mode === "template" && seat.isEmpty) {
-                return (
-                  <div key={seat.id} className={cn(sizeClasses[variant])} />
-                );
-              }
-
               const busSeat =
                 mode === "bus"
                   ? seats?.find((s) => s.seatNumber === seat.name)
@@ -116,6 +109,13 @@ export const SeatMatrixPreview = ({
               const seatTier = seatTiers.find(
                 (t) => t.id === (busSeat?.tierId || seat.tierId)
               );
+
+              // Skip rendering empty seats in both template and bus mode
+              if (seat.isEmpty) {
+                return (
+                  <div key={seat.id} className={cn(sizeClasses[variant])} />
+                );
+              }
 
               return (
                 <TooltipProvider key={seat.id}>
