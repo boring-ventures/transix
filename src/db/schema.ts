@@ -157,6 +157,10 @@ export const routes = pgTable("routes", {
   name: text("name").notNull(),
   originId: uuid("origin_id").references(() => locations.id),
   destinationId: uuid("destination_id").references(() => locations.id),
+  companyId: uuid("company_id").references(() => companies.id).notNull(),
+  defaultBusId: uuid("default_bus_id").references(() => buses.id),
+  estimatedDuration: integer("estimated_duration").notNull(), // Duration in minutes
+  active: boolean("active").default(true),
   capacity: integer("capacity").notNull().default(40),
   seatsTaken: integer("seats_taken").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true })
@@ -174,8 +178,11 @@ export const schedules = pgTable("schedules", {
   busId: uuid("bus_id").references(() => buses.id),
   departureDate: date("departure_date").notNull(),
   departureTime: time("departure_time").notNull(),
+  arrivalTime: time("arrival_time").notNull(),
+  status: text("status").notNull().default("scheduled"), // scheduled, in_progress, completed, cancelled
   price: numeric("price").notNull(),
   capacity: integer("capacity").notNull(),
+  availableSeats: integer("available_seats").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

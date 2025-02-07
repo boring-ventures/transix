@@ -42,6 +42,10 @@ const routeSchema = z.object({
   name: z.string().min(1, "El nombre es requerido").trim(),
   originId: z.string().uuid("ID de origen inválido"),
   destinationId: z.string().uuid("ID de destino inválido"),
+  companyId: z.string().uuid("ID de compañía inválido"),
+  defaultBusId: z.string().uuid("ID de bus inválido").optional(),
+  estimatedDuration: z.number().min(1, "La duración estimada debe ser mayor a 0"),
+  active: z.boolean().default(true),
   capacity: z.number().min(1, "La capacidad debe ser mayor a 0"),
   seatsTaken: z.number().min(0).default(0),
 });
@@ -57,8 +61,11 @@ const scheduleSchema = z.object({
   busId: z.string().uuid("ID de bus inválido"),
   departureDate: z.date(),
   departureTime: z.string(), // HH:mm format
+  arrivalTime: z.string(), // HH:mm format
+  status: z.enum(["scheduled", "in_progress", "completed", "cancelled"]).default("scheduled"),
   price: z.number().min(0, "El precio debe ser mayor o igual a 0"),
   capacity: z.number().min(1, "La capacidad debe ser mayor a 0"),
+  availableSeats: z.number().min(0, "Los asientos disponibles no pueden ser negativos"),
 });
 
 export const createScheduleSchema = scheduleSchema;

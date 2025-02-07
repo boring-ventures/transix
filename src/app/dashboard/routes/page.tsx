@@ -32,6 +32,10 @@ export default function Routes() {
       name: "La Paz - Santa Cruz",
       originId: "1",
       destinationId: "2",
+      companyId: "1", // Mock company ID
+      defaultBusId: null,
+      estimatedDuration: 480, // 8 hours in minutes
+      active: true,
       capacity: 40,
       seatsTaken: 0,
       createdAt: new Date(),
@@ -42,6 +46,10 @@ export default function Routes() {
       name: "Cochabamba - Sucre",
       originId: "3",
       destinationId: "4",
+      companyId: "1", // Mock company ID
+      defaultBusId: null,
+      estimatedDuration: 300, // 5 hours in minutes
+      active: true,
       capacity: 35,
       seatsTaken: 0,
       createdAt: new Date(),
@@ -57,8 +65,11 @@ export default function Routes() {
       busId: "1",
       departureDate: "2024-01-15",
       departureTime: "09:00",
+      arrivalTime: "17:00",
+      status: "scheduled",
       price: "150",
       capacity: 40,
+      availableSeats: 40,
       createdAt: new Date(),
       updatedAt: new Date(),
     },
@@ -68,8 +79,11 @@ export default function Routes() {
       busId: "2",
       departureDate: "2024-01-15",
       departureTime: "10:00",
+      arrivalTime: "15:00",
+      status: "scheduled",
       price: "100",
       capacity: 35,
+      availableSeats: 35,
       createdAt: new Date(),
       updatedAt: new Date(),
     },
@@ -79,26 +93,33 @@ export default function Routes() {
     name: "",
     originId: "",
     destinationId: "",
+    companyId: "1", // Mock company ID
+    defaultBusId: undefined,
+    estimatedDuration: 0,
+    active: true,
     capacity: 0,
     seatsTaken: 0,
   });
 
   const handleRouteSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setRoutes((prev) => [
-      ...prev,
-      {
-        id: (prev.length + 1).toString(),
-        ...newRoute,
-        seatsTaken: 0,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-    ]);
+    const newRouteEntry: Route = {
+      id: (routes.length + 1).toString(),
+      ...newRoute,
+      defaultBusId: newRoute.defaultBusId || null,
+      seatsTaken: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    setRoutes((prev) => [...prev, newRouteEntry]);
     setNewRoute({
       name: "",
       originId: "",
       destinationId: "",
+      companyId: "1", // Mock company ID
+      defaultBusId: undefined,
+      estimatedDuration: 0,
+      active: true,
       capacity: 0,
       seatsTaken: 0,
     });

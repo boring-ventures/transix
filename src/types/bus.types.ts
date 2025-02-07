@@ -42,6 +42,9 @@ export type SeatTemplateMatrix = {
   secondFloor?: FloorMatrix;
 };
 
+// Alias for backward compatibility
+export type BusSeatMatrix = SeatTemplateMatrix;
+
 /**
  * Bus Type Template Schemas
  */
