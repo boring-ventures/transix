@@ -16,6 +16,7 @@ import {
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 import {
   Sidebar,
@@ -106,6 +107,23 @@ const data = {
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
   const [openMenus, setOpenMenus] = React.useState<string[]>([]);
+  const [userData, setUserData] = React.useState(data.user);
+  const supabase = createClientComponentClient();
+
+  React.useEffect(() => {
+    const getUserData = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserData({
+          name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuario',
+          email: user.email || '',
+          avatar: user.user_metadata?.avatar_url || '/avatars/admin.jpg',
+        });
+      }
+    };
+
+    getUserData();
+  }, []);
 
   const toggleMenu = (title: string) => {
     setOpenMenus((prev) =>
@@ -223,7 +241,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter>
-          <NavUser user={data.user} />
+          <NavUser user={userData} />
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
