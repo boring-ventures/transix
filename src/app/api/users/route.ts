@@ -83,9 +83,31 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+    const {
+      data: { user: currentUser },
+    } = await supabase.auth.getUser();
+    if (!currentUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const body = await request.json();
     const userData = insertUserSchema.parse(body.user);
     const profileData = insertProfileSchema.parse(body.profile);
+
+    const [currentProfile] = await db
+      .select()
+      .from(profiles)
+      .where(eq(profiles.userId, currentUser.id))
+      .limit(1);
+
+    if (currentProfile && currentProfile.role === "company_admin") {
+      if (!currentProfile.companyId) {
+        return NextResponse.json(
+          { error: "Tu perfil no tiene una compañía asociada." },
+          { status: 400 }
+        );
+      }
+      profileData.companyId = currentProfile.companyId;
+    }
 
     const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
       email: userData.email,
@@ -95,7 +117,7 @@ export async function POST(request: Request) {
 
     if (authError) {
       return NextResponse.json(
-        { error: authError.message || "Failed to create user" }, 
+        { error: authError.message || "Failed to create user" },
         { status: 400 }
       );
     }
@@ -118,7 +140,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
     return NextResponse.json(
-      { error: "An unexpected error occurred" }, 
+      { error: "An unexpected error occurred" },
       { status: 500 }
     );
   }
