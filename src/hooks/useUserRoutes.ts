@@ -7,9 +7,10 @@ export function useUserRoutes() {
     name: string;
     email: string;
     avatar: string;
+    role: string;
     companyId?: string; // Campo opcional para la compañía
   };
-  const [userData, setUserData] = useState<UserData>({ name: '', email: '', avatar: '' });
+  const [userData, setUserData] = useState<UserData>({ name: '', email: '', avatar: '', role: '' });
   const [allowedRoutes, setAllowedRoutes] = useState<string[]>([]);
   const supabase = createClientComponentClient();
 
@@ -24,7 +25,7 @@ export function useUserRoutes() {
         // Seleccionamos role y companyId del perfil
         const { data: profile } = await supabase
           .from('profiles')
-          .select('role, companyId')
+          .select('role, company_id')
           .eq('user_id', user.id)
           .single();
 
@@ -35,10 +36,11 @@ export function useUserRoutes() {
             name,
             email,
             avatar,
-            companyId: profile.companyId,
+            role: profile.role,
+            companyId: profile.company_id,
           });
         } else {
-          setUserData({ name, email, avatar });
+          setUserData({ name, email, avatar, role: '' });
         }
       }
     };
