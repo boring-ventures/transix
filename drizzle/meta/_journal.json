@@ -15,6 +15,27 @@
       "when": 1738081322128,
       "tag": "0001_flaky_marvel_zombies",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1739195257994,
+      "tag": "0002_moaning_roulette",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1739198107602,
+      "tag": "0003_mature_iron_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1739198244981,
+      "tag": "0004_giant_spyke",
+      "breakpoints": true
     }
   ]
 }
