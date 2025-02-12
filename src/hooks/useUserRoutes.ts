@@ -3,6 +3,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { ROLE_ROUTES } from '../config/roleRoutes';
 
 export function useUserRoutes() {
+
   const [userData, setUserData] = useState({ name: '', email: '', avatar: '' });
   const [allowedRoutes, setAllowedRoutes] = useState<string[]>([]);
   const supabase = createClientComponentClient();
@@ -26,6 +27,15 @@ export function useUserRoutes() {
         if (profile) {
           const role = profile.role as keyof typeof ROLE_ROUTES;
           setAllowedRoutes(ROLE_ROUTES[role]);
+          setUserData({
+            name,
+            email,
+            avatar,
+            role: profile.role,
+            companyId: profile.company_id,
+          });
+        } else {
+          setUserData({ name, email, avatar, role: '' });
         }
       }
     };

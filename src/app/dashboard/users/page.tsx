@@ -95,18 +95,35 @@ export default function UsersPage() {
   const createRole = createForm.watch("role");
   const editRole = editForm.watch("role");
 
-  // Reset company field when role changes to superadmin in create form
+  // Validación del campo "companyId" en el formulario de creación:
+  // Si el rol es "superadmin", se limpia y se remueven errores.
+  // De lo contrario, se establece error de requerido solo si el campo no posee valor
+  // y además, no existe un companyId en userData.
   useEffect(() => {
     if (createRole === "superadmin") {
       createForm.setValue("companyId", "");
       createForm.clearErrors("companyId");
-    } else if (!createForm.getValues("companyId")) {
+    } else if (!createForm.getValues("companyId") && !userData.companyId) {
       createForm.setError("companyId", {
         type: "required",
         message: "La empresa es requerida para roles que no son superadmin",
       });
+    } else {
+      createForm.clearErrors("companyId");
     }
-  }, [createRole, createForm]);
+  }, [createRole, userData.companyId, createForm]);
+
+  // NUEVO: Si el usuario autenticado tiene companyId definido, se asigna por defecto
+  // en el formulario de creación siempre y cuando el rol no sea "superadmin".
+  useEffect(() => {
+    if (
+      userData.companyId !== null &&
+      userData.companyId !== "" &&
+      createRole !== "superadmin"
+    ) {
+      createForm.setValue("companyId", userData.companyId || "");
+    }
+  }, [userData.companyId, createRole, createForm]);
 
   // Reset company field when role changes to superadmin in edit form
   useEffect(() => {
