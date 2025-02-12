@@ -48,7 +48,6 @@ import { Column } from "@/components/table/types";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { CompanyResponse } from "@/types/company.types";
-import { useUserRoutes } from "@/hooks/useUserRoutes";
 
 export default function UsersPage() {
   const { data: users, isLoading: usersLoading } = useUsers();
@@ -56,7 +55,6 @@ export default function UsersPage() {
   const createUser = useCreateUser();
   const updateProfile = useUpdateProfile();
   const deleteUser = useDeleteUser();
-  const { userData } = useUserRoutes();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -454,14 +452,9 @@ export default function UsersPage() {
                   >
                     <FormLabel>Empresa</FormLabel>
                     <Select
-                      disabled={
-                        Boolean(userData.companyId) ||
-                        createRole === "superadmin" ||
-                        createRole === "company_admin"
-                      }
                       onValueChange={field.onChange}
-                      // Si el usuario tiene companyId definido, se utiliza ese valor y no se permite cambiar
-                      value={userData.companyId || field.value || undefined}
+                      value={field.value || undefined}
+                      disabled={createRole === "superadmin"}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Seleccionar empresa" />
@@ -674,6 +667,6 @@ export default function UsersPage() {
           }
         }}
       />
-    </div >
+    </div>
   );
 }

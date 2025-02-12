@@ -40,6 +40,7 @@ export const EditSeatModal = ({
 
   const handleStatusChange = async (status: string) => {
     try {
+      console.log("Updating seat status:", { seatId: seat.id, status });
       await updateSeat.mutateAsync({
         seatId: seat.id,
         status,
@@ -50,6 +51,7 @@ export const EditSeatModal = ({
       });
       onClose();
     } catch (error) {
+      console.error("Error updating seat status:", error);
       toast({
         title: "Error",
         description:
@@ -63,6 +65,7 @@ export const EditSeatModal = ({
 
   const handleTierChange = async (tierId: string) => {
     try {
+      console.log("Updating seat tier:", { seatId: seat.id, tierId });
       await updateSeat.mutateAsync({
         seatId: seat.id,
         tierId,
@@ -73,6 +76,7 @@ export const EditSeatModal = ({
       });
       onClose();
     } catch (error) {
+      console.error("Error updating seat tier:", error);
       toast({
         title: "Error",
         description:
@@ -106,11 +110,15 @@ export const EditSeatModal = ({
                   className={
                     seat.status === "maintenance"
                       ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-100"
+                      : seat.status === "disabled"
+                      ? "bg-gray-100 text-gray-800 hover:bg-gray-100"
                       : "bg-green-100 text-green-800 hover:bg-green-100"
                   }
                 >
                   {seat.status === "maintenance"
                     ? "Mantenimiento"
+                    : seat.status === "disabled"
+                    ? "Deshabilitado"
                     : "Disponible"}
                 </Badge>
               </div>
@@ -136,6 +144,7 @@ export const EditSeatModal = ({
                 <SelectContent>
                   <SelectItem value="available">Disponible</SelectItem>
                   <SelectItem value="maintenance">Mantenimiento</SelectItem>
+                  <SelectItem value="disabled">Deshabilitado</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -93,14 +93,14 @@ export const SeatMatrixPreview = ({
               );
 
               const getStatusColor = (
-                status: "available" | "maintenance" | null | undefined
+                status: "available" | "maintenance" | "disabled" | null | undefined
               ) => {
                 if (!status) return `${colorClasses.bg} ${colorClasses.border}`;
                 switch (status) {
                   case "maintenance":
                     return "bg-yellow-100 border-yellow-300";
-                  case "available":
-                    return `${colorClasses.bg} ${colorClasses.border}`;
+                  case "disabled":
+                    return "bg-gray-200 border-gray-300";
                   default:
                     return `${colorClasses.bg} ${colorClasses.border}`;
                 }
@@ -116,6 +116,14 @@ export const SeatMatrixPreview = ({
                   <div key={seat.id} className={cn(sizeClasses[variant])} />
                 );
               }
+
+              const seatContent = showLabels ? (
+                busSeat?.status === "disabled" ? (
+                  ""
+                ) : (
+                  seat.name
+                )
+              ) : null;
 
               return (
                 <TooltipProvider key={seat.id}>
@@ -140,14 +148,14 @@ export const SeatMatrixPreview = ({
                           }
                         }}
                       >
-                        {showLabels && (
+                        {seatContent && (
                           <span
                             className={cn(
                               "absolute inset-0 flex items-center justify-center font-medium text-muted-foreground",
                               labelSizes[variant]
                             )}
                           >
-                            {seat.name}
+                            {seatContent}
                           </span>
                         )}
                       </div>
@@ -177,7 +185,9 @@ export const SeatMatrixPreview = ({
                               Estado:{" "}
                               {busSeat.status === "available"
                                 ? "Disponible"
-                                : "Mantenimiento"}
+                                : busSeat.status === "maintenance"
+                                ? "Mantenimiento"
+                                : "Deshabilitado"}
                             </p>
                             <p className="text-xs text-gray-500 font-mono">
                               ID: {busSeat.id}

@@ -40,6 +40,7 @@ export function useUpdateSeatStatus() {
       });
 
       if (!response.ok) {
+        console.log(response)
         throw new Error("Error al actualizar el asiento");
       }
 

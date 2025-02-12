@@ -196,6 +196,25 @@ export default function BusesPage() {
         );
       },
     },
+    {
+      id: "company",
+      accessorKey: "company",
+      header: "Empresa",
+      cell: ({ row }) => {
+        if (!row.company) {
+          return <span className="text-gray-400 italic">Sin empresa</span>;
+        }
+        const company: Company = row.company;
+        return (
+          <button
+            className="cursor-pointer underline text-pink-600"
+            onClick={() => handleOpenCompanyModal(company)}
+          >
+            {company.name}
+          </button>
+        );
+      },
+    },
   ];
 
   if (busesLoading || companiesLoading || templatesLoading) {

@@ -11,12 +11,15 @@ import {
   time,
   pgEnum,
   pgSchema,
+  varchar,
+  decimal
 } from "drizzle-orm/pg-core";
-
+import { relations } from "drizzle-orm";
+ 
 // ============================================================================
 // ENUMS
 // ============================================================================
-
+ 
 // User and Access Control
 export const roleEnum = pgEnum("role_enum", [
   "superadmin", // Superadmin
@@ -24,7 +27,7 @@ export const roleEnum = pgEnum("role_enum", [
   "branch_admin", // Branch Admin
   "seller", // Seller
 ]);
-
+ 
 // Parcel Management
 export const parcelStatusEnum = pgEnum("parcel_status_enum", [
   "received",
@@ -33,13 +36,13 @@ export const parcelStatusEnum = pgEnum("parcel_status_enum", [
   "delivered",
   "cancelled",
 ]);
-
+ 
 // Ticket Management
 export const ticketStatusEnum = pgEnum("ticket_status_enum", [
   "active",
   "cancelled",
 ]);
-
+ 
 // Payment Processing
 export const paymentMethodEnum = pgEnum("payment_method_enum", [
   "cash",
@@ -47,36 +50,42 @@ export const paymentMethodEnum = pgEnum("payment_method_enum", [
   "bank_transfer",
   "qr",
 ]);
-
+ 
 // Operations
 export const eventTypeEnum = pgEnum("event_type_enum", [
   "arrival",
   "departure",
 ]);
-
+ 
 export const incidentTypeEnum = pgEnum("incident_type_enum", [
   "complaint",
   "delay",
   "accident",
 ]);
-
-
-
+ 
 export const seatStatusEnum = pgEnum("seat_status_enum", [
   "available",
   "maintenance",
+  "disabled"
 ]);
-
+ 
 export const maintenanceStatusEnum = pgEnum("maintenance_status_enum", [
   "active",
   "in_maintenance",
   "retired",
 ]);
-
+ 
+// Add new enum for bus assignment status
+export const busAssignmentStatusEnum = pgEnum("bus_assignment_status_enum", [
+  "active",
+  "completed",
+  "cancelled"
+]);
+ 
 // ============================================================================
 // CORE TABLES
 // ============================================================================
-
+ 
 // Branch Management
 export const branches = pgTable("branches", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -92,10 +101,10 @@ export const branches = pgTable("branches", {
     .defaultNow()
     .notNull(),
 });
-
+ 
 // Define auth schema
 export const authSchema = pgSchema("auth");
-
+ 
 // Reference to Supabase's auth.users table (only essential fields we need)
 export const users = authSchema.table("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -103,7 +112,7 @@ export const users = authSchema.table("users", {
   created_at: timestamp("created_at", { withTimezone: true }),
   updated_at: timestamp("updated_at", { withTimezone: true }),
 });
-
+ 
 export const profiles = pgTable("profiles", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").references(() => users.id).notNull(),
@@ -119,7 +128,7 @@ export const profiles = pgTable("profiles", {
     .defaultNow()
     .notNull(),
 });
-
+ 
 // Customer Management
 export const customers = pgTable("customers", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -134,11 +143,11 @@ export const customers = pgTable("customers", {
     .defaultNow()
     .notNull(),
 });
-
+ 
 // ============================================================================
 // ROUTE AND SCHEDULE MANAGEMENT
 // ============================================================================
-
+ 
 // Location Management
 export const locations = pgTable("locations", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -150,15 +159,18 @@ export const locations = pgTable("locations", {
     .defaultNow()
     .notNull(),
 });
-
+ 
 // Route Management
 export const routes = pgTable("routes", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
-  originId: uuid("origin_id").references(() => locations.id),
-  destinationId: uuid("destination_id").references(() => locations.id),
-  capacity: integer("capacity").notNull().default(40),
-  seatsTaken: integer("seats_taken").notNull().default(0),
+  originId: uuid("origin_id").references(() => locations.id).notNull(),
+  destinationId: uuid("destination_id").references(() => locations.id).notNull(),
+  estimatedDuration: integer("estimated_duration").notNull(), // en minutos
+  departureTime: time("departure_time").notNull(),
+  arrivalTime: time("arrival_time").notNull(),
+  operatingDays: text("operating_days").array().notNull(), // ['monday', 'wednesday', etc]
+  active: boolean("active").default(true),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -166,28 +178,23 @@ export const routes = pgTable("routes", {
     .defaultNow()
     .notNull(),
 });
-
+ 
 // Schedule Management
 export const schedules = pgTable("schedules", {
   id: uuid("id").primaryKey().defaultRandom(),
-  routeId: uuid("route_id").references(() => routes.id),
-  busId: uuid("bus_id").references(() => buses.id),
+  routeId: uuid("route_id").references(() => routes.id).notNull(),
+  busId: uuid("bus_id").references(() => buses.id).notNull(),
   departureDate: date("departure_date").notNull(),
-  departureTime: time("departure_time").notNull(),
-  price: numeric("price").notNull(),
-  capacity: integer("capacity").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
+  price: integer("price").notNull(),
+  status: text("status").notNull(), // 'scheduled', 'in_progress', 'completed', 'cancelled'
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
-
+ 
 // ============================================================================
 // TICKET MANAGEMENT
 // ============================================================================
-
+ 
 export const tickets = pgTable("tickets", {
   id: uuid("id").primaryKey().defaultRandom(),
   scheduleId: uuid("schedule_id").references(() => schedules.id),
@@ -202,7 +209,7 @@ export const tickets = pgTable("tickets", {
     .defaultNow()
     .notNull(),
 });
-
+ 
 export const ticketReassignments = pgTable("ticket_reassignments", {
   id: uuid("id").primaryKey().defaultRandom(),
   ticketId: uuid("ticket_id").references(() => tickets.id),
@@ -213,7 +220,7 @@ export const ticketReassignments = pgTable("ticket_reassignments", {
     .defaultNow()
     .notNull(),
 });
-
+ 
 export const ticketCancellations = pgTable("ticket_cancellations", {
   id: uuid("id").primaryKey().defaultRandom(),
   ticketId: uuid("ticket_id").references(() => tickets.id),
@@ -222,11 +229,11 @@ export const ticketCancellations = pgTable("ticket_cancellations", {
     .defaultNow()
     .notNull(),
 });
-
+ 
 // ============================================================================
 // PARCEL MANAGEMENT
 // ============================================================================
-
+ 
 export const parcels = pgTable("parcels", {
   id: uuid("id").primaryKey().defaultRandom(),
   scheduleId: uuid("schedule_id").references(() => schedules.id),
@@ -244,7 +251,7 @@ export const parcels = pgTable("parcels", {
     .defaultNow()
     .notNull(),
 });
-
+ 
 export const parcelStatusUpdates = pgTable("parcel_status_updates", {
   id: uuid("id").primaryKey().defaultRandom(),
   parcelId: uuid("parcel_id").references(() => parcels.id),
@@ -255,11 +262,11 @@ export const parcelStatusUpdates = pgTable("parcel_status_updates", {
     .defaultNow()
     .notNull(),
 });
-
+ 
 // ============================================================================
 // PAYMENT AND INVOICING
 // ============================================================================
-
+ 
 export const payments = pgTable("payments", {
   id: uuid("id").primaryKey().defaultRandom(),
   amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
@@ -271,7 +278,7 @@ export const payments = pgTable("payments", {
     .defaultNow()
     .notNull(),
 });
-
+ 
 export const paymentLines = pgTable("payment_lines", {
   id: uuid("id").primaryKey().defaultRandom(),
   paymentId: uuid("payment_id").references(() => payments.id),
@@ -283,7 +290,7 @@ export const paymentLines = pgTable("payment_lines", {
     .defaultNow()
     .notNull(),
 });
-
+ 
 export const invoices = pgTable("invoices", {
   id: uuid("id").primaryKey().defaultRandom(),
   paymentId: uuid("payment_id").references(() => payments.id),
@@ -296,11 +303,11 @@ export const invoices = pgTable("invoices", {
     .defaultNow()
     .notNull(),
 });
-
+ 
 // ============================================================================
 // OPERATIONAL LOGGING
 // ============================================================================
-
+ 
 export const busLogs = pgTable("bus_logs", {
   id: uuid("id").primaryKey().defaultRandom(),
   scheduleId: uuid("schedule_id").references(() => schedules.id),
@@ -311,7 +318,7 @@ export const busLogs = pgTable("bus_logs", {
   locationId: uuid("location_id").references(() => locations.id),
   loggedBy: uuid("logged_by").references(() => profiles.id),
 });
-
+ 
 export const occupancyLogs = pgTable("occupancy_logs", {
   id: uuid("id").primaryKey().defaultRandom(),
   scheduleId: uuid("schedule_id").references(() => schedules.id),
@@ -320,7 +327,7 @@ export const occupancyLogs = pgTable("occupancy_logs", {
     .defaultNow()
     .notNull(),
 });
-
+ 
 export const incidents = pgTable("incidents", {
   id: uuid("id").primaryKey().defaultRandom(),
   type: incidentTypeEnum("type").notNull(),
@@ -330,7 +337,7 @@ export const incidents = pgTable("incidents", {
     .notNull(),
   reportedBy: uuid("reported_by").references(() => profiles.id),
 });
-
+ 
 // Bus Type Templates
 export const busTypeTemplates = pgTable("bus_type_templates", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -343,11 +350,11 @@ export const busTypeTemplates = pgTable("bus_type_templates", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
-
+ 
 // Bus Fleet Management
 export const buses = pgTable("buses", {
   id: uuid("id").primaryKey().defaultRandom(),
-  companyId: uuid("company_id").references(() => companies.id),
+  companyId: uuid("company_id").references(() => companies.id).notNull(),
   templateId: uuid("template_id").references(() => busTypeTemplates.id).notNull(),
   plateNumber: text("plate_number").unique().notNull(),
   isActive: boolean("is_active").default(true),
@@ -356,7 +363,7 @@ export const buses = pgTable("buses", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
-
+ 
 // Seat Tiers Configuration
 export const seatTiers = pgTable("seat_tiers", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -368,7 +375,7 @@ export const seatTiers = pgTable("seat_tiers", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
-
+ 
 // Bus Seat Configuration
 export const busSeats = pgTable("bus_seats", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -380,12 +387,26 @@ export const busSeats = pgTable("bus_seats", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
-
+ 
 // Organizational Structure
 export const companies = pgTable("companies", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   active: boolean("active").default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+ 
+// New table to track bus assignments
+export const busAssignments = pgTable("bus_assignments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  busId: uuid("bus_id").references(() => buses.id).notNull(),
+  routeId: uuid("route_id").references(() => routes.id).notNull(),
+  scheduleId: uuid("schedule_id").references(() => schedules.id).notNull(),
+  status: busAssignmentStatusEnum("status").default("active"),
+  assignedAt: timestamp("assigned_at", { withTimezone: true }).defaultNow().notNull(),
+  startTime: timestamp("start_time", { withTimezone: true }).notNull(),
+  endTime: timestamp("end_time", { withTimezone: true }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
