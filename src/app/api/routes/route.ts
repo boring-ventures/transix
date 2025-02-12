@@ -1,51 +1,19 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { routes } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { routes, locations } from "@/db/schema";
+import { sql } from "drizzle-orm";
 import { createRouteSchema, updateRouteSchema } from "@/types/route.types";
-import { getRouteById, createRoute, updateRoute, deleteRoute } from "@/lib/routes/routes";
+import { createRoute, createRouteSchedule } from "@/lib/routes/routes";
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url);
-    const routeId = searchParams.get("routeId");
-    const companyId = searchParams.get("companyId");
-
-    if (routeId) {
-      const route = await getRouteById(routeId);
-      if (!route) {
-        return NextResponse.json(
-          { error: "Route not found" },
-          { status: 404 }
-        );
-      }
-      return NextResponse.json(route);
-    }
-
-    if (companyId) {
-      const companyRoutes = await db.query.routes.findMany({
-        where: (routes, { eq, and }) =>
-          and(eq(routes.companyId, companyId), eq(routes.active, true)),
-        with: {
-          origin: true,
-          destination: true,
-        },
-      });
-      return NextResponse.json(companyRoutes);
-    }
-
-    const allRoutes = await db.query.routes.findMany({
-      where: eq(routes.active, true),
-      with: {
-        origin: true,
-        destination: true,
-      },
-    });
+    const allRoutes = await db.select().from(routes);
+    
     return NextResponse.json(allRoutes);
   } catch (error) {
     console.error("Error fetching routes:", error);
     return NextResponse.json(
-      { error: "Error fetching routes" },
+      { error: "Error al obtener las rutas" },
       { status: 500 }
     );
   }
@@ -56,6 +24,15 @@ export async function POST(request: Request) {
     const body = await request.json();
     const validatedData = createRouteSchema.parse(body);
     const route = await createRoute(validatedData);
+    
+    if (body.schedule) {
+      const scheduleData = {
+        routeId: route.id,
+        ...body.schedule
+      };
+      await createRouteSchedule(scheduleData);
+    }
+    
     return NextResponse.json(route);
   } catch (error) {
     console.error("Error creating route:", error);
@@ -110,3 +87,11 @@ export async function DELETE(request: Request) {
     );
   }
 }
+function updateRoute(routeId: any, validatedData: { name?: string | undefined; active?: boolean | undefined; originId?: string | undefined; destinationId?: string | undefined; estimatedDuration?: number | undefined; departureTime?: string | undefined; arrivalTime?: string | undefined; operatingDays?: string[] | undefined; }) {
+  throw new Error("Function not implemented.");
+}
+
+function deleteRoute(routeId: string) {
+  throw new Error("Function not implemented.");
+}
+

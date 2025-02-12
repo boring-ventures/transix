@@ -25,7 +25,7 @@ export function RoutesStatsCards({ routes, schedules }: RoutesStatsCardsProps) {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            {routes.reduce((acc, curr) => acc + curr.capacity, 0)} asientos
+            {routes.filter(r => r.active).length} activas
           </div>
         </CardContent>
       </Card>

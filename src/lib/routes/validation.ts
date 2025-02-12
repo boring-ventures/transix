@@ -1,7 +1,8 @@
 import { and, between, eq, or, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { schedules } from "@/db/schema";
+import { schedules, busAssignments, routeSchedules } from "@/db/schema";
 import { Schedule } from "@/types/route.types";
+import { and as drizzleAnd, lt, gt } from "drizzle-orm";
 
 /**
  * Checks if a bus is available for a given schedule
@@ -19,44 +20,28 @@ export async function isBusAvailable(
   arrivalTime: string,
   excludeScheduleId?: string
 ): Promise<boolean> {
-  // Convert times to comparable format
-  const newDepartureTime = new Date(`1970-01-01T${departureTime}`);
-  const newArrivalTime = new Date(`1970-01-01T${arrivalTime}`);
+  try {
+    const date = departureDate.toISOString().split('T')[0];
+    const startDateTime = new Date(`${date}T${departureTime}`);
+    const endDateTime = new Date(`${date}T${arrivalTime}`);
 
-  // Get all schedules for this bus on the same date
-  const busSchedules = await db
-    .select()
-    .from(schedules)
-    .where(
-      and(
-        eq(schedules.busId, busId),
-        eq(schedules.departureDate, sql.placeholder("date")),
-        or(
-          eq(schedules.status, "scheduled"),
-          eq(schedules.status, "in_progress")
-        ),
-        excludeScheduleId ? sql`${schedules.id} != ${excludeScheduleId}` : undefined
-      )
-    )
-    .prepare("check_bus_availability")
-    .execute({ date: departureDate.toISOString().split('T')[0] });
+    const existingAssignments = await db
+      .select()
+      .from(busAssignments)
+      .where(
+        and(
+          eq(busAssignments.busId, busId),
+          sql`DATE(${busAssignments.startTime}) = ${date}::date`,
+          sql`${busAssignments.startTime}::time <= ${arrivalTime}::time`,
+          sql`${busAssignments.endTime}::time >= ${departureTime}::time`
+        )
+      );
 
-  // Check for time conflicts
-  for (const schedule of busSchedules) {
-    const existingDepartureTime = new Date(`1970-01-01T${schedule.departureTime}`);
-    const existingArrivalTime = new Date(`1970-01-01T${schedule.arrivalTime}`);
-
-    // Check if there's any overlap in the time ranges
-    if (
-      (newDepartureTime >= existingDepartureTime && newDepartureTime < existingArrivalTime) ||
-      (newArrivalTime > existingDepartureTime && newArrivalTime <= existingArrivalTime) ||
-      (newDepartureTime <= existingDepartureTime && newArrivalTime >= existingArrivalTime)
-    ) {
-      return false;
-    }
+    return existingAssignments.length === 0;
+  } catch (error) {
+    console.error("Error checking bus availability:", error);
+    return false;
   }
-
-  return true;
 }
 
 /**
@@ -118,4 +103,26 @@ export function calculateArrivalTime(
   departureDate.setMinutes(departureDate.getMinutes() + durationMinutes);
   
   return departureDate.toTimeString().slice(0, 5);
+}
+
+export async function validateRouteSchedule(
+  routeId: string,
+  departureTime: string,
+  operatingDays: string[],
+  seasonStart?: Date,
+  seasonEnd?: Date
+): Promise<boolean> {
+  const existingSchedules = await db
+    .select()
+    .from(routeSchedules)
+    .where(
+      and(
+        eq(routeSchedules.routeId, routeId),
+        eq(routeSchedules.departureTime, departureTime),
+        eq(routeSchedules.active, true)
+      )
+    );
+
+  // Validar superposición de horarios y temporadas
+  return existingSchedules.length === 0;
 }
