@@ -1,7 +1,7 @@
-import { and, eq } from "drizzle-orm";
+import { eq} from "drizzle-orm";
 import { db } from "@/db";
 import { routes, schedules, routeSchedules } from "@/db/schema";
-import { CreateRouteInput, Route, RouteSchedule, CreateRouteScheduleInput } from "@/types/route.types";
+import { CreateRouteInput, CreateRouteScheduleInput, UpdateRouteInput } from "@/types/route.types";
 
 /**
  * Creates a new route
@@ -19,6 +19,19 @@ export async function createRoute(input: CreateRouteInput) {
     .returning();
 
   return route;
+}
+
+/**
+ * Updates a route
+ */
+export async function updateRoute(id: string, updates: UpdateRouteInput) {
+  const [updatedRoute] = await db
+    .update(routes)
+    .set({ ...updates, updatedAt: new Date() })
+    .where(eq(routes.id, id))
+    .returning();
+
+  return updatedRoute;
 }
 
 /**
@@ -67,4 +80,17 @@ export async function updateSchedule(
     .returning();
 
   return updatedSchedule;
+}
+
+/**
+ * Deletes a route
+ */
+export async function deleteRoute(id: string) {
+  const [deletedRoute] = await db
+    .update(routes)
+    .set({ active: false })
+    .where(eq(routes.id, id))
+    .returning();
+
+  return deletedRoute;
 }

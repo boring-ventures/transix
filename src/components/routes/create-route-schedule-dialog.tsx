@@ -19,22 +19,10 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createRouteScheduleSchema } from "@/types/route.types";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
 import { addDays } from "date-fns";
-import { DateRange } from "react-day-picker";
-import React from "react";
 
 interface CreateRouteScheduleDialogProps {
   open: boolean;
@@ -60,10 +48,6 @@ export function CreateRouteScheduleDialog({
   route,
 }: CreateRouteScheduleDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [date, setDate] = React.useState<DateRange | undefined>({
-    from: undefined,
-    to: undefined,
-  });
 
   const form = useForm<CreateRouteScheduleInput>({
     resolver: zodResolver(createRouteScheduleSchema),
@@ -72,21 +56,10 @@ export function CreateRouteScheduleDialog({
       departureTime: "08:00",
       operatingDays: ["monday", "wednesday", "friday"],
       active: true,
-      seasonRange: {
-        from: undefined,
-        to: undefined,
-      },
+      seasonStart: addDays(new Date(), -90),
+      seasonEnd: new Date(),
     },
   });
-
-  React.useEffect(() => {
-    if (date?.from) {
-      form.setValue("seasonStart", date.from);
-    }
-    if (date?.to) {
-      form.setValue("seasonEnd", date.to);
-    }
-  }, [date, form]);
 
   const handleSubmit = async (data: CreateRouteScheduleInput) => {
     try {
@@ -112,60 +85,10 @@ export function CreateRouteScheduleDialog({
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="seasonRange"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Temporada</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !date && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {date?.from ? (
-                            date.to ? (
-                              <>
-                                {format(date.from, "LLL dd, y", { locale: es })} -{" "}
-                                {format(date.to, "LLL dd, y", { locale: es })}
-                              </>
-                            ) : (
-                              format(date.from, "LLL dd, y", { locale: es })
-                            )
-                          ) : (
-                            <span>Seleccionar fechas</span>
-                          )}
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent 
-                      className="w-auto p-0" 
-                      align="start"
-                      forceMount
-                    >
-                      <Calendar
-                        initialFocus
-                        mode="range"
-                        defaultMonth={date?.from}
-                        selected={field.value as DateRange}
-                        onSelect={(value: DateRange | undefined) => field.onChange(value)}
-                        numberOfMonths={2}
-                        disabled={(date) => date < new Date()}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
+          <form
+            onSubmit={form.handleSubmit(handleSubmit)}
+            className="space-y-4"
+          >
             <FormField
               control={form.control}
               name="departureTime"
@@ -179,6 +102,60 @@ export function CreateRouteScheduleDialog({
                 </FormItem>
               )}
             />
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="seasonStart"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Inicio de Temporada</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        {...field}
+                        value={
+                          field.value
+                            ? new Date(field.value).toISOString().split("T")[0]
+                            : ""
+                        }
+                        onChange={(e) => {
+                          const date = new Date(e.target.value);
+                          field.onChange(date);
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="seasonEnd"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Fin de Temporada</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        {...field}
+                        value={
+                          field.value
+                            ? new Date(field.value).toISOString().split("T")[0]
+                            : ""
+                        }
+                        onChange={(e) => {
+                          const date = new Date(e.target.value);
+                          field.onChange(date);
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}
