@@ -1,6 +1,7 @@
 import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { ROLE_ROUTES, DEFAULT_ROUTES } from '@/config/roleRoutes'
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
@@ -18,18 +19,34 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(redirectUrl)
     }
 
-    // TODO: Check for specific roles if needed
-    // const { data: profile } = await supabase
-    //   .from('profiles')
-    //   .select('role')
-    //   .eq('user_id', session.user.id)
-    //   .single()
+    // Obtener el perfil del usuario
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('user_id', user.id)
+      .single()
 
-    // console.log(profile);
+    if (!profile) {
+      console.warn('[Middleware] Redirecting to setup - No profile')
+      return NextResponse.redirect(new URL('/setup', req.url))
+    }
 
-    // if (!profile) {
-    //   return NextResponse.redirect(new URL('/setup', req.url))
-    // }
+    const role = profile.role as keyof typeof ROLE_ROUTES
+    const currentPath = req.nextUrl.pathname
+
+    console.log(`[Middleware] User role: ${role}`);
+    console.log(`[Middleware] Current path: ${currentPath}`);
+    console.log(`[Middleware] Allowed paths for role: ${ROLE_ROUTES[role].join(', ')}`);
+
+    // Verificar si la ruta actual está permitida para el rol del usuario
+    const isAllowed = ROLE_ROUTES[role].some(route => 
+      currentPath === route || currentPath.endsWith(`${route}`)
+    )
+
+    if (!isAllowed) {
+      console.warn(`[Middleware] Redirecting to default route - Unauthorized access to ${currentPath}`)
+      return NextResponse.redirect(new URL(DEFAULT_ROUTES[role], req.url))
+    }
   }
 
   return res
@@ -42,4 +59,4 @@ export const config = {
     '/login',
     '/setup',
   ]
-} 
+}

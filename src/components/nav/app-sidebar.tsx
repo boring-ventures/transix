@@ -16,6 +16,8 @@ import {
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { useUserRoutes } from '@/hooks/useUserRoutes';
 
 import {
   Sidebar,
@@ -104,8 +106,13 @@ const data = {
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { userData, allowedRoutes } = useUserRoutes();
   const pathname = usePathname();
   const [openMenus, setOpenMenus] = React.useState<string[]>([]);
+
+  const filteredNavMain = data.navMain.filter(item => 
+    allowedRoutes.some(route => item.url === route || item.items?.some(subItem => allowedRoutes.includes(subItem.url)))
+  );
 
   const toggleMenu = (title: string) => {
     setOpenMenus((prev) =>
@@ -121,7 +128,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarHeader className="p-3">
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton size="lg" asChild>
+            <SidebarMenuButton size="lg" asChild>
                 <a href="/dashboard" className="flex items-center gap-2">
                   <div className="flex h-8 w-8 items-center justify-center rounded-md">
                     <Image
@@ -147,7 +154,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
-            {data.navMain.map((item, index) => {
+            {filteredNavMain.map((item, index) => {
               const isActive = item.url
                 ? pathname === item.url
                 : item.items?.some((subItem) => pathname === subItem.url);
@@ -223,7 +230,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter>
-          <NavUser user={data.user} />
+          <NavUser user={userData} />
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
