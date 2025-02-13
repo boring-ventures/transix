@@ -1,29 +1,32 @@
 ## Descripción
-<!-- Proporciona un resumen conciso de los cambios en este PR -->
+Cambios en la base de datos para el tema de tickets, horarios de viajes, y routes_schedules (al insertar un horario en una ruta) y algunos ajustes en sus types, hooks, y endpoints respectivos (142)
 
 ## Tipo de Cambio
 <!-- Marca con una 'x' los tipos que aplican -->
 - [ ] 🐛 Corrección de Bug
-- [ ] ✨ Nueva Funcionalidad
-- [ ] 💄 Actualización de UI/UX
-- [ ] ♻️ Refactorización de Código
+- [ x ] ✨ Nueva Funcionalidad
+- [ x ] 💄 Actualización de UI/UX
+- [ x ] ♻️ Refactorización de Código
 - [ ] 📝 Documentación
-- [ ] 🔧 Configuración
+- [ x ] 🔧 Configuración
 - [ ] 🚀 Mejora de Rendimiento
 
 ## ¿Cómo se ha Probado?
-<!-- Describe las pruebas que has realizado -->
+Se han probado los cambios en la base de datos localmente
 
 ## Screenshots (si aplica)
-<!-- Añade capturas de pantalla si los cambios afectan a la UI -->
+Venta de tickets
+1. image.png
+
+Rutas
+2. image.png
 
 ## Lista de Verificación
-<!-- Marca con una 'x' los items completados -->
-- [ ] He realizado pruebas locales de los cambios
+- [ x ] He realizado pruebas locales de los cambios
 - [ ] He actualizado la documentación correspondiente
 - [ ] Los cambios mantienen o mejoran la accesibilidad
 - [ ] Los cambios no generan nuevas advertencias o errores
-- [ ] He verificado la compatibilidad con las funcionalidades existentes
+- [ x ] He verificado la compatibilidad con las funcionalidades existentes
 
 ## Notas Adicionales
-<!-- Cualquier información adicional relevante para los revisores --> 
+La rama 141 y 142 se han mergeado sin problemas, y antes del merge con master, se hizo una prueba de que dichos cambios coincidían.
