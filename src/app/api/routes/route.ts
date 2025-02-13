@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { routes, locations } from "@/db/schema";
-import { sql } from "drizzle-orm";
+import { routes } from "@/db/schema";
 import { createRouteSchema, updateRouteSchema } from "@/types/route.types";
-import { createRoute, createRouteSchedule } from "@/lib/routes/routes";
+import { createRoute, createRouteSchedule, deleteRoute, updateRoute } from "@/lib/routes/routes";
 
 export async function GET() {
   try {
@@ -86,12 +85,5 @@ export async function DELETE(request: Request) {
       { status: 500 }
     );
   }
-}
-function updateRoute(routeId: any, validatedData: { name?: string | undefined; active?: boolean | undefined; originId?: string | undefined; destinationId?: string | undefined; estimatedDuration?: number | undefined; departureTime?: string | undefined; arrivalTime?: string | undefined; operatingDays?: string[] | undefined; }) {
-  throw new Error("Function not implemented.");
-}
-
-function deleteRoute(routeId: string) {
-  throw new Error("Function not implemented.");
 }
 

@@ -8,13 +8,10 @@ import {
   integer,
   jsonb,
   date,
-  time,
   pgEnum,
   pgSchema,
-  varchar,
-  decimal
+  json
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
 
 // ============================================================================
 // ENUMS
@@ -185,19 +182,17 @@ export const routes = pgTable("routes", {
 
 // Route Schedules (Horarios disponibles para una ruta)
 export const routeSchedules = pgTable("route_schedules", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  routeId: uuid("route_id").references(() => routes.id).notNull(),
-  departureTime: time("departure_time").notNull(),
-  operatingDays: text("operating_days").array().notNull(), // ['monday', 'wednesday', etc]
+  id: uuid("id").defaultRandom().primaryKey(),
+  routeId: uuid("route_id")
+    .notNull()
+    .references(() => routes.id),
+  departureTime: text("departure_time").notNull(),
+  operatingDays: json("operating_days").notNull(),
+  seasonStart: date("season_start").notNull(),
+  seasonEnd: date("season_end").notNull(),
   active: boolean("active").default(true),
-  seasonStart: date("season_start"), // Para manejar horarios por temporada (opcional)
-  seasonEnd: date("season_end"),     // Para manejar horarios por temporada (opcional)
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Schedule Management (Instancias específicas de viajes)
