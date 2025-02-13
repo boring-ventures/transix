@@ -134,7 +134,7 @@ export const customers = pgTable("customers", {
   fullName: text("full_name").notNull(),
   phone: text("phone"),
   email: text("email"),
-  documentId: text("document_id"),
+  documentId: text("document_id").unique(),
   createdAt: timestamp("created_at", { withTimezone: true })
   .defaultNow()
     .notNull(),
@@ -147,7 +147,8 @@ export const scheduleStatusEnum = pgEnum("schedule_status_enum", [
   "scheduled",    // Programado
   "in_progress",  // En curso
   "completed",    // Completado
-  "cancelled"     // Cancelado
+  "cancelled",    // Cancelado
+  "delayed"       // Atrasado (nuevo valor)
 ]);
 
 // ============================================================================
@@ -230,6 +231,9 @@ export const tickets = pgTable("tickets", {
   busSeatId: uuid("bus_seat_id").references(() => busSeats.id).notNull(),
   status: ticketStatusEnum("status").default("active"),
   price: numeric("price", { precision: 10, scale: 2 }).notNull(),
+  purchasedBy: uuid("purchased_by").references(() => profiles.id),
+  notes: text("notes"),
+  purchasedAt: timestamp("purchased_at", { withTimezone: true }).defaultNow().notNull(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

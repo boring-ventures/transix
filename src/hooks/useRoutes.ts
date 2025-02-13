@@ -9,6 +9,7 @@ import type {
   CreateRouteScheduleInput,
   UpdateRouteScheduleInput 
 } from "@/types/route.types";
+import type { Schedule } from "@/types/schedule.types";
 
 const ROUTES_API_URL = "/api/routes";
 const ROUTE_SCHEDULES_API_URL = "/api/route-schedules";
@@ -37,19 +38,20 @@ export function useRoute(routeId: string) {
   });
 }
 
-export function useRouteSchedules(routeId?: string) {
-  return useQuery<RouteSchedule[]>({
-    queryKey: ["route-schedules", routeId],
+export const useRouteSchedules = (routeId?: string) => {
+  return useQuery<Schedule[]>({
+    queryKey: ["schedules", routeId],
     queryFn: async () => {
-      const url = routeId 
-        ? `${ROUTE_SCHEDULES_API_URL}?routeId=${routeId}`
-        : ROUTE_SCHEDULES_API_URL;
-      const { data } = await axios.get(url);
+      const { data } = await axios.get<Schedule[]>(
+        routeId
+          ? `/api/schedules?routeId=${routeId}`
+          : "/api/schedules"
+      );
       return data;
     },
-    enabled: true,
+    enabled: !!routeId,
   });
-}
+};
 
 export function useCreateRoute() {
   const queryClient = useQueryClient();

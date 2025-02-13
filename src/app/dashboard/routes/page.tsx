@@ -241,7 +241,7 @@ export default function Routes() {
               <h2 className="text-lg font-semibold">Horarios de {selectedRoute.name}</h2>
             </div>
             <RouteSchedulesTable
-              routeSchedules={routeSchedules}
+              routeSchedules={routeSchedules as unknown as RouteSchedule[]}
               onRouteScheduleSelect={handleRouteScheduleSelect}
               selectedRouteSchedule={selectedRouteSchedule}
             />

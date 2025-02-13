@@ -68,3 +68,33 @@ export async function updateSchedule(
 
   return updatedSchedule;
 }
+
+export const createSchedule = async (
+  routeId: string,
+  busId: string,
+  departureDate: Date,
+  estimatedArrivalTime: string,
+  price: number,
+  routeScheduleId: string
+) => {
+  type ScheduleInsert = typeof schedules.$inferInsert;
+
+  const insertData: ScheduleInsert = {
+    routeId,
+    busId,
+    routeScheduleId,
+    departureDate: departureDate.toISOString().split('T')[0],
+    estimatedArrivalTime: new Date(estimatedArrivalTime),
+    price,
+    status: 'scheduled' as const,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  };
+
+  const [schedule] = await db
+    .insert(schedules)
+    .values(insertData)
+    .returning();
+
+  return schedule;
+};
