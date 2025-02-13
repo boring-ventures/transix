@@ -1,6 +1,6 @@
 {
-  "id": "327262d8-2c63-4aa3-9fa3-5ebd0a9ab299",
-  "prevId": "8388374d-e463-4cc7-aa74-5a655fa527f7",
+  "id": "ddbd70b7-e55d-42b4-8998-f0b3740d46e9",
+  "prevId": "fcdcb8d6-6af3-4ec2-8e87-d528d3894332",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -488,7 +488,7 @@
           "name": "company_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "template_id": {
           "name": "template_id",
@@ -1394,19 +1394,52 @@
           "name": "origin_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "destination_id": {
           "name": "destination_id",
           "type": "uuid",
           "primaryKey": false,
+          "notNull": false
+        },
+        "company_id": {
+          "name": "company_id",
+          "type": "uuid",
+          "primaryKey": false,
           "notNull": true
+        },
+        "default_bus_id": {
+          "name": "default_bus_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
         },
         "estimated_duration": {
           "name": "estimated_duration",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
+        },
+        "active": {
+          "name": "active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "capacity": {
+          "name": "capacity",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 40
+        },
+        "seats_taken": {
+          "name": "seats_taken",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
         },
         "departure_time": {
           "name": "departure_time",
@@ -1425,13 +1458,6 @@
           "type": "text[]",
           "primaryKey": false,
           "notNull": true
-        },
-        "active": {
-          "name": "active",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -1475,6 +1501,32 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
+        },
+        "routes_company_id_companies_id_fk": {
+          "name": "routes_company_id_companies_id_fk",
+          "tableFrom": "routes",
+          "tableTo": "companies",
+          "columnsFrom": [
+            "company_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "routes_default_bus_id_buses_id_fk": {
+          "name": "routes_default_bus_id_buses_id_fk",
+          "tableFrom": "routes",
+          "tableTo": "buses",
+          "columnsFrom": [
+            "default_bus_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -1498,13 +1550,13 @@
           "name": "route_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "bus_id": {
           "name": "bus_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "departure_date": {
           "name": "departure_date",
@@ -1512,9 +1564,15 @@
           "primaryKey": false,
           "notNull": true
         },
-        "price": {
-          "name": "price",
-          "type": "integer",
+        "departure_time": {
+          "name": "departure_time",
+          "type": "time",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "arrival_time": {
+          "name": "arrival_time",
+          "type": "time",
           "primaryKey": false,
           "notNull": true
         },
@@ -1522,18 +1580,37 @@
           "name": "status",
           "type": "text",
           "primaryKey": false,
+          "notNull": true,
+          "default": "'scheduled'"
+        },
+        "price": {
+          "name": "price",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "capacity": {
+          "name": "capacity",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "available_seats": {
+          "name": "available_seats",
+          "type": "integer",
+          "primaryKey": false,
           "notNull": true
         },
         "created_at": {
           "name": "created_at",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
@@ -2022,8 +2099,7 @@
       "schema": "public",
       "values": [
         "active",
-        "cancelled",
-        "disabled"
+        "cancelled"
       ]
     }
   },

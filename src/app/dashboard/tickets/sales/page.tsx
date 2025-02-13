@@ -15,41 +15,12 @@ import { Label } from "@/components/ui/label";
 import { ArrowRight, ArrowLeft, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { BusSeatMap } from "@/components/bus/bus-seat-map";
-
-// Types based on the schema
-type Route = {
-  id: string;
-  name: string;
-  originId: string;
-  destinationId: string;
-  capacity: number;
-  seats_taken: number;
-  created_at: Date;
-  updated_at: Date;
-};
-
-type Schedule = {
-  id: string;
-  route_id: string;
-  bus_id: string;
-  departure_date: string;
-  departure_time: string;
-  price: number;
-  capacity: number;
-  created_at: Date;
-  updated_at: Date;
-};
-
-type Bus = {
-  id: string;
-  plate_number: string;
-  bus_type: "standard" | "luxury" | "double_decker" | "mini";
-  total_capacity: number;
-  is_active: boolean;
-  maintenance_status: string;
-  created_at: Date;
-  updated_at: Date;
-};
+import { useRoutes, useRouteSchedules } from "@/hooks/useRoutes";
+import { useLocations } from "@/hooks/useLocations";
+import { LoadingTable } from "@/components/table/loading-table";
+import { Route, RouteSchedule } from "@/types/route.types";
+import { Schedule } from "@/types/schedule.types";
+import { BusType } from "@/types/bus.types";
 
 type Passenger = {
   name: string;
@@ -58,92 +29,23 @@ type Passenger = {
 };
 
 export default function TicketSales() {
-  const [step, setStep] = useState(1);
-  const [selectedRoute, setSelectedRoute] = useState<string>("");
-  const [selectedSchedule, setSelectedSchedule] = useState<string>("");
+  const { toast } = useToast();
+  const { data: routes = [], isLoading: isLoadingInitial } = useRoutes();
+  const { data: locations = [] } = useLocations();
+  const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
+  const { data: schedules, isLoading: isLoadingSchedules } = useRouteSchedules(selectedRoute?.id);
+  const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
   const [passengers, setPassengers] = useState<Record<string, Passenger>>({});
-  const { toast } = useToast();
+  const [step, setStep] = useState(1);
 
-  // Mock data - this would come from local storage in production
-  const routes: Route[] = [
-    {
-      id: "1",
-      name: "La Paz - Santa Cruz",
-      originId: "1",
-      destinationId: "2",
-      capacity: 40,
-      seats_taken: 0,
-      created_at: new Date(),
-      updated_at: new Date(),
-    },
-    {
-      id: "2",
-      name: "Cochabamba - Sucre",
-      originId: "3",
-      destinationId: "4",
-      capacity: 35,
-      seats_taken: 0,
-      created_at: new Date(),
-      updated_at: new Date(),
-    },
-  ];
+  // Mostrar loading solo al cargar inicialmente
+  if (isLoadingInitial) {
+    return <LoadingTable columnCount={6} rowCount={10} />;
+  }
 
-  const schedules: Schedule[] = [
-    {
-      id: "1",
-      route_id: "1",
-      bus_id: "1",
-      departure_date: "2024-01-15",
-      departure_time: "09:00",
-      price: 150,
-      capacity: 40,
-      created_at: new Date(),
-      updated_at: new Date(),
-    },
-    {
-      id: "2",
-      route_id: "1",
-      bus_id: "2",
-      departure_date: "2024-01-15",
-      departure_time: "14:00",
-      price: 150,
-      capacity: 40,
-      created_at: new Date(),
-      updated_at: new Date(),
-    },
-  ];
-
-  const buses: Bus[] = [
-    {
-      id: "1",
-      plate_number: "ABC-123",
-      bus_type: "luxury",
-      total_capacity: 40,
-      is_active: true,
-      maintenance_status: "operational",
-      created_at: new Date(),
-      updated_at: new Date(),
-    },
-    {
-      id: "2",
-      plate_number: "XYZ-789",
-      bus_type: "standard",
-      total_capacity: 40,
-      is_active: true,
-      maintenance_status: "operational",
-      created_at: new Date(),
-      updated_at: new Date(),
-    },
-  ];
-
-  const getCurrentBus = () => {
-    const schedule = schedules.find((s) => s.id === selectedSchedule);
-    if (schedule) {
-      return buses.find((b) => b.id === schedule.bus_id);
-    }
-    return null;
-  };
+  // Filtrar solo las rutas activas
+  const activeRoutes = routes.filter(route => route.active);
 
   const handleSeatSelect = (seatNumber: string) => {
     setSelectedSeats((prev) => {
@@ -151,7 +53,6 @@ export default function TicketSales() {
         ? prev.filter((s) => s !== seatNumber)
         : [...prev, seatNumber];
 
-      // Update passengers state
       const newPassengers = { ...passengers };
       if (!prev.includes(seatNumber)) {
         newPassengers[seatNumber] = {
@@ -229,72 +130,78 @@ export default function TicketSales() {
         return (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">Seleccionar Ruta</h2>
-            {routes.map((route) => (
-              <Card
-                key={route.id}
-                className={`cursor-pointer transition-colors hover:border-primary
-                  ${
-                    selectedRoute === route.id
-                      ? "border-primary bg-primary/5"
-                      : ""
-                  }`}
-                onClick={() => setSelectedRoute(route.id)}
-              >
-                <CardHeader>
-                  <CardTitle>{route.name}</CardTitle>
-                  <CardDescription>
-                    Capacidad: {route.capacity} pasajeros
-                    <br />
-                    Asientos ocupados: {route.seats_taken}
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            ))}
+            {activeRoutes.map((route) => {
+              const origin = locations.find(loc => loc.id === route.originId);
+              const destination = locations.find(loc => loc.id === route.destinationId);
+              
+              return (
+                <Card
+                  key={route.id}
+                  className={`cursor-pointer transition-colors hover:border-primary
+                    ${selectedRoute?.id === route.id ? "border-primary bg-primary/5" : ""}`}
+                  onClick={() => setSelectedRoute(route)}
+                >
+                  <CardHeader>
+                    <CardTitle>{route.name}</CardTitle>
+                    <CardDescription>
+                      {origin?.name} - {destination?.name}
+                      <br />
+                      Duración estimada: {route.estimatedDuration} minutos
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              );
+            })}
           </div>
         );
       case 2:
         return (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">Seleccionar Horario</h2>
-            {schedules
-              .filter((schedule) => schedule.route_id === selectedRoute)
-              .map((schedule) => (
-                <Card
-                  key={schedule.id}
-                  className={`cursor-pointer transition-colors hover:border-primary
-                    ${
-                      selectedSchedule === schedule.id
-                        ? "border-primary bg-primary/5"
-                        : ""
-                    }`}
-                  onClick={() => {
-                    setSelectedSchedule(schedule.id);
-                    setSelectedSeats([]);
-                    setPassengers({});
-                  }}
-                >
-                  <CardHeader>
-                    <CardTitle>{schedule.departure_time}</CardTitle>
-                    <CardDescription>
-                      Fecha: {schedule.departure_date}
-                      <br />
-                      Precio: Bs. {schedule.price}
-                    </CardDescription>
-                  </CardHeader>
-                </Card>
-              ))}
+            {schedules?.map((schedule) => (
+              <Card
+                key={schedule.id}
+                className={`cursor-pointer transition-colors hover:border-primary
+                ${selectedSchedule?.id === schedule.id ? "border-primary bg-primary/5" : ""}`}
+                onClick={() => {
+                  setSelectedSchedule(schedule);
+                  setStep(3);
+                  setSelectedSeats([]);
+                  setPassengers({});
+                }}
+              >
+                <CardHeader>
+                  <CardTitle>
+                    {new Date(schedule.departureDate).toLocaleDateString()} - {
+                      new Date(schedule.estimatedArrivalTime).toLocaleTimeString()
+                    }
+                  </CardTitle>
+                  <CardDescription>
+                    {schedule.routeName} - ${schedule.price / 100}
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            ))}
           </div>
         );
       case 3:
-        const currentBus = getCurrentBus();
-        return currentBus ? (
+        const currentSchedule = schedules?.find((s) => s.id === selectedSchedule?.id);
+        return currentSchedule?.bus ? (
           <div className="space-y-6">
             <h2 className="text-xl font-semibold">Seleccionar Asientos</h2>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Bus: {currentSchedule.bus.plateNumber}</p>
+                <p className="text-sm text-muted-foreground">Tipo: {currentSchedule.bus.template.type}</p>
+              </div>
+            </div>
             <BusSeatMap
-              busType={currentBus.bus_type}
+              busType={currentSchedule.bus.template.type as BusType}
+              seatsLayout={currentSchedule.bus.template.seatsLayout}
               selectedSeats={selectedSeats}
               onSeatSelect={handleSeatSelect}
-              occupiedSeats={[]} // This would come from local storage
+              occupiedSeats={[]} // Aquí podrías obtener los asientos ocupados de la base de datos
+              availableSeats={currentSchedule.bus.seats}
             />
 
             {selectedSeats.length > 0 && (
@@ -356,8 +263,8 @@ export default function TicketSales() {
             <Button
               onClick={() => {
                 setStep(1);
-                setSelectedRoute("");
-                setSelectedSchedule("");
+                setSelectedRoute(null);
+                setSelectedSchedule(null);
                 setSelectedSeats([]);
                 setPassengers({});
               }}

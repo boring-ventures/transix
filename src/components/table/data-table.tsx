@@ -28,16 +28,33 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { TableProps, SortDirection, PaginationState } from "./types";
+import { TableProps, SortDirection, PaginationState, Column } from "./types";
 import { sortData, filterData, paginateData } from "./table-utils";
 
-export function DataTable<T extends Record<string, unknown>>({
+interface DataTableProps<TData> {
+  title?: string;
+  description?: string;
+  data: TData[];
+  columns: Column<TData>[];
+  searchable?: boolean;
+  searchField?: keyof TData;
+  defaultSort?: { field: keyof TData; direction: SortDirection };
+  rowSelection?: boolean;
+  pageSize?: number;
+  pageSizeOptions?: number[];
+  onEdit?: (row: TData) => void;
+  onDelete?: (row: TData) => void;
+  onAdd?: () => void;
+  onRowClick?: (row: TData) => void;
+}
+
+export function DataTable<TData>({
   title,
   description,
   data,
   columns,
   searchable = true,
-  searchField = "title" as keyof T,
+  searchField = "title" as keyof TData,
   defaultSort,
   rowSelection = true,
   pageSize = 10,
@@ -46,9 +63,9 @@ export function DataTable<T extends Record<string, unknown>>({
   onDelete,
   onAdd,
   onRowClick,
-}: TableProps<T>) {
+}: DataTableProps<TData>) {
   const [sortConfig, setSortConfig] = useState<{
-    field: keyof T | undefined;
+    field: keyof TData | undefined;
     direction: SortDirection;
   }>({
     field: defaultSort?.field,
@@ -63,7 +80,7 @@ export function DataTable<T extends Record<string, unknown>>({
   });
 
   // Handle sorting
-  const handleSort = (field: keyof T) => {
+  const handleSort = (field: keyof TData) => {
     setSortConfig((current) => ({
       field,
       direction:

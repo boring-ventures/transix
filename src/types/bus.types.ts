@@ -42,6 +42,9 @@ export type SeatTemplateMatrix = {
   secondFloor?: FloorMatrix;
 };
 
+// Alias for backward compatibility
+export type BusSeatMatrix = SeatTemplateMatrix;
+
 /**
  * Bus Type Template Schemas
  */
@@ -203,3 +206,5 @@ export type MaintenanceStatusLabel = {
 export type SeatStatusLabel = {
   [K in typeof seatStatusEnum.enumValues[number]]: string;
 };
+
+export type BusType = "standard" | "luxury" | "double_decker" | "mini";

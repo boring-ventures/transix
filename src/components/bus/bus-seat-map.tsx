@@ -1,9 +1,9 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { BusType } from "@/types/bus.types";
 
 type SeatTier = "economy" | "business" | "premium";
-export type BusType = "standard" | "luxury" | "double_decker" | "mini";
 
 interface Seat {
   number: string;
@@ -14,17 +14,21 @@ interface Seat {
 
 interface BusSeatMapProps {
   busType: BusType;
+  seatsLayout: string;
   selectedSeats: string[];
   onSeatSelect: (seatNumber: string) => void;
-  occupiedSeats?: string[];
+  occupiedSeats: string[];
+  availableSeats: string[];
 }
 
-export function BusSeatMap({
+export const BusSeatMap: React.FC<BusSeatMapProps> = ({
   busType,
+  seatsLayout,
   selectedSeats,
   onSeatSelect,
-  occupiedSeats = [],
-}: BusSeatMapProps) {
+  occupiedSeats,
+  availableSeats,
+}) => {
   const getBusLayout = (type: BusType): (Seat | null)[][] => {
     switch (type) {
       case "standard":
@@ -213,4 +217,4 @@ export function BusSeatMap({
       </div>
     </div>
   );
-}
+};

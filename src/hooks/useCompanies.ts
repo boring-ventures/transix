@@ -1,15 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import type { CompanyResponse, CreateCompanyInput, UpdateCompanyInput } from "@/types/company.types";
+import type { CompanyResponse, CreateCompanyInput, UpdateCompanyInput, Company } from "@/types/company.types";
 
 const API_URL = "/api/companies";
 
 export function useCompanies() {
-  return useQuery<CompanyResponse[]>({
+  return useQuery<Company[]>({
     queryKey: ["companies"],
     queryFn: async () => {
-      const { data } = await axios.get(API_URL);
-      return data;
+      const response = await fetch("/api/companies");
+      if (!response.ok) {
+        throw new Error("Error fetching companies");
+      }
+      return response.json();
     },
   });
 }

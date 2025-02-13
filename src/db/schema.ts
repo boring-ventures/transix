@@ -8,11 +8,8 @@ import {
   integer,
   jsonb,
   date,
-  time,
   pgEnum,
   pgSchema,
-  varchar,
-  decimal
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
  
@@ -62,7 +59,9 @@ export const incidentTypeEnum = pgEnum("incident_type_enum", [
   "delay",
   "accident",
 ]);
- 
+
+
+
 export const seatStatusEnum = pgEnum("seat_status_enum", [
   "available",
   "maintenance",
@@ -74,14 +73,7 @@ export const maintenanceStatusEnum = pgEnum("maintenance_status_enum", [
   "in_maintenance",
   "retired",
 ]);
- 
-// Add new enum for bus assignment status
-export const busAssignmentStatusEnum = pgEnum("bus_assignment_status_enum", [
-  "active",
-  "completed",
-  "cancelled"
-]);
- 
+
 // ============================================================================
 // CORE TABLES
 // ============================================================================
@@ -135,7 +127,7 @@ export const customers = pgTable("customers", {
   fullName: text("full_name").notNull(),
   phone: text("phone"),
   email: text("email"),
-  documentId: text("document_id"),
+  documentId: text("document_id").unique(),
   createdAt: timestamp("created_at", { withTimezone: true })
   .defaultNow()
     .notNull(),
@@ -143,7 +135,7 @@ export const customers = pgTable("customers", {
     .defaultNow()
     .notNull(),
 });
- 
+
 // ============================================================================
 // ROUTE AND SCHEDULE MANAGEMENT
 // ============================================================================
@@ -164,13 +156,10 @@ export const locations = pgTable("locations", {
 export const routes = pgTable("routes", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
-  originId: uuid("origin_id").references(() => locations.id).notNull(),
-  destinationId: uuid("destination_id").references(() => locations.id).notNull(),
-  estimatedDuration: integer("estimated_duration").notNull(), // en minutos
-  departureTime: time("departure_time").notNull(),
-  arrivalTime: time("arrival_time").notNull(),
-  operatingDays: text("operating_days").array().notNull(), // ['monday', 'wednesday', etc]
-  active: boolean("active").default(true),
+  originId: uuid("origin_id").references(() => locations.id),
+  destinationId: uuid("destination_id").references(() => locations.id),
+  capacity: integer("capacity").notNull().default(40),
+  seatsTaken: integer("seats_taken").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -178,17 +167,22 @@ export const routes = pgTable("routes", {
     .defaultNow()
     .notNull(),
 });
- 
+
 // Schedule Management
 export const schedules = pgTable("schedules", {
   id: uuid("id").primaryKey().defaultRandom(),
-  routeId: uuid("route_id").references(() => routes.id).notNull(),
-  busId: uuid("bus_id").references(() => buses.id).notNull(),
+  routeId: uuid("route_id").references(() => routes.id),
+  busId: uuid("bus_id").references(() => buses.id),
   departureDate: date("departure_date").notNull(),
-  price: integer("price").notNull(),
-  status: text("status").notNull(), // 'scheduled', 'in_progress', 'completed', 'cancelled'
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  departureTime: time("departure_time").notNull(),
+  price: numeric("price").notNull(),
+  capacity: integer("capacity").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });
  
 // ============================================================================
@@ -202,6 +196,9 @@ export const tickets = pgTable("tickets", {
   busSeatId: uuid("bus_seat_id").references(() => busSeats.id).notNull(),
   status: ticketStatusEnum("status").default("active"),
   price: numeric("price", { precision: 10, scale: 2 }).notNull(),
+  purchasedBy: uuid("purchased_by").references(() => profiles.id),
+  notes: text("notes"),
+  purchasedAt: timestamp("purchased_at", { withTimezone: true }).defaultNow().notNull(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -393,20 +390,6 @@ export const companies = pgTable("companies", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   active: boolean("active").default(true),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-});
- 
-// New table to track bus assignments
-export const busAssignments = pgTable("bus_assignments", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  busId: uuid("bus_id").references(() => buses.id).notNull(),
-  routeId: uuid("route_id").references(() => routes.id).notNull(),
-  scheduleId: uuid("schedule_id").references(() => schedules.id).notNull(),
-  status: busAssignmentStatusEnum("status").default("active"),
-  assignedAt: timestamp("assigned_at", { withTimezone: true }).defaultNow().notNull(),
-  startTime: timestamp("start_time", { withTimezone: true }).notNull(),
-  endTime: timestamp("end_time", { withTimezone: true }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

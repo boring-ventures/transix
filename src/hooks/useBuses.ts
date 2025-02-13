@@ -4,12 +4,15 @@ import type { Bus, CreateBusInput, UpdateBusInput } from "@/types/bus.types";
 
 const API_URL = "/api/buses";
 
-export function useBuses() {
-  return useQuery<Bus[]>({
-    queryKey: ["buses"],
+export function useBuses(companyId: string) {
+  return useQuery({
+    queryKey: ["buses", companyId],
     queryFn: async () => {
-      const { data } = await axios.get(API_URL);
-      return data;
+      const response = await fetch(`/api/buses?companyId=${companyId}`);
+      if (!response.ok) {
+        throw new Error("Error fetching buses");
+      }
+      return response.json() as Promise<Bus[]>;
     },
   });
 }

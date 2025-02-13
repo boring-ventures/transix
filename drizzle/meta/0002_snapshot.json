@@ -1,5 +1,5 @@
 {
-  "id": "8388374d-e463-4cc7-aa74-5a655fa527f7",
+  "id": "fcdcb8d6-6af3-4ec2-8e87-d528d3894332",
   "prevId": "9d8caa8d-ce7d-41a5-91a8-626c9a718b81",
   "version": "7",
   "dialect": "postgresql",
@@ -1283,6 +1283,31 @@
           "primaryKey": false,
           "notNull": false
         },
+        "company_id": {
+          "name": "company_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "default_bus_id": {
+          "name": "default_bus_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "estimated_duration": {
+          "name": "estimated_duration",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "active": {
+          "name": "active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
         "capacity": {
           "name": "capacity",
           "type": "integer",
@@ -1339,6 +1364,32 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
+        },
+        "routes_company_id_companies_id_fk": {
+          "name": "routes_company_id_companies_id_fk",
+          "tableFrom": "routes",
+          "tableTo": "companies",
+          "columnsFrom": [
+            "company_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "routes_default_bus_id_buses_id_fk": {
+          "name": "routes_default_bus_id_buses_id_fk",
+          "tableFrom": "routes",
+          "tableTo": "buses",
+          "columnsFrom": [
+            "default_bus_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -1382,6 +1433,19 @@
           "primaryKey": false,
           "notNull": true
         },
+        "arrival_time": {
+          "name": "arrival_time",
+          "type": "time",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'scheduled'"
+        },
         "price": {
           "name": "price",
           "type": "numeric",
@@ -1390,6 +1454,12 @@
         },
         "capacity": {
           "name": "capacity",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "available_seats": {
+          "name": "available_seats",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
@@ -1875,8 +1945,7 @@
       "schema": "public",
       "values": [
         "available",
-        "maintenance",
-        "disabled"
+        "maintenance"
       ]
     },
     "public.ticket_status_enum": {

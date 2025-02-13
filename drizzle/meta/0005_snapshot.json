@@ -1,6 +1,6 @@
 {
-  "id": "c1e1834c-543b-4dd7-bbfc-0edb8ebf0214",
-  "prevId": "ddbd70b7-e55d-42b4-8998-f0b3740d46e9",
+  "id": "8d9953d6-83a3-4217-bf2d-52dfd206d139",
+  "prevId": "c1e1834c-543b-4dd7-bbfc-0edb8ebf0214",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1373,6 +1373,91 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.route_schedules": {
+      "name": "route_schedules",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "route_id": {
+          "name": "route_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "departure_time": {
+          "name": "departure_time",
+          "type": "time",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "operating_days": {
+          "name": "operating_days",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "active": {
+          "name": "active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "season_start": {
+          "name": "season_start",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "season_end": {
+          "name": "season_end",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "route_schedules_route_id_routes_id_fk": {
+          "name": "route_schedules_route_id_routes_id_fk",
+          "tableFrom": "route_schedules",
+          "tableTo": "routes",
+          "columnsFrom": [
+            "route_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.routes": {
       "name": "routes",
       "schema": "",
@@ -1405,24 +1490,6 @@
         "estimated_duration": {
           "name": "estimated_duration",
           "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "departure_time": {
-          "name": "departure_time",
-          "type": "time",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "arrival_time": {
-          "name": "arrival_time",
-          "type": "time",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "operating_days": {
-          "name": "operating_days",
-          "type": "text[]",
           "primaryKey": false,
           "notNull": true
         },
@@ -1500,6 +1567,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "route_schedule_id": {
+          "name": "route_schedule_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
         "bus_id": {
           "name": "bus_id",
           "type": "uuid",
@@ -1512,6 +1585,24 @@
           "primaryKey": false,
           "notNull": true
         },
+        "estimated_arrival_time": {
+          "name": "estimated_arrival_time",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actual_departure_time": {
+          "name": "actual_departure_time",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "actual_arrival_time": {
+          "name": "actual_arrival_time",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
         "price": {
           "name": "price",
           "type": "integer",
@@ -1520,20 +1611,21 @@
         },
         "status": {
           "name": "status",
-          "type": "text",
+          "type": "schedule_status_enum",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
         "created_at": {
           "name": "created_at",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
@@ -1547,6 +1639,19 @@
           "tableTo": "routes",
           "columnsFrom": [
             "route_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "schedules_route_schedule_id_route_schedules_id_fk": {
+          "name": "schedules_route_schedule_id_route_schedules_id_fk",
+          "tableFrom": "schedules",
+          "tableTo": "route_schedules",
+          "columnsFrom": [
+            "route_schedule_id"
           ],
           "columnsTo": [
             "id"
@@ -2007,6 +2112,16 @@
         "company_admin",
         "branch_admin",
         "seller"
+      ]
+    },
+    "public.schedule_status_enum": {
+      "name": "schedule_status_enum",
+      "schema": "public",
+      "values": [
+        "scheduled",
+        "in_progress",
+        "completed",
+        "cancelled"
       ]
     },
     "public.seat_status_enum": {

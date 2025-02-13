@@ -12,6 +12,7 @@ import {
   ChevronDown,
   List,
   Building,
+  Clock,
 } from "lucide-react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -61,14 +62,30 @@ const data = {
       ],
     },
     {
+      title: "Rutas",
+      icon: Map,
+      items: [
+        {
+          title: "Lista de Rutas",
+          url: "/dashboard/routes",
+          icon: List,
+        },
+        {
+          title: "Ubicaciones",
+          url: "/dashboard/locations",
+          icon: Map,
+        },
+        {
+          title: "Horarios",
+          url: "/dashboard/routes/schedules",
+          icon: Clock,
+        },
+      ],
+    },
+    {
       title: "Encomiendas",
       url: "/dashboard/parcels",
       icon: Package,
-    },
-    {
-      title: "Rutas",
-      url: "/dashboard/routes",
-      icon: Map,
     },
     {
       title: "Buses",
