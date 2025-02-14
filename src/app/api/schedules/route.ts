@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { schedules, routes, buses, locations, busTypeTemplates, busSeats } from "@/db/schema";
-import { sql, eq } from "drizzle-orm";
+import { schedules, routes, buses, busTypeTemplates, busSeats } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import { isBusAvailable } from "@/lib/routes/validation";
 import { createSchedule } from "@/lib/routes/routes";
 
@@ -22,7 +22,7 @@ export async function GET(req: Request) {
           maintenanceStatus: buses.maintenanceStatus,
           template: {
             id: busTypeTemplates.id, // este es un uuid
-            //name: busTypeTemplates.name,
+            name: busTypeTemplates.name.toString(),
             type: busTypeTemplates.type, // id del template
             totalCapacity: busTypeTemplates.totalCapacity,
             seatsLayout: busTypeTemplates.seatsLayout // id del busseat

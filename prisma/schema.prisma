@@ -1,0 +1,832 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+  schemas   = ["auth", "public"]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model audit_log_entries {
+  instance_id String?   @db.Uuid
+  id          String    @id @db.Uuid
+  payload     Json?     @db.Json
+  created_at  DateTime? @db.Timestamptz(6)
+  ip_address  String    @default("") @db.VarChar(64)
+
+  @@index([instance_id], map: "audit_logs_instance_id_idx")
+  @@schema("auth")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model flow_state {
+  id                     String                @id @db.Uuid
+  user_id                String?               @db.Uuid
+  auth_code              String
+  code_challenge_method  code_challenge_method
+  code_challenge         String
+  provider_type          String
+  provider_access_token  String?
+  provider_refresh_token String?
+  created_at             DateTime?             @db.Timestamptz(6)
+  updated_at             DateTime?             @db.Timestamptz(6)
+  authentication_method  String
+  auth_code_issued_at    DateTime?             @db.Timestamptz(6)
+  saml_relay_states      saml_relay_states[]
+
+  @@index([created_at(sort: Desc)])
+  @@index([auth_code], map: "idx_auth_code")
+  @@index([user_id, authentication_method], map: "idx_user_id_auth_method")
+  @@schema("auth")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model identities {
+  provider_id     String
+  user_id         String    @db.Uuid
+  identity_data   Json
+  provider        String
+  last_sign_in_at DateTime? @db.Timestamptz(6)
+  created_at      DateTime? @db.Timestamptz(6)
+  updated_at      DateTime? @db.Timestamptz(6)
+  email           String?   @default(dbgenerated("lower((identity_data ->> 'email'::text))"))
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  users           users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([provider_id, provider], map: "identities_provider_id_provider_unique")
+  @@index([email])
+  @@index([user_id])
+  @@schema("auth")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model instances {
+  id              String    @id @db.Uuid
+  uuid            String?   @db.Uuid
+  raw_base_config String?
+  created_at      DateTime? @db.Timestamptz(6)
+  updated_at      DateTime? @db.Timestamptz(6)
+
+  @@schema("auth")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model mfa_amr_claims {
+  session_id            String   @db.Uuid
+  created_at            DateTime @db.Timestamptz(6)
+  updated_at            DateTime @db.Timestamptz(6)
+  authentication_method String
+  id                    String   @id(map: "amr_id_pk") @db.Uuid
+  sessions              sessions @relation(fields: [session_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([session_id, authentication_method], map: "mfa_amr_claims_session_id_authentication_method_pkey")
+  @@schema("auth")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model mfa_challenges {
+  id                     String      @id @db.Uuid
+  factor_id              String      @db.Uuid
+  created_at             DateTime    @db.Timestamptz(6)
+  verified_at            DateTime?   @db.Timestamptz(6)
+  ip_address             String      @db.Inet
+  otp_code               String?
+  web_authn_session_data Json?
+  mfa_factors            mfa_factors @relation(fields: [factor_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "mfa_challenges_auth_factor_id_fkey")
+
+  @@index([created_at(sort: Desc)], map: "mfa_challenge_created_at_idx")
+  @@schema("auth")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model mfa_factors {
+  id                   String           @id @db.Uuid
+  user_id              String           @db.Uuid
+  friendly_name        String?
+  factor_type          factor_type
+  status               factor_status
+  created_at           DateTime         @db.Timestamptz(6)
+  updated_at           DateTime         @db.Timestamptz(6)
+  secret               String?
+  phone                String?
+  last_challenged_at   DateTime?        @unique @db.Timestamptz(6)
+  web_authn_credential Json?
+  web_authn_aaguid     String?          @db.Uuid
+  mfa_challenges       mfa_challenges[]
+  users                users            @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, phone], map: "unique_phone_factor_per_user")
+  @@index([user_id, created_at], map: "factor_id_created_at_idx")
+  @@index([user_id])
+  @@schema("auth")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model one_time_tokens {
+  id         String              @id @db.Uuid
+  user_id    String              @db.Uuid
+  token_type one_time_token_type
+  token_hash String
+  relates_to String
+  created_at DateTime            @default(now()) @db.Timestamp(6)
+  updated_at DateTime            @default(now()) @db.Timestamp(6)
+  users      users               @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, token_type])
+  @@index([relates_to], map: "one_time_tokens_relates_to_hash_idx", type: Hash)
+  @@index([token_hash], map: "one_time_tokens_token_hash_hash_idx", type: Hash)
+  @@schema("auth")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model refresh_tokens {
+  instance_id String?   @db.Uuid
+  id          BigInt    @id @default(autoincrement())
+  token       String?   @unique(map: "refresh_tokens_token_unique") @db.VarChar(255)
+  user_id     String?   @db.VarChar(255)
+  revoked     Boolean?
+  created_at  DateTime? @db.Timestamptz(6)
+  updated_at  DateTime? @db.Timestamptz(6)
+  parent      String?   @db.VarChar(255)
+  session_id  String?   @db.Uuid
+  sessions    sessions? @relation(fields: [session_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([instance_id])
+  @@index([instance_id, user_id])
+  @@index([parent])
+  @@index([session_id, revoked])
+  @@index([updated_at(sort: Desc)])
+  @@schema("auth")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model saml_providers {
+  id                String        @id @db.Uuid
+  sso_provider_id   String        @db.Uuid
+  entity_id         String        @unique
+  metadata_xml      String
+  metadata_url      String?
+  attribute_mapping Json?
+  created_at        DateTime?     @db.Timestamptz(6)
+  updated_at        DateTime?     @db.Timestamptz(6)
+  name_id_format    String?
+  sso_providers     sso_providers @relation(fields: [sso_provider_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([sso_provider_id])
+  @@schema("auth")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model saml_relay_states {
+  id              String        @id @db.Uuid
+  sso_provider_id String        @db.Uuid
+  request_id      String
+  for_email       String?
+  redirect_to     String?
+  created_at      DateTime?     @db.Timestamptz(6)
+  updated_at      DateTime?     @db.Timestamptz(6)
+  flow_state_id   String?       @db.Uuid
+  flow_state      flow_state?   @relation(fields: [flow_state_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  sso_providers   sso_providers @relation(fields: [sso_provider_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([created_at(sort: Desc)])
+  @@index([for_email])
+  @@index([sso_provider_id])
+  @@schema("auth")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model schema_migrations {
+  version String @id @db.VarChar(255)
+
+  @@schema("auth")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model sessions {
+  id             String           @id @db.Uuid
+  user_id        String           @db.Uuid
+  created_at     DateTime?        @db.Timestamptz(6)
+  updated_at     DateTime?        @db.Timestamptz(6)
+  factor_id      String?          @db.Uuid
+  aal            aal_level?
+  not_after      DateTime?        @db.Timestamptz(6)
+  refreshed_at   DateTime?        @db.Timestamp(6)
+  user_agent     String?
+  ip             String?          @db.Inet
+  tag            String?
+  mfa_amr_claims mfa_amr_claims[]
+  refresh_tokens refresh_tokens[]
+  users          users            @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([not_after(sort: Desc)])
+  @@index([user_id])
+  @@index([user_id, created_at], map: "user_id_created_at_idx")
+  @@schema("auth")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model sso_domains {
+  id              String        @id @db.Uuid
+  sso_provider_id String        @db.Uuid
+  domain          String
+  created_at      DateTime?     @db.Timestamptz(6)
+  updated_at      DateTime?     @db.Timestamptz(6)
+  sso_providers   sso_providers @relation(fields: [sso_provider_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([sso_provider_id])
+  @@schema("auth")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model sso_providers {
+  id                String              @id @db.Uuid
+  resource_id       String?
+  created_at        DateTime?           @db.Timestamptz(6)
+  updated_at        DateTime?           @db.Timestamptz(6)
+  saml_providers    saml_providers[]
+  saml_relay_states saml_relay_states[]
+  sso_domains       sso_domains[]
+
+  @@schema("auth")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model users {
+  instance_id                 String?           @db.Uuid
+  id                          String            @id @db.Uuid
+  aud                         String?           @db.VarChar(255)
+  role                        String?           @db.VarChar(255)
+  email                       String?           @db.VarChar(255)
+  encrypted_password          String?           @db.VarChar(255)
+  email_confirmed_at          DateTime?         @db.Timestamptz(6)
+  invited_at                  DateTime?         @db.Timestamptz(6)
+  confirmation_token          String?           @db.VarChar(255)
+  confirmation_sent_at        DateTime?         @db.Timestamptz(6)
+  recovery_token              String?           @db.VarChar(255)
+  recovery_sent_at            DateTime?         @db.Timestamptz(6)
+  email_change_token_new      String?           @db.VarChar(255)
+  email_change                String?           @db.VarChar(255)
+  email_change_sent_at        DateTime?         @db.Timestamptz(6)
+  last_sign_in_at             DateTime?         @db.Timestamptz(6)
+  raw_app_meta_data           Json?
+  raw_user_meta_data          Json?
+  is_super_admin              Boolean?
+  created_at                  DateTime?         @db.Timestamptz(6)
+  updated_at                  DateTime?         @db.Timestamptz(6)
+  phone                       String?           @unique
+  phone_confirmed_at          DateTime?         @db.Timestamptz(6)
+  phone_change                String?           @default("")
+  phone_change_token          String?           @default("") @db.VarChar(255)
+  phone_change_sent_at        DateTime?         @db.Timestamptz(6)
+  confirmed_at                DateTime?         @default(dbgenerated("LEAST(email_confirmed_at, phone_confirmed_at)")) @db.Timestamptz(6)
+  email_change_token_current  String?           @default("") @db.VarChar(255)
+  email_change_confirm_status Int?              @default(0) @db.SmallInt
+  banned_until                DateTime?         @db.Timestamptz(6)
+  reauthentication_token      String?           @default("") @db.VarChar(255)
+  reauthentication_sent_at    DateTime?         @db.Timestamptz(6)
+  is_sso_user                 Boolean           @default(false)
+  deleted_at                  DateTime?         @db.Timestamptz(6)
+  is_anonymous                Boolean           @default(false)
+  identities                  identities[]
+  mfa_factors                 mfa_factors[]
+  one_time_tokens             one_time_tokens[]
+  sessions                    sessions[]
+  profiles                    profiles[]
+
+  @@index([instance_id])
+  @@index([is_anonymous])
+  @@schema("auth")
+}
+
+model branches {
+  id         String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id String     @db.Uuid
+  name       String
+  address    String?
+  city       String?
+  active     Boolean?   @default(true)
+  created_at DateTime   @default(now()) @db.Timestamptz(6)
+  updated_at DateTime   @default(now()) @db.Timestamptz(6)
+  companies  companies  @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "branches_company_id_companies_id_fk")
+  profiles   profiles[]
+
+  @@schema("public")
+}
+
+model bus_assignments {
+  id          String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bus_id      String                      @db.Uuid
+  route_id    String                      @db.Uuid
+  schedule_id String                      @db.Uuid
+  status      bus_assignment_status_enum? @default(active)
+  assigned_at DateTime                    @default(now()) @db.Timestamptz(6)
+  start_time  DateTime                    @db.Timestamptz(6)
+  end_time    DateTime                    @db.Timestamptz(6)
+  created_at  DateTime                    @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime                    @default(now()) @db.Timestamptz(6)
+  buses       buses                       @relation(fields: [bus_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "bus_assignments_bus_id_buses_id_fk")
+  routes      routes                      @relation(fields: [route_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "bus_assignments_route_id_routes_id_fk")
+  schedules   schedules                   @relation(fields: [schedule_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "bus_assignments_schedule_id_schedules_id_fk")
+
+  @@schema("public")
+}
+
+model bus_logs {
+  id          String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  schedule_id String?         @db.Uuid
+  event_type  event_type_enum
+  timestamp   DateTime        @default(now()) @db.Timestamptz(6)
+  location_id String?         @db.Uuid
+  logged_by   String?         @db.Uuid
+  locations   locations?      @relation(fields: [location_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "bus_logs_location_id_locations_id_fk")
+  profiles    profiles?       @relation(fields: [logged_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "bus_logs_logged_by_profiles_id_fk")
+  schedules   schedules?      @relation(fields: [schedule_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "bus_logs_schedule_id_schedules_id_fk")
+
+  @@schema("public")
+}
+
+model bus_seats {
+  id          String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bus_id      String?           @db.Uuid
+  seat_number String
+  tier_id     String            @db.Uuid
+  status      seat_status_enum? @default(available)
+  is_active   Boolean?          @default(true)
+  created_at  DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime          @default(now()) @db.Timestamptz(6)
+  buses       buses?            @relation(fields: [bus_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "bus_seats_bus_id_buses_id_fk")
+  seat_tiers  seat_tiers        @relation(fields: [tier_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "bus_seats_tier_id_seat_tiers_id_fk")
+  tickets     tickets[]
+
+  @@schema("public")
+}
+
+model bus_type_templates {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id           String    @db.Uuid
+  name                 String
+  description          String?
+  total_capacity       Int
+  seat_template_matrix Json
+  is_active            Boolean?  @default(true)
+  created_at           DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime  @default(now()) @db.Timestamptz(6)
+  type                 String
+  seats_layout         String
+  companies            companies @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "bus_type_templates_company_id_companies_id_fk")
+  buses                buses[]
+
+  @@schema("public")
+}
+
+model buses {
+  id                      String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id              String                   @db.Uuid
+  template_id             String                   @db.Uuid
+  plate_number            String                   @unique(map: "buses_plate_number_unique")
+  is_active               Boolean?                 @default(true)
+  seat_matrix             Json
+  maintenance_status_enum maintenance_status_enum? @default(active)
+  created_at              DateTime                 @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime                 @default(now()) @db.Timestamptz(6)
+  bus_assignments         bus_assignments[]
+  bus_seats               bus_seats[]
+  companies               companies                @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "buses_company_id_companies_id_fk")
+  bus_type_templates      bus_type_templates       @relation(fields: [template_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "buses_template_id_bus_type_templates_id_fk")
+  schedules               schedules[]
+
+  @@schema("public")
+}
+
+model companies {
+  id                 String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name               String
+  active             Boolean?             @default(true)
+  created_at         DateTime             @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime             @default(now()) @db.Timestamptz(6)
+  branches           branches[]
+  bus_type_templates bus_type_templates[]
+  buses              buses[]
+  profiles           profiles[]
+  seat_tiers         seat_tiers[]
+
+  @@schema("public")
+}
+
+model customers {
+  id                                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  full_name                              String
+  phone                                  String?
+  email                                  String?
+  document_id                            String?   @unique(map: "customers_document_id_unique")
+  created_at                             DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at                             DateTime  @default(now()) @db.Timestamptz(6)
+  parcels_parcels_receiver_idTocustomers parcels[] @relation("parcels_receiver_idTocustomers")
+  parcels_parcels_sender_idTocustomers   parcels[] @relation("parcels_sender_idTocustomers")
+  tickets                                tickets[]
+
+  @@schema("public")
+}
+
+model incidents {
+  id          String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type        incident_type_enum
+  description String
+  reported_at DateTime           @default(now()) @db.Timestamptz(6)
+  reported_by String?            @db.Uuid
+  profiles    profiles?          @relation(fields: [reported_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "incidents_reported_by_profiles_id_fk")
+
+  @@schema("public")
+}
+
+model invoices {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  payment_id     String?   @db.Uuid
+  invoice_number String    @unique(map: "invoices_invoice_number_unique")
+  tax_info       Json
+  created_at     DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime  @default(now()) @db.Timestamptz(6)
+  payments       payments? @relation(fields: [payment_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "invoices_payment_id_payments_id_fk")
+
+  @@schema("public")
+}
+
+model locations {
+  id                                      String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                                    String
+  created_at                              DateTime   @default(now()) @db.Timestamptz(6)
+  updated_at                              DateTime   @default(now()) @db.Timestamptz(6)
+  bus_logs                                bus_logs[]
+  routes_routes_destination_idTolocations routes[]   @relation("routes_destination_idTolocations")
+  routes_routes_origin_idTolocations      routes[]   @relation("routes_origin_idTolocations")
+
+  @@schema("public")
+}
+
+model occupancy_logs {
+  id             String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  schedule_id    String?    @db.Uuid
+  occupied_seats Int
+  recorded_at    DateTime   @default(now()) @db.Timestamptz(6)
+  schedules      schedules? @relation(fields: [schedule_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "occupancy_logs_schedule_id_schedules_id_fk")
+
+  @@schema("public")
+}
+
+model parcel_status_updates {
+  id         String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  parcel_id  String?            @db.Uuid
+  status     parcel_status_enum
+  updated_by String?            @db.Uuid
+  reason     String?
+  updated_at DateTime           @default(now()) @db.Timestamptz(6)
+  parcels    parcels?           @relation(fields: [parcel_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "parcel_status_updates_parcel_id_parcels_id_fk")
+  profiles   profiles?          @relation(fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "parcel_status_updates_updated_by_profiles_id_fk")
+
+  @@schema("public")
+}
+
+model parcels {
+  id                                       String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  schedule_id                              String?                 @db.Uuid
+  sender_id                                String?                 @db.Uuid
+  receiver_id                              String?                 @db.Uuid
+  weight                                   Decimal                 @db.Decimal
+  dimensions                               Json?
+  declared_value                           Decimal                 @db.Decimal
+  status                                   parcel_status_enum?     @default(received)
+  price                                    Decimal                 @db.Decimal(10, 2)
+  created_at                               DateTime                @default(now()) @db.Timestamptz(6)
+  updated_at                               DateTime                @default(now()) @db.Timestamptz(6)
+  parcel_status_updates                    parcel_status_updates[]
+  customers_parcels_receiver_idTocustomers customers?              @relation("parcels_receiver_idTocustomers", fields: [receiver_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "parcels_receiver_id_customers_id_fk")
+  schedules                                schedules?              @relation(fields: [schedule_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "parcels_schedule_id_schedules_id_fk")
+  customers_parcels_sender_idTocustomers   customers?              @relation("parcels_sender_idTocustomers", fields: [sender_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "parcels_sender_id_customers_id_fk")
+  payment_lines                            payment_lines[]
+
+  @@schema("public")
+}
+
+model payment_lines {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  payment_id  String?   @db.Uuid
+  ticket_id   String?   @db.Uuid
+  parcel_id   String?   @db.Uuid
+  description String?
+  amount      Decimal   @db.Decimal(10, 2)
+  created_at  DateTime  @default(now()) @db.Timestamptz(6)
+  parcels     parcels?  @relation(fields: [parcel_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "payment_lines_parcel_id_parcels_id_fk")
+  payments    payments? @relation(fields: [payment_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "payment_lines_payment_id_payments_id_fk")
+  tickets     tickets?  @relation(fields: [ticket_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "payment_lines_ticket_id_tickets_id_fk")
+
+  @@schema("public")
+}
+
+model payments {
+  id            String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  amount        Decimal             @db.Decimal(10, 2)
+  method        payment_method_enum
+  created_at    DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime            @default(now()) @db.Timestamptz(6)
+  invoices      invoices[]
+  payment_lines payment_lines[]
+
+  @@schema("public")
+}
+
+model profiles {
+  id                    String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id               String                  @db.Uuid
+  company_id            String?                 @db.Uuid
+  full_name             String?
+  role                  role_enum
+  branch_id             String?                 @db.Uuid
+  active                Boolean?                @default(true)
+  created_at            DateTime                @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime                @default(now()) @db.Timestamptz(6)
+  bus_logs              bus_logs[]
+  incidents             incidents[]
+  parcel_status_updates parcel_status_updates[]
+  branches              branches?               @relation(fields: [branch_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "profiles_branch_id_branches_id_fk")
+  companies             companies?              @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "profiles_company_id_companies_id_fk")
+  users                 users                   @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "profiles_user_id_users_id_fk")
+  tickets               tickets[]
+
+  @@schema("public")
+}
+
+model route_schedules {
+  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  route_id       String      @db.Uuid
+  departure_time DateTime    @db.Time(6)
+  operating_days String[]
+  active         Boolean?    @default(true)
+  season_start   DateTime?   @db.Date
+  season_end     DateTime?   @db.Date
+  created_at     DateTime    @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime    @default(now()) @db.Timestamptz(6)
+  routes         routes      @relation(fields: [route_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "route_schedules_route_id_routes_id_fk")
+  schedules      schedules[]
+
+  @@schema("public")
+}
+
+model routes {
+  id                                         String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                                       String
+  origin_id                                  String            @db.Uuid
+  destination_id                             String            @db.Uuid
+  created_at                                 DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at                                 DateTime          @default(now()) @db.Timestamptz(6)
+  estimated_duration                         Int
+  active                                     Boolean?          @default(true)
+  bus_assignments                            bus_assignments[]
+  route_schedules                            route_schedules[]
+  locations_routes_destination_idTolocations locations         @relation("routes_destination_idTolocations", fields: [destination_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "routes_destination_id_locations_id_fk")
+  locations_routes_origin_idTolocations      locations         @relation("routes_origin_idTolocations", fields: [origin_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "routes_origin_id_locations_id_fk")
+  schedules                                  schedules[]
+
+  @@schema("public")
+}
+
+model schedules {
+  id                                                                   String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  route_id                                                             String                 @db.Uuid
+  route_schedule_id                                                    String                 @db.Uuid
+  bus_id                                                               String                 @db.Uuid
+  departure_date                                                       DateTime               @db.Date
+  estimated_arrival_time                                               DateTime               @db.Timestamptz(6)
+  actual_departure_time                                                DateTime?              @db.Timestamptz(6)
+  actual_arrival_time                                                  DateTime?              @db.Timestamptz(6)
+  price                                                                Int
+  status                                                               schedule_status_enum
+  created_at                                                           DateTime               @default(now()) @db.Timestamptz(6)
+  updated_at                                                           DateTime               @default(now()) @db.Timestamptz(6)
+  bus_assignments                                                      bus_assignments[]
+  bus_logs                                                             bus_logs[]
+  occupancy_logs                                                       occupancy_logs[]
+  parcels                                                              parcels[]
+  buses                                                                buses                  @relation(fields: [bus_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "schedules_bus_id_buses_id_fk")
+  routes                                                               routes                 @relation(fields: [route_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "schedules_route_id_routes_id_fk")
+  route_schedules                                                      route_schedules        @relation(fields: [route_schedule_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "schedules_route_schedule_id_route_schedules_id_fk")
+  ticket_reassignments_ticket_reassignments_new_schedule_idToschedules ticket_reassignments[] @relation("ticket_reassignments_new_schedule_idToschedules")
+  ticket_reassignments_ticket_reassignments_old_schedule_idToschedules ticket_reassignments[] @relation("ticket_reassignments_old_schedule_idToschedules")
+  tickets                                                              tickets[]
+
+  @@schema("public")
+}
+
+model seat_tiers {
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id  String      @db.Uuid
+  name        String
+  description String?
+  base_price  Decimal     @db.Decimal(10, 2)
+  is_active   Boolean?    @default(true)
+  created_at  DateTime    @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime    @default(now()) @db.Timestamptz(6)
+  bus_seats   bus_seats[]
+  companies   companies   @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "seat_tiers_company_id_companies_id_fk")
+
+  @@schema("public")
+}
+
+model ticket_cancellations {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ticket_id    String?  @db.Uuid
+  reason       String
+  cancelled_at DateTime @default(now()) @db.Timestamptz(6)
+  tickets      tickets? @relation(fields: [ticket_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ticket_cancellations_ticket_id_tickets_id_fk")
+
+  @@schema("public")
+}
+
+model ticket_reassignments {
+  id                                                        String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ticket_id                                                 String?    @db.Uuid
+  old_schedule_id                                           String?    @db.Uuid
+  new_schedule_id                                           String?    @db.Uuid
+  reason                                                    String
+  reassigned_at                                             DateTime   @default(now()) @db.Timestamptz(6)
+  schedules_ticket_reassignments_new_schedule_idToschedules schedules? @relation("ticket_reassignments_new_schedule_idToschedules", fields: [new_schedule_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ticket_reassignments_new_schedule_id_schedules_id_fk")
+  schedules_ticket_reassignments_old_schedule_idToschedules schedules? @relation("ticket_reassignments_old_schedule_idToschedules", fields: [old_schedule_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ticket_reassignments_old_schedule_id_schedules_id_fk")
+  tickets                                                   tickets?   @relation(fields: [ticket_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ticket_reassignments_ticket_id_tickets_id_fk")
+
+  @@schema("public")
+}
+
+model tickets {
+  id                   String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  schedule_id          String?                @db.Uuid
+  customer_id          String?                @db.Uuid
+  bus_seat_id          String                 @db.Uuid
+  status               ticket_status_enum?    @default(active)
+  price                Decimal                @db.Decimal(10, 2)
+  created_at           DateTime               @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime               @default(now()) @db.Timestamptz(6)
+  purchased_by         String?                @db.Uuid
+  notes                String?
+  purchased_at         DateTime               @default(now()) @db.Timestamptz(6)
+  payment_lines        payment_lines[]
+  ticket_cancellations ticket_cancellations[]
+  ticket_reassignments ticket_reassignments[]
+  bus_seats            bus_seats              @relation(fields: [bus_seat_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "tickets_bus_seat_id_bus_seats_id_fk")
+  customers            customers?             @relation(fields: [customer_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "tickets_customer_id_customers_id_fk")
+  profiles             profiles?              @relation(fields: [purchased_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "tickets_purchased_by_profiles_id_fk")
+  schedules            schedules?             @relation(fields: [schedule_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "tickets_schedule_id_schedules_id_fk")
+
+  @@schema("public")
+}
+
+enum aal_level {
+  aal1
+  aal2
+  aal3
+
+  @@schema("auth")
+}
+
+enum code_challenge_method {
+  s256
+  plain
+
+  @@schema("auth")
+}
+
+enum factor_status {
+  unverified
+  verified
+
+  @@schema("auth")
+}
+
+enum factor_type {
+  totp
+  webauthn
+  phone
+
+  @@schema("auth")
+}
+
+enum one_time_token_type {
+  confirmation_token
+  reauthentication_token
+  recovery_token
+  email_change_token_new
+  email_change_token_current
+  phone_change_token
+
+  @@schema("auth")
+}
+
+enum bus_assignment_status_enum {
+  active
+  completed
+  cancelled
+
+  @@schema("public")
+}
+
+enum event_type_enum {
+  arrival
+  departure
+
+  @@schema("public")
+}
+
+enum incident_type_enum {
+  complaint
+  delay
+  accident
+
+  @@schema("public")
+}
+
+enum maintenance_status_enum {
+  active
+  in_maintenance
+  retired
+
+  @@schema("public")
+}
+
+enum parcel_status_enum {
+  received
+  in_transit
+  ready_for_pickup
+  delivered
+  cancelled
+
+  @@schema("public")
+}
+
+enum payment_method_enum {
+  cash
+  card
+  bank_transfer
+  qr
+
+  @@schema("public")
+}
+
+enum role_enum {
+  superadmin
+  company_admin
+  branch_admin
+  seller
+
+  @@schema("public")
+}
+
+enum schedule_status_enum {
+  scheduled
+  in_progress
+  completed
+  cancelled
+  delayed
+
+  @@schema("public")
+}
+
+enum seat_status_enum {
+  available
+  maintenance
+
+  @@schema("public")
+}
+
+enum ticket_status_enum {
+  active
+  cancelled
+
+  @@schema("public")
+}
