@@ -14,6 +14,27 @@ export async function GET(request: NextRequest) {
       } : undefined,
       include: {
         routes: true,
+        schedules: {
+          include: {
+            bus_assignments: {
+              where: {
+                status: 'active'
+              },
+              include: {
+                buses: {
+                  include: {
+                    bus_type_templates: true,
+                    bus_seats: {
+                      include: {
+                        seat_tiers: true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       },
     });
 
@@ -37,6 +58,25 @@ export async function GET(request: NextRequest) {
         active: schedule.routes.active,
         createdAt: schedule.routes.created_at,
         updatedAt: schedule.routes.updated_at,
+      } : undefined,
+      bus: schedule.schedules[0]?.bus_assignments[0]?.buses ? {
+        id: schedule.schedules[0].bus_assignments[0].buses.id,
+        plateNumber: schedule.schedules[0].bus_assignments[0].buses.plate_number,
+        template: schedule.schedules[0].bus_assignments[0].buses.bus_type_templates ? {
+          id: schedule.schedules[0].bus_assignments[0].buses.bus_type_templates.id,
+          type: schedule.schedules[0].bus_assignments[0].buses.bus_type_templates.type,
+          seatsLayout: schedule.schedules[0].bus_assignments[0].buses.bus_type_templates.seats_layout,
+        } : undefined,
+        seats: schedule.schedules[0].bus_assignments[0].buses.bus_seats.map(seat => ({
+          id: seat.id,
+          seatNumber: seat.seat_number,
+          status: seat.status,
+          tier: seat.seat_tiers ? {
+            id: seat.seat_tiers.id,
+            name: seat.seat_tiers.name,
+            basePrice: seat.seat_tiers.base_price
+          } : undefined
+        })),
       } : undefined,
     }));
 

@@ -27,7 +27,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 
 export default function Routes() {
   const { toast } = useToast();
-  const { data: buses, isLoading: isLoadingBuses } = useBuses("1");
+  const companyId = "1"; // TODO: Get this from user context or environment
+  const { data: buses, isLoading: isLoadingBuses } = useBuses(companyId);
   const { data: locations = [], isLoading: isLoadingLocations } = useLocations();
   const {
     data: routes = [],
@@ -226,6 +227,7 @@ export default function Routes() {
             setDeletingRoute(route);
             setIsDeleteOpen(true);
           }}
+          companyId={companyId}
         />
 
         {selectedRoute && (

@@ -94,6 +94,26 @@ export type RouteSchedule = {
   seasonEnd: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  bus?: {
+    id: string;
+    plateNumber: string;
+    template?: {
+      id: string;
+      type: string;
+      seatsLayout: string;
+    };
+    seats: {
+      id: string;
+      seatNumber: string;
+      status: string;
+      tier?: {
+        id: string;
+        name: string;
+        basePrice: number;
+      };
+    }[];
+  };
+  route?: Route;
 };
 
 export type Schedule = {

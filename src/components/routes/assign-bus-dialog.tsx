@@ -25,7 +25,8 @@ import { Label } from "@/components/ui/label";
 interface AssignBusDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  schedule: Schedule;
+  route?: Route;
+  schedule?: Schedule;
   buses: Bus[];
   onAssign: (data: { busId: string; scheduleId: string }) => Promise<void>;
   isSubmitting?: boolean;
@@ -34,10 +35,11 @@ interface AssignBusDialogProps {
 export function AssignBusDialog({
   open,
   onOpenChange,
+  route,
   schedule,
   buses,
   onAssign,
-  isSubmitting
+  isSubmitting = false
 }: AssignBusDialogProps) {
   const [selectedBus, setSelectedBus] = useState<string | undefined>(undefined);
 
@@ -45,14 +47,26 @@ export function AssignBusDialog({
     if (!selectedBus) return;
     await onAssign({ 
       busId: selectedBus, 
-      scheduleId: schedule.id 
+      scheduleId: schedule?.id || route?.id || ""
     });
     onOpenChange(false);
   };
 
-  // Formatear las fechas para mostrar
-  const departureDateTime = new Date(schedule.departureDate);
-  const estimatedArrival = new Date(schedule.estimatedArrivalTime);
+  const getDialogTitle = () => {
+    if (schedule) {
+      return "Asignar Bus a Horario";
+    }
+    return "Asignar Bus a Ruta";
+  };
+
+  const getDialogDescription = () => {
+    if (schedule) {
+      const departureDateTime = new Date(schedule.departureDate);
+      const estimatedArrival = new Date(schedule.estimatedArrivalTime);
+      return `Horario: ${formatTime(departureDateTime)} - ${formatTime(estimatedArrival)}`;
+    }
+    return `Selecciona un bus para asignar a la ruta ${route?.name}`;
+  };
 
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString('es-ES', { 
@@ -66,22 +80,21 @@ export function AssignBusDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Asignar Bus a Ruta</DialogTitle>
+          <DialogTitle>{getDialogTitle()}</DialogTitle>
           <DialogDescription>
-            Horario: {formatTime(departureDateTime)} - {formatTime(estimatedArrival)}
+            {getDialogDescription()}
           </DialogDescription>
         </DialogHeader>
-        
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>Bus</Label>
+
+        <div className="grid gap-4 py-4">
+          <div className="grid gap-2">
+            <Label htmlFor="bus">Bus</Label>
             <Select
               value={selectedBus}
               onValueChange={setSelectedBus}
-              disabled={isSubmitting}
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar bus" />
+              <SelectTrigger id="bus">
+                <SelectValue placeholder="Selecciona un bus" />
               </SelectTrigger>
               <SelectContent>
                 {buses.map((bus) => (
@@ -98,7 +111,6 @@ export function AssignBusDialog({
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            disabled={isSubmitting}
           >
             Cancelar
           </Button>
@@ -106,7 +118,7 @@ export function AssignBusDialog({
             onClick={handleAssign}
             disabled={!selectedBus || isSubmitting}
           >
-            {isSubmitting ? "Asignando..." : "Asignar Bus"}
+            {isSubmitting ? "Asignando..." : "Asignar"}
           </Button>
         </DialogFooter>
       </DialogContent>

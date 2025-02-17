@@ -21,20 +21,24 @@ import { LoadingTable } from "@/components/table/loading-table";
 import { Route, RouteSchedule } from "@/types/route.types";
 import { Schedule } from "@/types/schedule.types";
 import { BusType } from "@/types/bus.types";
+import { SeatMatrixPreview } from "@/components/bus/seat-matrix-preview";
+import { useSeatTiers } from "@/hooks/useSeatTiers";
 
 type Passenger = {
   name: string;
   document_id: string;
   seat_number: string;
+  price: number;
 };
 
 export default function TicketSales() {
   const { toast } = useToast();
   const { data: routes = [], isLoading: isLoadingInitial } = useRoutes();
   const { data: locations = [] } = useLocations();
+  const { data: seatTiers = [] } = useSeatTiers();
   const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
   const { data: schedules, isLoading: isLoadingSchedules } = useRouteSchedules(selectedRoute?.id);
-  const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
+  const [selectedSchedule, setSelectedSchedule] = useState<RouteSchedule | null>(null);
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
   const [passengers, setPassengers] = useState<Record<string, Passenger>>({});
   const [step, setStep] = useState(1);
@@ -47,7 +51,7 @@ export default function TicketSales() {
   // Filtrar solo las rutas activas
   const activeRoutes = routes.filter(route => route.active);
 
-  const handleSeatSelect = (seatNumber: string) => {
+  const handleSeatSelect = (seatNumber: string, price: number) => {
     setSelectedSeats((prev) => {
       const newSeats = prev.includes(seatNumber)
         ? prev.filter((s) => s !== seatNumber)
@@ -59,6 +63,7 @@ export default function TicketSales() {
           name: "",
           document_id: "",
           seat_number: seatNumber,
+          price: price,
         };
       } else {
         delete newPassengers[seatNumber];
@@ -172,12 +177,10 @@ export default function TicketSales() {
               >
                 <CardHeader>
                   <CardTitle>
-                    {new Date(schedule.departureDate).toLocaleDateString()} - {
-                      new Date(schedule.estimatedArrivalTime).toLocaleTimeString()
-                    }
+                    {new Date(`1970-01-01T${schedule.departureTime}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </CardTitle>
                   <CardDescription>
-                    {schedule.routeName} - ${schedule.price / 100}
+                    {selectedRoute?.name} - Días: {schedule.operatingDays.join(", ")}
                   </CardDescription>
                 </CardHeader>
               </Card>
@@ -186,23 +189,59 @@ export default function TicketSales() {
         );
       case 3:
         const currentSchedule = schedules?.find((s) => s.id === selectedSchedule?.id);
-        return currentSchedule?.bus ? (
+        
+        if (!currentSchedule?.bus) {
+          return (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">
+                No hay un bus asignado a este horario. Por favor, seleccione otro horario o contacte al administrador.
+              </p>
+            </div>
+          );
+        }
+
+        const availableSeats = currentSchedule.bus.seats
+          .filter(seat => seat.status === 'available')
+          .map(seat => seat.seatNumber);
+
+        return (
           <div className="space-y-6">
             <h2 className="text-xl font-semibold">Seleccionar Asientos</h2>
             <div className="flex items-center justify-between mb-4">
               <div>
                 <p className="text-sm text-muted-foreground">Bus: {currentSchedule.bus.plateNumber}</p>
-                <p className="text-sm text-muted-foreground">Tipo: {currentSchedule.bus.template.type}</p>
+                <p className="text-sm text-muted-foreground">Tipo: {currentSchedule.bus.template?.type}</p>
               </div>
             </div>
-            <BusSeatMap
-              busType={currentSchedule.bus.template.type as BusType}
-              seatsLayout={currentSchedule.bus.template.seatsLayout}
-              selectedSeats={selectedSeats}
-              onSeatSelect={handleSeatSelect}
-              occupiedSeats={[]} // Aquí podrías obtener los asientos ocupados de la base de datos
-              availableSeats={currentSchedule.bus.seats}
-            />
+
+            {currentSchedule.bus.template?.seatsLayout ? (
+              <BusSeatMap
+                busType={currentSchedule.bus.template.type as BusType}
+                seatsLayout={currentSchedule.bus.template.seatsLayout}
+                selectedSeats={selectedSeats}
+                onSeatSelect={(seatNumber) => {
+                  const seat = currentSchedule.bus?.seats.find(s => s.seatNumber === seatNumber);
+                  if (seat && seat.tier) {
+                    handleSeatSelect(seatNumber, Number(seat.tier.basePrice));
+                  }
+                }}
+                occupiedSeats={currentSchedule.bus.seats
+                  .filter(seat => seat.status !== 'available')
+                  .map(seat => seat.seatNumber)}
+                availableSeats={availableSeats}
+                seatPrices={Object.fromEntries(
+                  currentSchedule.bus.seats
+                    .filter(seat => seat.tier)
+                    .map(seat => [seat.seatNumber, Number(seat.tier?.basePrice)])
+                )}
+              />
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">
+                  La distribución de asientos no está disponible para este bus.
+                </p>
+              </div>
+            )}
 
             {selectedSeats.length > 0 && (
               <div className="space-y-4">
@@ -210,7 +249,12 @@ export default function TicketSales() {
                 {selectedSeats.map((seatNumber) => (
                   <Card key={seatNumber}>
                     <CardHeader>
-                      <CardTitle>Asiento {seatNumber}</CardTitle>
+                      <CardTitle className="flex justify-between items-center">
+                        <span>Asiento {seatNumber}</span>
+                        <span className="text-sm text-muted-foreground">
+                          Precio: ${passengers[seatNumber]?.price.toFixed(2)}
+                        </span>
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="grid gap-4">
@@ -253,7 +297,7 @@ export default function TicketSales() {
               </div>
             )}
           </div>
-        ) : null;
+        );
       case 4:
         return (
           <div className="text-center space-y-4">

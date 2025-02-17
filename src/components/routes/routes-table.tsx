@@ -1,12 +1,13 @@
 import { DataTable } from "@/components/table/data-table";
 import { Column } from "@/components/table/types";
-import { Location, Route, RouteWithRelations, Schedule } from "@/types/route.types";
+import { Location, Route, RouteWithRelations } from "@/types/route.types";
 import { Button } from "@/components/ui/button";
 import { Bus } from "@/components/icons/bus";
 import { Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { AssignBusDialog } from "./assign-bus-dialog";
 import { useBuses } from "@/hooks/useBuses";
+import { useBusAssignments, BusAssignment } from "@/hooks/useBusAssignments";
 
 interface RoutesTableProps {
   routes: RouteWithRelations[];
@@ -17,145 +18,111 @@ interface RoutesTableProps {
   onAdd?: () => void;
   onEdit?: (route: Route) => void;
   onDelete?: (route: Route) => void;
+  companyId: string;
 }
 
-export function RoutesTable({ 
-  routes, 
-  locations, 
-  onBusAssigned,
+export function RoutesTable({
+  routes,
+  locations,
   onRouteSelect,
   selectedRouteId,
+  onBusAssigned,
   onAdd,
   onEdit,
-  onDelete
+  onDelete,
+  companyId,
 }: RoutesTableProps) {
-  const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
-  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
-  const { data: buses } = useBuses("1");
+  const [isAssignBusDialogOpen, setIsAssignBusDialogOpen] = useState(false);
+  const [selectedRoute, setSelectedRoute] = useState<RouteWithRelations | null>(null);
+  const { data: buses = [] } = useBuses(companyId);
+  const { data: busAssignments = [] } = useBusAssignments();
 
-  const getLocationName = (id: string) => {
-    return locations.find((loc) => loc.id === id)?.name || "";
-  };
-
-  const handleAssignBus = async (data: { busId: string; scheduleId: string }) => {
-    await onBusAssigned(data);
-    setIsAssignDialogOpen(false);
-  };
-
-  const routeColumns: Column<Route>[] = [
+  const columns: Column<RouteWithRelations>[] = [
     {
       id: "name",
       accessorKey: "name",
       header: "Nombre",
-      sortable: true,
-      cell: ({ row }) => (
-        <Button
-          variant="link"
-          className={`p-0 h-auto font-normal ${row.id === selectedRouteId ? 'text-primary font-medium' : ''}`}
-          onClick={() => onRouteSelect(row)}
-        >
-          {row.name}
-        </Button>
-      ),
     },
     {
       id: "origin",
-      accessorKey: "originId",
+      accessorKey: "origin",
       header: "Origen",
-      cell: ({ row }) => getLocationName(row.originId || ""),
-      sortable: true,
+      cell: ({ row }) => row.origin?.name,
     },
     {
       id: "destination",
-      accessorKey: "destinationId",
+      accessorKey: "destination",
       header: "Destino",
-      cell: ({ row }) => getLocationName(row.destinationId || ""),
-      sortable: true,
+      cell: ({ row }) => row.destination?.name,
     },
     {
-      id: "schedule",
+      id: "duration",
       accessorKey: "estimatedDuration",
-      header: "Horario",
-      cell: ({ row }) => (
-        <div className="flex flex-col">
-          <span>Duración estimada: {row.estimatedDuration} min</span>
-        </div>
-      ),
-      sortable: false,
+      header: "Duración (min)",
     },
     {
       id: "actions",
       accessorKey: "id",
       header: "Acciones",
-      cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              const schedule: Schedule = {
-                id: crypto.randomUUID(),
-                routeId: row.id,
-                routeScheduleId: "",
-                busId: "",
-                departureDate: new Date().toISOString(),
-                estimatedArrivalTime: new Date(),
-                actualDepartureTime: null,
-                actualArrivalTime: null,
-                price: 0,
-                status: "scheduled",
-                createdAt: new Date(),
-                updatedAt: new Date()
-              };
-              setSelectedSchedule(schedule);
-              setIsAssignDialogOpen(true);
-            }}
-          >
-            <Bus className="mr-2 h-4 w-4" />
-            Asignar Bus
-          </Button>
-          {onEdit && (
+      cell: ({ row }) => {
+        const route = row;
+        const busAssignment = busAssignments.find(
+          (assignment) => assignment.routeId === route.id && assignment.status === 'active'
+        );
+
+        return (
+          <div className="flex items-center gap-2">
             <Button
               variant="ghost"
-              size="sm"
-              onClick={() => onEdit(row)}
+              size="icon"
+              onClick={() => {
+                setSelectedRoute(route);
+                setIsAssignBusDialogOpen(true);
+              }}
             >
-              Editar
+              <Bus className="h-4 w-4" />
+              {busAssignment && (
+                <span className="ml-2">{busAssignment.bus?.plateNumber}</span>
+              )}
             </Button>
-          )}
-          {onDelete && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onDelete(row)}
-            >
-              Eliminar
-            </Button>
-          )}
-        </div>
-      ),
+            {onEdit && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onEdit(route)}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            )}
+            {onDelete && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onDelete(route)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        );
+      },
     },
   ];
 
   return (
     <>
       <DataTable
-        title="Rutas Disponibles"
+        columns={columns}
         data={routes}
-        columns={routeColumns}
-        searchable={true}
-        searchField="name"
-        onAdd={onAdd}
+        onRowClick={onRouteSelect}
       />
-      
-      {selectedSchedule && (
+      {selectedRoute && (
         <AssignBusDialog
-          open={isAssignDialogOpen}
-          onOpenChange={setIsAssignDialogOpen}
-          schedule={selectedSchedule}
-          buses={buses || []}
-          onAssign={handleAssignBus}
-          isSubmitting={false}
+          open={isAssignBusDialogOpen}
+          onOpenChange={setIsAssignBusDialogOpen}
+          route={selectedRoute}
+          buses={buses}
+          onAssign={onBusAssigned}
         />
       )}
     </>
