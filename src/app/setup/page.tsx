@@ -1,126 +1,81 @@
-'use client'
+import { prisma } from "@/lib/prisma";
+import { v4 as uuidv4 } from "uuid";
+import { redirect } from "next/navigation";
+import { z } from "zod";
 
-import { useState, useEffect } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { useRouter } from 'next/navigation'
-import { z } from 'zod'
-
+// Esquema para validar el registro del admin
 const setupSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
   fullName: z.string().min(3),
-})
+});
+
+// Esta función (server action) se invoca al enviar el formulario.
+export async function registerAdmin(formData: FormData) {
+  "use server";
+  const email = formData.get("email") as string;
+  const password = formData.get("password") as string;
+  const fullName = formData.get("fullName") as string;
+
+  // Validamos la entrada
+  setupSchema.parse({ email, password, fullName });
+
+  // *IMPORTANTE:* Aquí debes hashear la contraseña antes de guardarla.
+  // Para demo se está guardando en texto plano, pero en producción debes usar bcrypt o similar.
+
+  // Se crea el usuario y su perfil de admin (superadmin)
+  await prisma.users.create({
+    data: {
+      id: uuidv4(),
+      email,
+      encrypted_password: password,
+      profiles: {
+        create: {
+          full_name: fullName,
+          role: "superadmin",
+          active: true,
+          company_id: null,
+          branch_id: null,
+        },
+      },
+    },
+  });
+
+  // Redirige al dashboard luego del registro exitoso
+  redirect("/dashboard");
+}
 
 export default function SetupPage() {
-  const [mounted, setMounted] = useState(false)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [fullName, setFullName] = useState('')
-  const [error, setError] = useState('')
-  const router = useRouter()
-  const supabase = createClientComponentClient()
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  const handleSetup = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-
-    try {
-      setupSchema.parse({ email, password, fullName })
-
-      // Log the request parameters
-      console.log('Sending request with:', {
-        email,
-        full_name: fullName,
-        // Don't log the actual password
-        hasPassword: !!password
-      })
-
-      const rpcResponse = await supabase
-        .rpc('create_first_superadmin', {
-          email,
-          password,
-          full_name: fullName,
-        })
-
-      // Log the full RPC response
-      console.log('RPC Response:', JSON.stringify(rpcResponse, null, 2))
-
-      if (rpcResponse.error) {
-        console.error('RPC Error Details:', {
-          message: rpcResponse.error.message,
-          details: rpcResponse.error.details,
-          hint: rpcResponse.error.hint,
-          code: rpcResponse.error.code
-        })
-        setError(`Failed to create superadmin: ${rpcResponse.error.message || 'Unknown error'}`)
-        return
-      }
-
-      // Sign in the superadmin
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
-
-      if (signInError) {
-        console.error('Sign In Error:', signInError)
-        setError(signInError.message)
-        return
-      }
-
-      router.push('/dashboard')
-      router.refresh()
-    } catch (err) {
-      console.error('Setup Error:', err)
-      if (err instanceof z.ZodError) {
-        setError(err.errors[0].message)
-      } else {
-        setError('An unexpected error occurred')
-      }
-    }
-  }
-
-  if (!mounted) {
-    return null
-  }
-
   return (
     <div className="flex min-h-screen items-center justify-center">
-      <form onSubmit={handleSetup} className="space-y-4 w-full max-w-md p-8">
+      {/* Se utiliza el atributo "action" del formulario para invocar la acción registerAdmin */}
+      <form action={registerAdmin} method="POST" className="space-y-4 w-full max-w-md p-8">
         <h1 className="text-2xl font-bold text-center">Setup Superadmin</h1>
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-            {error}
-          </div>
-        )}
-        <Input
+        <input
           type="email"
+          name="email"
           placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          className="input"
+          required
         />
-        <Input
+        <input
           type="password"
+          name="password"
           placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          className="input"
+          required
         />
-        <Input
+        <input
           type="text"
+          name="fullName"
           placeholder="Full Name"
-          value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
+          className="input"
+          required
         />
-        <Button type="submit" className="w-full">
+        <button type="submit" className="btn w-full">
           Create Superadmin Account
-        </Button>
+        </button>
       </form>
     </div>
-  )
-} 
+  );
+}
