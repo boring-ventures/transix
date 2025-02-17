@@ -3,6 +3,8 @@ import { Column } from "@/components/table/types";
 import { Route, Schedule } from "@/types/route.types";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { Button } from "@/components/ui/button";
+import { Bus } from "@/components/icons/bus";
 
 // Shows a table with the available schedules
 
@@ -10,9 +12,15 @@ interface SchedulesTableProps {
   schedules: Schedule[];
   routes: Route[];
   onScheduleSelect: (schedule: Schedule) => void;
+  onAssignBus?: (schedule: Schedule) => void;
 }
 
-export function SchedulesTable({ schedules, routes, onScheduleSelect }: SchedulesTableProps) {
+export function SchedulesTable({ 
+  schedules, 
+  routes, 
+  onScheduleSelect,
+  onAssignBus 
+}: SchedulesTableProps) {
   const scheduleColumns: Column<Schedule>[] = [
     {
       id: "route",
@@ -96,6 +104,24 @@ export function SchedulesTable({ schedules, routes, onScheduleSelect }: Schedule
         );
       },
       sortable: true,
+    },
+    {
+      id: "actions",
+      header: "Acciones",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e) => {
+              e.stopPropagation();
+              onAssignBus?.(row);
+            }}
+          >
+            <Bus className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
     },
   ];
 

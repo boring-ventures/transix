@@ -21,14 +21,22 @@ import { Bus } from "@/types/bus.types";
 import { Route, Schedule } from "@/types/route.types";
 import { useBusAvailability } from "@/hooks/useBusAvailability";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 
 interface AssignBusDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   route?: Route;
-  schedule?: Schedule;
+  schedule: Schedule;
   buses: Bus[];
-  onAssign: (data: { busId: string; scheduleId: string }) => Promise<void>;
+  onAssign: (data: { 
+    busId: string; 
+    scheduleId: string;
+    routeId: string;
+    startTime: string;
+    endTime: string;
+  }) => Promise<void>;
   isSubmitting?: boolean;
 }
 
@@ -42,14 +50,66 @@ export function AssignBusDialog({
   isSubmitting = false
 }: AssignBusDialogProps) {
   const [selectedBus, setSelectedBus] = useState<string | undefined>(undefined);
+  const [startTime, setStartTime] = useState<string>("");
+  const [endTime, setEndTime] = useState<string>("");
+  const { toast } = useToast();
 
   const handleAssign = async () => {
-    if (!selectedBus) return;
-    await onAssign({ 
-      busId: selectedBus, 
-      scheduleId: schedule?.id || route?.id || ""
-    });
-    onOpenChange(false);
+    if (!selectedBus) {
+      toast({
+        title: "Error de validación",
+        description: "Debe seleccionar un bus",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!startTime) {
+      toast({
+        title: "Error de validación",
+        description: "Debe especificar la hora de inicio",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!endTime) {
+      toast({
+        title: "Error de validación",
+        description: "Debe especificar la hora de fin",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      console.log("Enviando datos de asignación:", {
+        busId: selectedBus,
+        scheduleId: schedule.id,
+        routeId: schedule.routeId,
+        startTime,
+        endTime
+      });
+
+      await onAssign({ 
+        busId: selectedBus,
+        scheduleId: schedule.id,
+        routeId: schedule.routeId,
+        startTime,
+        endTime
+      });
+      onOpenChange(false);
+      setSelectedBus(undefined);
+      setStartTime("");
+      setEndTime("");
+    } catch (error) {
+      console.error("Error al asignar bus:", error);
+      toast({
+        title: "Error al asignar bus",
+        description: error instanceof Error ? error.message : "Error desconocido",
+        variant: "destructive",
+      });
+    }
   };
 
   const getDialogTitle = () => {
@@ -97,13 +157,33 @@ export function AssignBusDialog({
                 <SelectValue placeholder="Selecciona un bus" />
               </SelectTrigger>
               <SelectContent>
-                {buses.map((bus) => (
+                {buses.map((bus: Bus) => (
                   <SelectItem key={bus.id} value={bus.id}>
                     {bus.plateNumber}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="startTime">Hora de Inicio</Label>
+            <Input
+              id="startTime"
+              type="time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+            />
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="endTime">Hora de Fin</Label>
+            <Input
+              id="endTime"
+              type="time"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+            />
           </div>
         </div>
 
@@ -116,7 +196,7 @@ export function AssignBusDialog({
           </Button>
           <Button
             onClick={handleAssign}
-            disabled={!selectedBus || isSubmitting}
+            disabled={!selectedBus || !startTime || !endTime || isSubmitting}
           >
             {isSubmitting ? "Asignando..." : "Asignar"}
           </Button>

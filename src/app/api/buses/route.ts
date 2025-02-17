@@ -13,18 +13,13 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const companyId = searchParams.get("companyId");
 
-    // Validar el UUID si se proporciona
-    if (companyId && !isValidUUID(companyId)) {
-      return NextResponse.json(
-        { error: "Invalid company ID format" },
-        { status: 400 }
-      );
-    }
+    // Si el companyId es "1" o no es un UUID válido, no aplicar el filtro
+    const shouldFilterByCompany = companyId && isValidUUID(companyId);
 
     const buses = await prisma.buses.findMany({
       where: {
         is_active: true,
-        ...(companyId ? { company_id: companyId } : {}),
+        ...(shouldFilterByCompany ? { company_id: companyId } : {}),
       },
       include: {
         companies: true,

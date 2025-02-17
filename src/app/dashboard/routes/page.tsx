@@ -156,14 +156,37 @@ export default function Routes() {
     }
   };
 
-  const handleAssignBus = async (data: { busId: string; scheduleId: string }) => {
+  const handleAssignBus = async (data: { 
+    busId: string; 
+    scheduleId: string;
+    routeId: string;
+    startTime: string;
+    endTime: string;
+  }) => {
+    if (!data.scheduleId) {
+      toast({
+        title: "Error al asignar bus",
+        description: "Debe seleccionar un horario para asignar un bus",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setIsAssigning(true);
-      await fetch("/api/bus-assignments", {
+      const response = await fetch("/api/bus-assignments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
+
+      const responseData = await response.json().catch(() => ({ 
+        error: "Error al procesar la respuesta del servidor" 
+      }));
+
+      if (!response.ok) {
+        throw new Error(responseData.error || responseData.details || "Error al asignar bus");
+      }
       
       await mutateSchedules();
       setIsAssignDialogOpen(false);
@@ -172,6 +195,7 @@ export default function Routes() {
         description: "El bus ha sido asignado exitosamente.",
       });
     } catch (error) {
+      console.error("Error al asignar bus:", error);
       toast({
         title: "Error al asignar bus",
         description: error instanceof Error ? error.message : "Error desconocido",
@@ -179,6 +203,52 @@ export default function Routes() {
       });
     } finally {
       setIsAssigning(false);
+    }
+  };
+
+  const handleGenerateSchedules = async (routeSchedule: RouteSchedule) => {
+    try {
+      const today = new Date();
+      const nextWeek = new Date();
+      nextWeek.setDate(today.getDate() + 7);
+
+      // Calculamos la hora de llegada estimada basada en la duración de la ruta
+      const departureTime = routeSchedule.departureTime;
+      const [hours, minutes] = departureTime.split(':').map(Number);
+      const departureDate = new Date(today);
+      departureDate.setHours(hours, minutes, 0, 0);
+
+      const response = await fetch("/api/schedules", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          routeId: routeSchedule.routeId,
+          routeScheduleId: routeSchedule.id,
+          departureDate: departureDate.toISOString(),
+          departureTime: routeSchedule.departureTime,
+          price: 0, // Precio base, puede ajustarse según necesidades
+          startDate: today.toISOString().split('T')[0],
+          endDate: nextWeek.toISOString().split('T')[0],
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Error al generar viajes");
+      }
+
+      await mutateSchedules();
+      toast({
+        title: "Viajes generados",
+        description: "Los viajes han sido generados exitosamente.",
+      });
+    } catch (error) {
+      console.error("Error al generar viajes:", error);
+      toast({
+        title: "Error al generar viajes",
+        description: error instanceof Error ? error.message : "Error desconocido",
+        variant: "destructive",
+      });
     }
   };
 
@@ -217,7 +287,6 @@ export default function Routes() {
           locations={locations}
           onRouteSelect={handleRouteSelect}
           selectedRouteId={selectedRoute?.id}
-          onBusAssigned={handleAssignBus}
           onAdd={() => setIsCreateDialogOpen(true)}
           onEdit={(route) => {
             setEditingRoute(route);
@@ -233,12 +302,13 @@ export default function Routes() {
         {selectedRoute && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Horarios de {selectedRoute.name}</h2>
+              <h2 className="text-lg font-semibold">Horarios Recurrentes: {selectedRoute.name}</h2>
             </div>
             <RouteSchedulesTable
               routeSchedules={routeSchedules as unknown as RouteSchedule[]}
               onRouteScheduleSelect={handleRouteScheduleSelect}
               selectedRouteSchedule={selectedRouteSchedule}
+              onGenerateSchedules={handleGenerateSchedules}
             />
           </div>
         )}
@@ -254,6 +324,10 @@ export default function Routes() {
               )}
               routes={routes}
               onScheduleSelect={handleScheduleSelect}
+              onAssignBus={(schedule) => {
+                setSelectedSchedule(schedule);
+                setIsAssignDialogOpen(true);
+              }}
             />
           </div>
         )}

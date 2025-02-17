@@ -622,7 +622,7 @@ model schedules {
   id                                                                   String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   route_id                                                             String                 @db.Uuid
   route_schedule_id                                                    String                 @db.Uuid
-  bus_id                                                               String                 @db.Uuid
+  bus_id                                                               String?                @db.Uuid
   departure_date                                                       DateTime               @db.Date
   estimated_arrival_time                                               DateTime               @db.Timestamptz(6)
   actual_departure_time                                                DateTime?              @db.Timestamptz(6)
@@ -635,7 +635,7 @@ model schedules {
   bus_logs                                                             bus_logs[]
   occupancy_logs                                                       occupancy_logs[]
   parcels                                                              parcels[]
-  buses                                                                buses                  @relation(fields: [bus_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "schedules_bus_id_buses_id_fk")
+  buses                                                                buses?                 @relation(fields: [bus_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "schedules_bus_id_buses_id_fk")
   routes                                                               routes                 @relation(fields: [route_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "schedules_route_id_routes_id_fk")
   route_schedules                                                      route_schedules        @relation(fields: [route_schedule_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "schedules_route_schedule_id_route_schedules_id_fk")
   ticket_reassignments_ticket_reassignments_new_schedule_idToschedules ticket_reassignments[] @relation("ticket_reassignments_new_schedule_idToschedules")

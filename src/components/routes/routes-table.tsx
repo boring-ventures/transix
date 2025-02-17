@@ -1,20 +1,15 @@
 import { DataTable } from "@/components/table/data-table";
 import { Column } from "@/components/table/types";
-import { Location, Route, RouteWithRelations } from "@/types/route.types";
+import { Location, Route, RouteWithRelations, Schedule } from "@/types/route.types";
 import { Button } from "@/components/ui/button";
-import { Bus } from "@/components/icons/bus";
 import { Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { AssignBusDialog } from "./assign-bus-dialog";
-import { useBuses } from "@/hooks/useBuses";
-import { useBusAssignments, BusAssignment } from "@/hooks/useBusAssignments";
 
 interface RoutesTableProps {
   routes: RouteWithRelations[];
   locations: Location[];
   onRouteSelect: (route: Route) => void;
   selectedRouteId?: string;
-  onBusAssigned: (data: { busId: string; scheduleId: string }) => Promise<void>;
   onAdd?: () => void;
   onEdit?: (route: Route) => void;
   onDelete?: (route: Route) => void;
@@ -26,17 +21,11 @@ export function RoutesTable({
   locations,
   onRouteSelect,
   selectedRouteId,
-  onBusAssigned,
   onAdd,
   onEdit,
   onDelete,
   companyId,
 }: RoutesTableProps) {
-  const [isAssignBusDialogOpen, setIsAssignBusDialogOpen] = useState(false);
-  const [selectedRoute, setSelectedRoute] = useState<RouteWithRelations | null>(null);
-  const { data: buses = [] } = useBuses(companyId);
-  const { data: busAssignments = [] } = useBusAssignments();
-
   const columns: Column<RouteWithRelations>[] = [
     {
       id: "name",
@@ -66,25 +55,8 @@ export function RoutesTable({
       header: "Acciones",
       cell: ({ row }) => {
         const route = row;
-        const busAssignment = busAssignments.find(
-          (assignment) => assignment.routeId === route.id && assignment.status === 'active'
-        );
-
         return (
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                setSelectedRoute(route);
-                setIsAssignBusDialogOpen(true);
-              }}
-            >
-              <Bus className="h-4 w-4" />
-              {busAssignment && (
-                <span className="ml-2">{busAssignment.bus?.plateNumber}</span>
-              )}
-            </Button>
             {onEdit && (
               <Button
                 variant="ghost"
@@ -110,21 +82,10 @@ export function RoutesTable({
   ];
 
   return (
-    <>
-      <DataTable
-        columns={columns}
-        data={routes}
-        onRowClick={onRouteSelect}
-      />
-      {selectedRoute && (
-        <AssignBusDialog
-          open={isAssignBusDialogOpen}
-          onOpenChange={setIsAssignBusDialogOpen}
-          route={selectedRoute}
-          buses={buses}
-          onAssign={onBusAssigned}
-        />
-      )}
-    </>
+    <DataTable
+      columns={columns}
+      data={routes}
+      onRowClick={onRouteSelect}
+    />
   );
 }

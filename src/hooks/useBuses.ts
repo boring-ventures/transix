@@ -9,7 +9,7 @@ export function useBuses(companyId?: string) {
     queryKey: ["buses", companyId],
     queryFn: async () => {
       try {
-        const url = companyId 
+        const url = companyId && companyId !== "1"
           ? `/api/buses?companyId=${encodeURIComponent(companyId)}`
           : '/api/buses';
 
@@ -26,7 +26,7 @@ export function useBuses(companyId?: string) {
         throw error;
       }
     },
-    enabled: companyId === undefined || companyId.length > 30,
+    enabled: true,
   });
 }
 
