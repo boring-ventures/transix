@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useEffect } from "react";
 import {
   useUsers,
@@ -50,7 +49,7 @@ import { Column } from "@/components/table/types";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { CompanyResponse } from "@/types/company.types";
-import { useSession } from "next-auth/react";
+import { useUserRoutes } from "@/hooks/useUserRoutes";
 
 interface CustomSession {
   user: {
@@ -62,7 +61,7 @@ interface CustomSession {
 }
 
 export default function UsersPage() {
-  const { data: session } = useSession() as { data: CustomSession | null };
+  const { userData } = useUserRoutes();
   const { data: users, isLoading: usersLoading } = useUsers();
   const { data: companies, isLoading: companiesLoading } = useCompanies();
   const createUser = useCreateUser();
@@ -108,7 +107,7 @@ export default function UsersPage() {
     if (createRole === role_enum.superadmin) {
       createForm.setValue("companyId", "");
       createForm.clearErrors("companyId");
-    } else if (!createForm.getValues("companyId") && session?.user?.companyId === null) {
+    } else if (!createForm.getValues("companyId") && userData?.companyId === null) {
       createForm.setError("companyId", {
         type: "required",
         message: "La empresa es requerida para roles que no son superadmin",
@@ -116,17 +115,17 @@ export default function UsersPage() {
     } else {
       createForm.clearErrors("companyId");
     }
-  }, [createRole, session?.user?.companyId, createForm]);
+  }, [createRole, userData.companyId, createForm]);
 
   // Si el usuario autenticado tiene companyId definido, se asigna por defecto
   useEffect(() => {
     if (
-      session?.user?.companyId &&
+      userData?.companyId &&
       createRole !== role_enum.superadmin
     ) {
-      createForm.setValue("companyId", session.user.companyId);
+      createForm.setValue("companyId", userData.companyId);
     }
-  }, [session?.user?.companyId, createRole, createForm]);
+  }, [userData?.companyId, createRole, createForm]);
 
   // Reset company field when role changes to superadmin in edit form
   useEffect(() => {
@@ -332,15 +331,25 @@ export default function UsersPage() {
       header: "Empresa",
       cell: ({ row }) => {
         const data = row as unknown as UserWithProfile;
-        if (!data.company) {
+
+        // Intentamos usar data.company si viene del API.
+        let companyInfo = data.company;
+        // Si no está, buscamos la empresa en la lista de companies usando el companyId del perfil
+        if (!companyInfo && data.profile?.companyId && companies) {
+          companyInfo = companies.find(
+            (comp) => comp.id === data.profile!.companyId
+          ) || undefined;
+        }
+        
+        if (!companyInfo) {
           return <span className="text-gray-400 italic">Sin empresa</span>;
         }
         return (
           <button
             className="cursor-pointer underline text-pink-600"
-            onClick={() => handleOpenCompanyModal(data.company!)}
+            onClick={() => handleOpenCompanyModal(companyInfo)}
           >
-            {data.company.name}
+            {companyInfo.name}
           </button>
         );
       },

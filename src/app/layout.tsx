@@ -6,6 +6,7 @@ import localFont from "next/font/local";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { QueryProvider } from "@/providers/QueryProvider";
 import { Toaster } from "@/components/ui/toaster";
+import { SessionProvider } from "next-auth/react";
 
 const APP_NAME = "TRANSIX";
 const APP_DESCRIPTION = "Transportation Management System";
@@ -71,11 +72,11 @@ export default function RootLayout({
         className={`${inter.variable} ${neutro.variable}`}
         suppressHydrationWarning
       >
-        <AuthProvider>
-          <QueryProvider>
-            <Providers>{children}</Providers>
-          </QueryProvider>
-        </AuthProvider>
+          <AuthProvider>
+            <QueryProvider>
+              <Providers>{children}</Providers>
+            </QueryProvider>
+          </AuthProvider>
         <Toaster />
       </body>
     </html>

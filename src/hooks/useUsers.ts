@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import type { UserWithProfile, CreateUserInput, CreateProfileInput } from "@/types/user.types";
+import type { UserWithProfile, CreateUserInput, CreateProfileInput, CreateUserRequest } from "@/types/user.types";
 
 const API_URL = "/api/users";
 
@@ -29,14 +29,8 @@ export function useCreateUser() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      user,
-      profile,
-    }: {
-      user: CreateUserInput;
-      profile: CreateProfileInput;
-    }) => {
-      const response = await axios.post(API_URL, { user, profile });
+    mutationFn: async (payload: CreateUserRequest) => {
+      const response = await axios.post(API_URL, payload);
       if (response.data.error) {
         throw new Error(response.data.error);
       }
