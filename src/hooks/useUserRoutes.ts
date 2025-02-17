@@ -4,7 +4,7 @@ import { ROLE_ROUTES } from '../config/roleRoutes';
 
 export function useUserRoutes() {
 
-  const [userData, setUserData] = useState({ name: '', email: '', avatar: '' });
+  const [userData, setUserData] = useState({ name: '', email: '', avatar: '', role: '', companyId: '' });
   const [allowedRoutes, setAllowedRoutes] = useState<string[]>([]);
   const supabase = createClientComponentClient();
 
@@ -20,6 +20,8 @@ export function useUserRoutes() {
           name,
           email,
           avatar,
+          role: '',
+          companyId: '',
         });
 
         const { data: profile } = await supabase
@@ -39,7 +41,7 @@ export function useUserRoutes() {
             companyId: profile.company_id,
           });
         } else {
-          setUserData({ name, email, avatar, role: '' });
+          setUserData({ name, email, avatar, role: '', companyId: '' });
         }
       }
     };

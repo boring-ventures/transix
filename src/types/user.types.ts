@@ -38,14 +38,20 @@ export const createUserSchema = z.object({
   password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
   fullName: z.string().min(1, "El nombre completo es requerido").trim(),
   role: z.nativeEnum(role_enum),
-  companyId: z.string().uuid("ID de empresa inválido"),
+  companyId: z.union([
+    z.string().uuid("ID de empresa inválido"),
+    z.literal("")
+  ]).transform((val) => (val === "" ? null : val)),
 });
 
 export const updateUserSchema = z.object({
   email: z.string().email("Email inválido").optional(),
   fullName: z.string().min(1, "El nombre completo es requerido").trim(),
   role: z.nativeEnum(role_enum),
-  companyId: z.string().uuid("ID de empresa inválido"),
+  companyId: z.union([
+    z.string().uuid("ID de empresa inválido"),
+    z.literal("")
+  ]).transform((val) => (val === "" ? null : val)),
 });
 
 /**
@@ -121,3 +127,16 @@ export type UpdateProfileInput = {
   companyId?: string | null;
   active?: boolean;
 };
+
+export const insertUserSchema = z.object({
+  email: z.string().email("Email inválido"),
+  password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
+});
+
+export const insertProfileSchema = z.object({
+  fullName: z.string().min(1, "El nombre completo es requerido").trim(),
+  role: z.nativeEnum(role_enum),
+  companyId: z.string().uuid("ID de empresa inválido").nullable(),
+  branchId: z.string().uuid("ID de sucursal inválido").nullable(),
+  active: z.boolean().default(true),
+});
