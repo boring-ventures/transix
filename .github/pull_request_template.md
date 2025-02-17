@@ -1,13 +1,13 @@
 ## Descripción
-Cambios en las dependencias de drizzle a prisma, cambios en total a 28 files. Hay algunos pequeños errores que arreglar, pero la mayoria de las dependencias se han cambiado.
+Cambios pequeños para arreglar logica relacionada a buses.
 
 ## Tipo de Cambio
 <!-- Marca con una 'x' los tipos que aplican -->
 - [ x ] 🐛 Corrección de Bug
-- [ x ] ✨ Nueva Funcionalidad
+- [ ] ✨ Nueva Funcionalidad
 - [ ] 💄 Actualización de UI/UX
-- [ x] ♻️ Refactorización de Código
-- [ x ] 📝 Documentación
+- [ x ] ♻️ Refactorización de Código
+- [ ] 📝 Documentación
 - [ x ] 🔧 Configuración
 - [ ] 🚀 Mejora de Rendimiento
 
@@ -25,4 +25,4 @@ No aplica
 - [ x ] He verificado la compatibilidad con las funcionalidades existentes
 
 ## Notas Adicionales
-Ninguna.
+Este commit solo es un guardado para checkpoint de emergencia.

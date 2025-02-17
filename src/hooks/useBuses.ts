@@ -4,16 +4,29 @@ import type { Bus, CreateBusInput, UpdateBusInput } from "@/types/bus.types";
 
 const API_URL = "/api/buses";
 
-export function useBuses(companyId: string) {
+export function useBuses(companyId?: string) {
   return useQuery({
     queryKey: ["buses", companyId],
     queryFn: async () => {
-      const response = await fetch(`/api/buses?companyId=${companyId}`);
-      if (!response.ok) {
-        throw new Error("Error fetching buses");
+      try {
+        const url = companyId 
+          ? `/api/buses?companyId=${encodeURIComponent(companyId)}`
+          : '/api/buses';
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Error fetching buses");
+        }
+
+        return data;
+      } catch (error) {
+        console.error("Error in useBuses:", error);
+        throw error;
       }
-      return response.json() as Promise<Bus[]>;
     },
+    enabled: companyId === undefined || companyId.length > 30,
   });
 }
 

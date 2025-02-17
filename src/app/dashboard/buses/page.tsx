@@ -49,8 +49,9 @@ import { Plus } from "lucide-react";
 import { EditBusModal } from "@/components/bus/edit-bus-modal";
 
 export default function BusesPage() {
-  const { data: buses, isLoading: busesLoading } = useBuses();
   const { data: companies, isLoading: companiesLoading } = useCompanies();
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const { data: buses, isLoading: busesLoading } = useBuses(selectedCompany?.id);
   const { data: templates, isLoading: templatesLoading } = useBusTemplates();
   const createBus = useCreateBus();
   const deleteBus = useDeleteBus();
@@ -60,7 +61,6 @@ export default function BusesPage() {
   const [editingBus, setEditingBus] = useState<BusWithRelations | null>(null);
   const [deletingBus, setDeletingBus] = useState<BusWithRelations | null>(null);
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
-  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const { toast } = useToast();
 
   const createForm = useForm<CreateBusInput>({
