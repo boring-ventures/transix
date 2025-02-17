@@ -107,6 +107,8 @@ export const CreateTemplateModal = ({
       description: "",
       companyId: "",
       totalCapacity: 0,
+      type: "standard",
+      seatsLayout: "",
       seatTemplateMatrix: {
         firstFloor: {
           dimensions: firstFloorConfig,

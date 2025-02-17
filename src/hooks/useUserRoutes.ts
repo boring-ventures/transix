@@ -12,15 +12,19 @@ export function useUserRoutes() {
     const getUserData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        const name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuario';
+        const email = user.email || '';
+        const avatar = user.user_metadata?.avatar_url || '/avatars/admin.jpg';
+
         setUserData({
-          name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuario',
-          email: user.email || '',
-          avatar: user.user_metadata?.avatar_url || '/avatars/admin.jpg',
+          name,
+          email,
+          avatar,
         });
 
         const { data: profile } = await supabase
           .from('profiles')
-          .select('role')
+          .select('role, company_id')
           .eq('user_id', user.id)
           .single();
 

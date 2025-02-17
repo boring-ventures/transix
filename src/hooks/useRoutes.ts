@@ -39,13 +39,13 @@ export function useRoute(routeId: string) {
 }
 
 export const useRouteSchedules = (routeId?: string) => {
-  return useQuery<Schedule[]>({
-    queryKey: ["schedules", routeId],
+  return useQuery<RouteSchedule[]>({
+    queryKey: ["route-schedules", routeId],
     queryFn: async () => {
-      const { data } = await axios.get<Schedule[]>(
+      const { data } = await axios.get<RouteSchedule[]>(
         routeId
-          ? `/api/schedules?routeId=${routeId}`
-          : "/api/schedules"
+          ? `/api/route-schedules?routeId=${routeId}`
+          : "/api/route-schedules"
       );
       return data;
     },
@@ -76,6 +76,7 @@ export function useCreateRouteSchedule() {
       return response;
     },
     onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["route-schedules"] });
       queryClient.invalidateQueries({ queryKey: ["route-schedules", variables.routeId] });
       queryClient.invalidateQueries({ queryKey: ["routes"] });
     },

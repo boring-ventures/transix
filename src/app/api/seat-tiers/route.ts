@@ -1,30 +1,33 @@
 import { NextResponse } from "next/server";
-import { db } from "@/db";
-import { seatTiers, companies } from "@/db/schema";
+import { prisma } from "@/lib/prisma";
 import { createSeatTierSchema } from "@/types/bus.types";
-import { eq } from "drizzle-orm";
 
 export async function GET() {
   try {
-    const tiers = await db.select({
-      id: seatTiers.id,
-      name: seatTiers.name,
-      description: seatTiers.description,
-      basePrice: seatTiers.basePrice,
-      isActive: seatTiers.isActive,
-      companyId: seatTiers.companyId,
-      createdAt: seatTiers.createdAt,
-      updatedAt: seatTiers.updatedAt,
-      company: {
-        id: companies.id,
-        name: companies.name,
-        active: companies.active,
+    const tiers = await prisma.seat_tiers.findMany({
+      include: {
+        companies: true,
       },
-    })
-    .from(seatTiers)
-    .leftJoin(companies, eq(seatTiers.companyId, companies.id));
+    });
 
-    return NextResponse.json(tiers);
+    // Transform the data to match the expected format
+    const transformedTiers = tiers.map(tier => ({
+      id: tier.id,
+      name: tier.name,
+      description: tier.description,
+      basePrice: tier.base_price,
+      isActive: tier.is_active,
+      companyId: tier.company_id,
+      createdAt: tier.created_at,
+      updatedAt: tier.updated_at,
+      company: tier.companies ? {
+        id: tier.companies.id,
+        name: tier.companies.name,
+        active: tier.companies.active,
+      } : null,
+    }));
+
+    return NextResponse.json(transformedTiers);
   } catch (error) {
     console.error("Error fetching seat tiers:", error);
     return NextResponse.json(
@@ -39,17 +42,37 @@ export async function POST(request: Request) {
     const body = await request.json();
     const validatedData = createSeatTierSchema.parse(body);
 
-    const [tier] = await db.insert(seatTiers)
-      .values({
-        companyId: validatedData.companyId,
+    const tier = await prisma.seat_tiers.create({
+      data: {
+        company_id: validatedData.companyId,
         name: validatedData.name,
         description: validatedData.description,
-        basePrice: validatedData.basePrice.toString(),
-        isActive: validatedData.isActive,
-      })
-      .returning();
+        base_price: validatedData.basePrice.toString(),
+        is_active: validatedData.isActive,
+      },
+      include: {
+        companies: true,
+      },
+    });
 
-    return NextResponse.json(tier);
+    // Transform the response to match the expected format
+    const transformedTier = {
+      id: tier.id,
+      name: tier.name,
+      description: tier.description,
+      basePrice: tier.base_price,
+      isActive: tier.is_active,
+      companyId: tier.company_id,
+      createdAt: tier.created_at,
+      updatedAt: tier.updated_at,
+      company: tier.companies ? {
+        id: tier.companies.id,
+        name: tier.companies.name,
+        active: tier.companies.active,
+      } : null,
+    };
+
+    return NextResponse.json(transformedTier);
   } catch (error) {
     console.error("Error creating seat tier:", error);
     return NextResponse.json(

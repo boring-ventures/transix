@@ -1,81 +1,123 @@
-import { users, profiles, roleEnum } from "@/db/schema";
-import { InferSelectModel } from "drizzle-orm";
 import { z } from "zod";
 import { Company } from "./company.types";
+import { role_enum } from "@prisma/client";
 
-export type User = InferSelectModel<typeof users>;
-export type Profile = InferSelectModel<typeof profiles>;
+/**
+ * Base Types
+ */
+export type User = {
+  id: string;
+  email: string;
+  emailVerified: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type Profile = {
+  id: string;
+  userId: string;
+  fullName: string;
+  role: role_enum;
+  companyId: string | null;
+  branchId: string | null;
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 export type UserWithProfile = User & {
   profile?: Profile;
   company?: Company;
 };
 
-// Base schema for user forms
-const baseUserFormSchema = z.object({
-  email: z.string().email("Email inválido").trim(),
-  fullName: z.string().min(1, "El nombre es requerido").trim(),
-  role: z.enum(roleEnum.enumValues),
-  companyId: z.string().nullable(),
+/**
+ * Form Schemas
+ */
+export const createUserSchema = z.object({
+  email: z.string().email("Email inválido"),
+  password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
+  fullName: z.string().min(1, "El nombre completo es requerido").trim(),
+  role: z.nativeEnum(role_enum),
+  companyId: z.string().uuid("ID de empresa inválido"),
 });
 
-// Schema for creating a new user
-export const createUserFormSchema = baseUserFormSchema
-  .extend({
-    password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres").trim(),
-  })
-  .superRefine((data, ctx) => {
-    if (data.role !== "superadmin" && !data.companyId) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "La empresa es requerida para roles que no son superadmin",
-        path: ["companyId"],
-      });
-    }
-  });
-
-// Schema for editing a user
-export const editUserFormSchema = baseUserFormSchema.superRefine((data, ctx) => {
-  if (data.role !== "superadmin" && !data.companyId) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "La empresa es requerida para roles que no son superadmin",
-      path: ["companyId"],
-    });
-  }
+export const updateUserSchema = z.object({
+  email: z.string().email("Email inválido").optional(),
+  fullName: z.string().min(1, "El nombre completo es requerido").trim(),
+  role: z.nativeEnum(role_enum),
+  companyId: z.string().uuid("ID de empresa inválido"),
 });
 
-// Form data types
-export type CreateUserFormData = z.infer<typeof createUserFormSchema>;
-export type EditUserFormData = z.infer<typeof editUserFormSchema>;
+/**
+ * API Types
+ */
+export interface CreateUserRequest {
+  user: {
+    email: string;
+    password: string;
+  };
+  profile: {
+    fullName: string;
+    role: role_enum;
+    companyId: string | null;
+    branchId: string | null;
+    active: boolean;
+  };
+}
 
-// API input types
-export type CreateUserInput = {
-  email: string;
-  password: string;
-};
+export interface UpdateProfileRequest {
+  profileId: string;
+  data: {
+    fullName?: string;
+    role?: role_enum;
+    companyId?: string | null;
+    active?: boolean;
+  };
+}
+
+/**
+ * API Schemas
+ */
+const userApiSchema = z.object({
+  email: z.string().email("Email inválido"),
+  password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
+  emailVerified: z.date().nullable().optional(),
+});
+
+export const createUserApiSchema = userApiSchema;
+export const updateUserApiSchema = userApiSchema.partial();
+
+/**
+ * Profile Schemas
+ */
+const profileSchema = z.object({
+  fullName: z.string().min(1, "El nombre completo es requerido").trim(),
+  role: z.nativeEnum(role_enum),
+  companyId: z.string().uuid("ID de empresa inválido").nullable(),
+  branchId: z.string().uuid("ID de sucursal inválido").nullable(),
+  active: z.boolean().default(true),
+});
+
+export const createProfileSchema = profileSchema;
+export const updateProfileSchema = profileSchema.partial();
+
+/**
+ * Form Types
+ */
+export type CreateUserInput = z.infer<typeof createUserSchema>;
+export type UpdateUserInput = z.infer<typeof updateUserSchema>;
 
 export type CreateProfileInput = {
   fullName: string;
-  role: typeof roleEnum.enumValues[number];
+  role: role_enum;
   companyId: string | null;
   branchId: string | null;
   active: boolean;
 };
 
-// API schemas
-export const insertUserSchema = z.object({
-  email: z.string().email().trim(),
-  password: z.string().min(8).trim(),
-});
-
-export const insertProfileSchema = z.object({
-  fullName: z.string().min(3).trim(),
-  role: z.enum(roleEnum.enumValues),
-  companyId: z.string().uuid().nullable(),
-  branchId: z.string().uuid().nullable(),
-  active: z.boolean().default(true),
-});
-
-export type InsertUserInput = z.infer<typeof insertUserSchema>;
-export type InsertProfileInput = z.infer<typeof insertProfileSchema>;
+export type UpdateProfileInput = {
+  fullName?: string;
+  role?: role_enum;
+  companyId?: string | null;
+  active?: boolean;
+};

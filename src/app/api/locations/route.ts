@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/db";
-import { locations } from "@/db/schema";
+import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
 const createLocationSchema = z.object({
@@ -9,8 +8,17 @@ const createLocationSchema = z.object({
 
 export async function GET() {
   try {
-    const allLocations = await db.select().from(locations);
-    return NextResponse.json(allLocations);
+    const locations = await prisma.locations.findMany();
+    
+    // Transform the data to match the expected format
+    const transformedLocations = locations.map(location => ({
+      id: location.id,
+      name: location.name,
+      createdAt: location.created_at,
+      updatedAt: location.updated_at,
+    }));
+    
+    return NextResponse.json(transformedLocations);
   } catch (error) {
     console.error("Error fetching locations:", error);
     return NextResponse.json(
@@ -25,14 +33,21 @@ export async function POST(request: Request) {
     const body = await request.json();
     const validatedData = createLocationSchema.parse(body);
 
-    const [location] = await db
-      .insert(locations)
-      .values({
+    const location = await prisma.locations.create({
+      data: {
         name: validatedData.name,
-      })
-      .returning();
+      },
+    });
 
-    return NextResponse.json(location, { status: 201 });
+    // Transform the response to match the expected format
+    const transformedLocation = {
+      id: location.id,
+      name: location.name,
+      createdAt: location.created_at,
+      updatedAt: location.updated_at,
+    };
+
+    return NextResponse.json(transformedLocation, { status: 201 });
   } catch (error) {
     console.error("Error creating location:", error);
     return NextResponse.json(

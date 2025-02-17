@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { db } from "@/db";
-import { busAssignments } from "@/db/schema";
+import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { bus_assignment_status_enum } from "@prisma/client";
 
 const createAssignmentSchema = z.object({
   busId: z.string().uuid(),
@@ -18,18 +18,44 @@ export async function POST(request: Request) {
     const validatedData = createAssignmentSchema.parse(body);
     const today = new Date().toISOString().split('T')[0];
 
-    // Insertar usando el routeId recibido directamente
-    await db.insert(busAssignments).values({
-      id: crypto.randomUUID(),
-      busId: validatedData.busId,
-      routeId: validatedData.routeId, // Usar el routeId que viene del cliente
-      scheduleId: crypto.randomUUID(),
-      startTime: new Date(`${today}T${validatedData.startTime}`),
-      endTime: new Date(`${today}T${validatedData.endTime}`),
-      assignedAt: new Date(),
+    const assignment = await prisma.bus_assignments.create({
+      data: {
+        bus_id: validatedData.busId,
+        route_id: validatedData.routeId,
+        schedule_id: crypto.randomUUID(),
+        start_time: new Date(`${today}T${validatedData.startTime}`),
+        end_time: new Date(`${today}T${validatedData.endTime}`),
+        assigned_at: new Date(),
+        status: bus_assignment_status_enum.active,
+      },
+      include: {
+        buses: true,
+        routes: true,
+      },
     });
 
-    return NextResponse.json({ success: true }, { status: 201 });
+    // Transform the response to match the expected format
+    const transformedAssignment = {
+      id: assignment.id,
+      busId: assignment.bus_id,
+      routeId: assignment.route_id,
+      scheduleId: assignment.schedule_id,
+      startTime: assignment.start_time,
+      endTime: assignment.end_time,
+      assignedAt: assignment.assigned_at,
+      status: assignment.status,
+      bus: assignment.buses ? {
+        id: assignment.buses.id,
+        plateNumber: assignment.buses.plate_number,
+        maintenanceStatus: assignment.buses.maintenance_status,
+      } : null,
+      route: assignment.routes ? {
+        id: assignment.routes.id,
+        name: assignment.routes.name,
+      } : null,
+    };
+
+    return NextResponse.json(transformedAssignment, { status: 201 });
   } catch (error) {
     console.error("Error creating bus assignment:", error);
     return NextResponse.json(

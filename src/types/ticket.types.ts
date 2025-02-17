@@ -1,15 +1,40 @@
-import { tickets, ticketStatusEnum, ticketReassignments, ticketCancellations } from "@/db/schema";
-import { InferSelectModel } from "drizzle-orm";
 import { z } from "zod";
+import { ticket_status_enum } from "@prisma/client";
 import { Schedule } from "./route.types";
 import { BusSeat } from "./bus.types";
 
 /**
- * Database model types
+ * Base Types
  */
-export type Ticket = InferSelectModel<typeof tickets>;
-export type TicketReassignment = InferSelectModel<typeof ticketReassignments>;
-export type TicketCancellation = InferSelectModel<typeof ticketCancellations>;
+export type Ticket = {
+  id: string;
+  scheduleId: string | null;
+  customerId: string | null;
+  busSeatId: string;
+  status: ticket_status_enum;
+  price: number;
+  purchasedBy: string | null;
+  notes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  purchasedAt: Date;
+};
+
+export type TicketCancellation = {
+  id: string;
+  ticketId: string | null;
+  reason: string;
+  cancelledAt: Date;
+};
+
+export type TicketReassignment = {
+  id: string;
+  ticketId: string | null;
+  oldScheduleId: string | null;
+  newScheduleId: string | null;
+  reason: string;
+  reassignedAt: Date;
+};
 
 export type TicketWithRelations = Ticket & {
   schedule?: Schedule;
@@ -22,39 +47,41 @@ export type TicketWithRelations = Ticket & {
  * Ticket Schemas
  */
 const ticketSchema = z.object({
-  scheduleId: z.string().uuid("ID de horario inválido"),
-  customerId: z.string().uuid("ID de cliente inválido"),
+  scheduleId: z.string().uuid("ID de horario inválido").nullable(),
+  customerId: z.string().uuid("ID de cliente inválido").nullable(),
   busSeatId: z.string().uuid("ID de asiento inválido"),
-  status: z.enum(ticketStatusEnum.enumValues).default("active"),
+  status: z.nativeEnum(ticket_status_enum).default(ticket_status_enum.active),
   price: z.number().min(0, "El precio debe ser mayor o igual a 0"),
+  purchasedBy: z.string().uuid("ID de usuario inválido").nullable(),
+  notes: z.string().nullable(),
 });
 
 export const createTicketSchema = ticketSchema;
 export const updateTicketSchema = ticketSchema.partial();
 
 /**
- * Ticket Reassignment Schemas
+ * Cancellation Schemas
  */
-const ticketReassignmentSchema = z.object({
+const cancellationSchema = z.object({
+  ticketId: z.string().uuid("ID de ticket inválido"),
+  reason: z.string().min(1, "La razón es requerida"),
+});
+
+export const createCancellationSchema = cancellationSchema;
+export const updateCancellationSchema = cancellationSchema.partial();
+
+/**
+ * Reassignment Schemas
+ */
+const reassignmentSchema = z.object({
   ticketId: z.string().uuid("ID de ticket inválido"),
   oldScheduleId: z.string().uuid("ID de horario anterior inválido"),
   newScheduleId: z.string().uuid("ID de nuevo horario inválido"),
-  reason: z.string().min(1, "La razón es requerida").trim(),
+  reason: z.string().min(1, "La razón es requerida"),
 });
 
-export const createTicketReassignmentSchema = ticketReassignmentSchema;
-export const updateTicketReassignmentSchema = ticketReassignmentSchema.partial();
-
-/**
- * Ticket Cancellation Schemas
- */
-const ticketCancellationSchema = z.object({
-  ticketId: z.string().uuid("ID de ticket inválido"),
-  reason: z.string().min(1, "La razón es requerida").trim(),
-});
-
-export const createTicketCancellationSchema = ticketCancellationSchema;
-export const updateTicketCancellationSchema = ticketCancellationSchema.partial();
+export const createReassignmentSchema = reassignmentSchema;
+export const updateReassignmentSchema = reassignmentSchema.partial();
 
 /**
  * Form Types
@@ -62,15 +89,15 @@ export const updateTicketCancellationSchema = ticketCancellationSchema.partial()
 export type CreateTicketInput = z.infer<typeof createTicketSchema>;
 export type UpdateTicketInput = z.infer<typeof updateTicketSchema>;
 
-export type CreateTicketReassignmentInput = z.infer<typeof createTicketReassignmentSchema>;
-export type UpdateTicketReassignmentInput = z.infer<typeof updateTicketReassignmentSchema>;
+export type CreateCancellationInput = z.infer<typeof createCancellationSchema>;
+export type UpdateCancellationInput = z.infer<typeof updateCancellationSchema>;
 
-export type CreateTicketCancellationInput = z.infer<typeof createTicketCancellationSchema>;
-export type UpdateTicketCancellationInput = z.infer<typeof updateTicketCancellationSchema>;
+export type CreateReassignmentInput = z.infer<typeof createReassignmentSchema>;
+export type UpdateReassignmentInput = z.infer<typeof updateReassignmentSchema>;
 
 /**
  * Helper Types for Labels
  */
 export type TicketStatusLabel = {
-  [K in typeof ticketStatusEnum.enumValues[number]]: string;
+  [K in typeof ticket_status_enum[number]]: string;
 }; 

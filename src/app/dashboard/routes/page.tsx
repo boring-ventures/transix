@@ -64,13 +64,6 @@ export default function Routes() {
     active: true,
   });
 
-  const [newRouteSchedule, setNewRouteSchedule] = useState<CreateRouteScheduleInput>({
-    routeId: "",
-    departureTime: "08:00",
-    operatingDays: ["monday", "wednesday", "friday"],
-    active: true,
-  });
-
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [editingRoute, setEditingRoute] = useState<Route | null>(null);

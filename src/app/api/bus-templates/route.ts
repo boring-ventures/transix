@@ -1,38 +1,45 @@
 import { NextResponse } from "next/server";
-import { db } from "@/db";
-import { busTypeTemplates, companies, seatTiers } from "@/db/schema";
+import { prisma } from "@/lib/prisma";
 import { createBusTypeTemplateSchema } from "@/types/bus.types";
-import { eq } from "drizzle-orm";
+import { Prisma } from "@prisma/client";
+import { ZodError } from "zod";
 
 export async function GET() {
   try {
-    const templates = await db.select({
-      id: busTypeTemplates.id,
-      name: busTypeTemplates.name,
-      description: busTypeTemplates.description,
-      companyId: busTypeTemplates.companyId,
-      totalCapacity: busTypeTemplates.totalCapacity,
-      seatTemplateMatrix: busTypeTemplates.seatTemplateMatrix,
-      isActive: busTypeTemplates.isActive,
-      createdAt: busTypeTemplates.createdAt,
-      updatedAt: busTypeTemplates.updatedAt,
-      company: {
-        id: companies.id,
-        name: companies.name,
-        active: companies.active,
-        createdAt: companies.createdAt,
-        updatedAt: companies.updatedAt,
+    const templates = await prisma.bus_type_templates.findMany({
+      where: {
+        is_active: true,
       },
-    })
-    .from(busTypeTemplates)
-    .leftJoin(companies, eq(busTypeTemplates.companyId, companies.id))
-    .where(eq(busTypeTemplates.isActive, true));
+      include: {
+        companies: true,
+      },
+    });
 
-    return NextResponse.json(templates);
+    // Transform the response to match the expected format
+    const transformedTemplates = templates.map(template => ({
+      id: template.id,
+      name: template.name,
+      description: template.description,
+      companyId: template.company_id,
+      totalCapacity: template.total_capacity,
+      type: template.type,
+      seatTemplateMatrix: template.seat_template_matrix,
+      seatsLayout: template.seats_layout,
+      isActive: template.is_active,
+      createdAt: template.created_at,
+      updatedAt: template.updated_at,
+      company: template.companies ? {
+        id: template.companies.id,
+        name: template.companies.name,
+        active: template.companies.active,
+      } : null,
+    }));
+
+    return NextResponse.json(transformedTemplates);
   } catch (error) {
-    console.error("Error fetching bus templates:", error);
+    console.error("Error fetching bus type templates:", error);
     return NextResponse.json(
-      { error: "Failed to fetch bus templates" },
+      { error: "Error fetching bus type templates" },
       { status: 500 }
     );
   }
@@ -43,38 +50,74 @@ export async function POST(request: Request) {
     const body = await request.json();
     const validatedData = createBusTypeTemplateSchema.parse(body);
 
-    const template = await db.transaction(async (tx) => {
-      // Create the bus template
-      const [newTemplate] = await tx.insert(busTypeTemplates).values({
-        companyId: validatedData.companyId,
-        name: validatedData.name,
-        description: validatedData.description,
-        totalCapacity: validatedData.totalCapacity,
-        seatTemplateMatrix: validatedData.seatTemplateMatrix,   
-        isActive: validatedData.isActive,
-      }).returning();
-
-      // Create the seat tiers
-      if (validatedData.seatTiers?.length > 0) {
-        await tx.insert(seatTiers).values(
-          validatedData.seatTiers.map(tier => ({
-            companyId: validatedData.companyId,
-            name: tier.name,
-            description: tier.description,
-            basePrice: tier.basePrice.toString(),
-            isActive: tier.isActive,
-          }))
-        );
-      }
-
-      return newTemplate;
+    // Check if company exists
+    const company = await prisma.companies.findUnique({
+      where: {
+        id: validatedData.companyId,
+      },
     });
 
-    return NextResponse.json(template);
+    if (!company) {
+      return NextResponse.json(
+        { error: "Company not found" },
+        { status: 404 }
+      );
+    }
+
+    // Create bus type template
+    const template = await prisma.bus_type_templates.create({
+      data: {
+        company_id: validatedData.companyId,
+        name: validatedData.name,
+        description: validatedData.description,
+        total_capacity: validatedData.totalCapacity,
+        type: validatedData.type,
+        seat_template_matrix: validatedData.seatTemplateMatrix,
+        seats_layout: validatedData.seatsLayout,
+        is_active: true,
+      },
+      include: {
+        companies: true,
+      },
+    });
+
+    // Transform the response to match the expected format
+    const transformedTemplate = {
+      id: template.id,
+      name: template.name,
+      description: template.description,
+      companyId: template.company_id,
+      totalCapacity: template.total_capacity,
+      type: template.type,
+      seatTemplateMatrix: template.seat_template_matrix,
+      seatsLayout: template.seats_layout,
+      isActive: template.is_active,
+      createdAt: template.created_at,
+      updatedAt: template.updated_at,
+      company: template.companies ? {
+        id: template.companies.id,
+        name: template.companies.name,
+        active: template.companies.active,
+      } : null,
+    };
+
+    return NextResponse.json(transformedTemplate);
   } catch (error) {
-    console.error("Error creating bus template:", error);
+    console.error("Error creating bus type template:", error);
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        { error: "Validation error", details: error.errors },
+        { status: 400 }
+      );
+    }
+    if (error instanceof Error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 400 }
+      );
+    }
     return NextResponse.json(
-      { error: "Failed to create bus template" },
+      { error: "Error creating bus type template" },
       { status: 500 }
     );
   }

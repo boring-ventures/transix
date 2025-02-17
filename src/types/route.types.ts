@@ -1,38 +1,4 @@
-import { routes, locations, eventTypeEnum, busLogs, occupancyLogs, routeSchedules } from "@/db/schema";
-import { InferSelectModel } from "drizzle-orm";
 import { z } from "zod";
-
-/**
- * Database model types
- */
-export type Route = InferSelectModel<typeof routes>;
-export type RouteSchedule = InferSelectModel<typeof routeSchedules>;
-export type Location = InferSelectModel<typeof locations>;
-export type BusLog = InferSelectModel<typeof busLogs>;
-export type OccupancyLog = InferSelectModel<typeof occupancyLogs>;
-
-export type RouteWithRelations = Route & {
-  origin?: Location;
-  destination?: Location;
-  routeSchedules?: RouteSchedule[];
-};
-
-export type RouteScheduleWithRelations = RouteSchedule & {
-  route?: Route;
-};
-
-/**
- * Enums
- */
-const operatingDaysEnum = [
-  "monday",
-  "tuesday",
-  "wednesday",
-  "thursday",
-  "friday",
-  "saturday",
-  "sunday",
-] as const;
 
 /**
  * Base Schemas
@@ -48,6 +14,16 @@ const routeSchema = z.object({
   estimatedDuration: z.number().min(1, "La duración estimada debe ser mayor a 0"),
   active: z.boolean().default(true),
 });
+
+const operatingDaysEnum = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+] as const;
 
 export const createRouteScheduleSchema = z.object({
   routeId: z.string().uuid("ID de ruta inválido"),
@@ -73,24 +49,6 @@ export const createRouteScheduleSchema = z.object({
   path: ["seasonStart"],
 });
 
-const busLogSchema = z.object({
-  scheduleId: z.string().uuid("ID de horario inválido"),
-  eventType: z.enum(eventTypeEnum.enumValues),
-  locationId: z.string().uuid("ID de ubicación inválido"),
-  loggedBy: z.string().uuid("ID de usuario inválido"),
-});
-
-const occupancyLogSchema = z.object({
-  scheduleId: z.string().uuid("ID de horario inválido"),
-  occupiedSeats: z.number().min(0),
-});
-
-/**
- * Export Schemas
- */
-export const createLocationSchema = locationSchema;
-export const updateLocationSchema = locationSchema.partial();
-
 export const createRouteSchema = routeSchema;
 export const updateRouteSchema = routeSchema.partial();
 
@@ -112,33 +70,66 @@ export const updateRouteScheduleSchema = z.object({
   active: z.boolean().optional(),
 });
 
-export const createBusLogSchema = busLogSchema;
-export const updateBusLogSchema = busLogSchema.partial();
-
-export const createOccupancyLogSchema = occupancyLogSchema;
-export const updateOccupancyLogSchema = occupancyLogSchema.partial();
-
 /**
  * Export Types
  */
-export type CreateLocationInput = z.infer<typeof createLocationSchema>;
-export type UpdateLocationInput = z.infer<typeof updateLocationSchema>;
+export type Route = {
+  id: string;
+  name: string;
+  originId: string;
+  destinationId: string;
+  estimatedDuration: number;
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
+export type RouteSchedule = {
+  id: string;
+  routeId: string;
+  departureTime: string;
+  operatingDays: typeof operatingDaysEnum[number][];
+  active: boolean;
+  seasonStart: Date | null;
+  seasonEnd: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type Schedule = {
+  id: string;
+  routeId: string;
+  routeScheduleId: string;
+  busId: string;
+  departureDate: Date;
+  estimatedArrivalTime: Date;
+  actualDepartureTime: Date | null;
+  actualArrivalTime: Date | null;
+  price: number;
+  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'delayed';
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type RouteWithRelations = Route & {
+  origin?: Location;
+  destination?: Location;
+  routeSchedules?: RouteSchedule[];
+};
+
+export type RouteScheduleWithRelations = RouteSchedule & {
+  route?: Route;
+};
+
+export type Location = {
+  id: string;
+  name: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type CreateLocationInput = z.infer<typeof locationSchema>;
 export type CreateRouteInput = z.infer<typeof createRouteSchema>;
 export type UpdateRouteInput = z.infer<typeof updateRouteSchema>;
-
 export type CreateRouteScheduleInput = z.infer<typeof createRouteScheduleSchema>;
 export type UpdateRouteScheduleInput = z.infer<typeof updateRouteScheduleSchema>;
-
-export type CreateBusLogInput = z.infer<typeof createBusLogSchema>;
-export type UpdateBusLogInput = z.infer<typeof updateBusLogSchema>;
-
-export type CreateOccupancyLogInput = z.infer<typeof createOccupancyLogSchema>;
-export type UpdateOccupancyLogInput = z.infer<typeof updateOccupancyLogSchema>;
-
-/**
- * Helper Types for Labels
- */
-export type EventTypeLabel = {
-  [K in typeof eventTypeEnum.enumValues[number]]: string;
-}; 

@@ -31,10 +31,12 @@ import {
 import { useForm } from "react-hook-form";
 import {
   UserWithProfile,
-  createUserFormSchema,
-  editUserFormSchema,
-  CreateUserFormData,
-  EditUserFormData,
+  CreateUserInput,
+  UpdateUserInput,
+  createUserSchema,
+  updateUserSchema,
+  CreateUserRequest,
+  UpdateProfileRequest,
 } from "@/types/user.types";
 import {
   Select,
@@ -43,13 +45,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { roleEnum } from "@/db/schema";
+import { role_enum } from "@prisma/client";
 import { Column } from "@/components/table/types";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { CompanyResponse } from "@/types/company.types";
+import { useSession } from "next-auth/react";
+
+interface CustomSession {
+  user: {
+    id: string;
+    email: string;
+    role: role_enum;
+    companyId: string | null;
+  };
+}
 
 export default function UsersPage() {
+  const { data: session } = useSession() as { data: CustomSession | null };
   const { data: users, isLoading: usersLoading } = useUsers();
   const { data: companies, isLoading: companiesLoading } = useCompanies();
   const createUser = useCreateUser();
@@ -59,34 +72,29 @@ export default function UsersPage() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserWithProfile | null>(null);
-  const [deletingUser, setDeletingUser] = useState<UserWithProfile | null>(
-    null
-  );
-
+  const [deletingUser, setDeletingUser] = useState<UserWithProfile | null>(null);
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
-  const [selectedCompany, setSelectedCompany] =
-    useState<CompanyResponse | null>(null);
-
+  const [selectedCompany, setSelectedCompany] = useState<CompanyResponse | null>(null);
   const { toast } = useToast();
 
-  const createForm = useForm<CreateUserFormData>({
-    resolver: zodResolver(createUserFormSchema),
+  const createForm = useForm<CreateUserInput>({
+    resolver: zodResolver(createUserSchema),
     defaultValues: {
       email: "",
       password: "",
       fullName: "",
-      role: "seller",
+      role: role_enum.seller,
       companyId: "",
     },
     mode: "onChange",
   });
 
-  const editForm = useForm<EditUserFormData>({
-    resolver: zodResolver(editUserFormSchema),
+  const editForm = useForm<UpdateUserInput>({
+    resolver: zodResolver(updateUserSchema),
     defaultValues: {
       email: "",
       fullName: "",
-      role: "seller",
+      role: role_enum.seller,
       companyId: "",
     },
     mode: "onChange",
@@ -95,15 +103,12 @@ export default function UsersPage() {
   const createRole = createForm.watch("role");
   const editRole = editForm.watch("role");
 
-  // Validación del campo "companyId" en el formulario de creación:
-  // Si el rol es "superadmin", se limpia y se remueven errores.
-  // De lo contrario, se establece error de requerido solo si el campo no posee valor
-  // y además, no existe un companyId en userData.
+  // Validación del campo "companyId" en el formulario de creación
   useEffect(() => {
-    if (createRole === "superadmin") {
+    if (createRole === role_enum.superadmin) {
       createForm.setValue("companyId", "");
       createForm.clearErrors("companyId");
-    } else if (!createForm.getValues("companyId") && !userData.companyId) {
+    } else if (!createForm.getValues("companyId") && session?.user?.companyId === null) {
       createForm.setError("companyId", {
         type: "required",
         message: "La empresa es requerida para roles que no son superadmin",
@@ -111,31 +116,29 @@ export default function UsersPage() {
     } else {
       createForm.clearErrors("companyId");
     }
-  }, [createRole, userData.companyId, createForm]);
+  }, [createRole, session?.user?.companyId, createForm]);
 
-  // NUEVO: Si el usuario autenticado tiene companyId definido, se asigna por defecto
-  // en el formulario de creación siempre y cuando el rol no sea "superadmin".
+  // Si el usuario autenticado tiene companyId definido, se asigna por defecto
   useEffect(() => {
     if (
-      userData.companyId !== null &&
-      userData.companyId !== "" &&
-      createRole !== "superadmin"
+      session?.user?.companyId &&
+      createRole !== role_enum.superadmin
     ) {
-      createForm.setValue("companyId", userData.companyId || "");
+      createForm.setValue("companyId", session.user.companyId);
     }
-  }, [userData.companyId, createRole, createForm]);
+  }, [session?.user?.companyId, createRole, createForm]);
 
   // Reset company field when role changes to superadmin in edit form
   useEffect(() => {
-    if (editRole === "superadmin") {
+    if (editRole === role_enum.superadmin) {
       editForm.setValue("companyId", "");
       editForm.clearErrors("companyId");
     }
   }, [editRole, editForm]);
 
-  const onCreateSubmit = async (data: CreateUserFormData) => {
+  const onCreateSubmit = async (data: CreateUserInput) => {
     try {
-      await createUser.mutateAsync({
+      const request: CreateUserRequest = {
         user: {
           email: data.email,
           password: data.password,
@@ -143,11 +146,13 @@ export default function UsersPage() {
         profile: {
           fullName: data.fullName,
           role: data.role,
-          companyId: data.role === "superadmin" ? null : data.companyId || null,
+          companyId: data.role === role_enum.superadmin ? null : data.companyId,
           active: true,
           branchId: null,
         },
-      });
+      };
+      
+      await createUser.mutateAsync(request);
       setIsCreateOpen(false);
       createForm.reset();
       toast({
@@ -167,26 +172,23 @@ export default function UsersPage() {
     }
   };
 
-  const onEditSubmit = async (data: EditUserFormData) => {
+  const onEditSubmit = async (data: UpdateUserInput) => {
     if (!editingUser?.profile) return;
 
     try {
-      await updateProfile.mutateAsync({
+      const request: UpdateProfileRequest = {
         profileId: editingUser.id,
         data: {
           fullName: data.fullName,
           role: data.role,
-          companyId: data.role === "superadmin" ? null : data.companyId || null,
+          companyId: data.role === role_enum.superadmin ? null : data.companyId,
         },
-      });
+      };
+      
+      await updateProfile.mutateAsync(request);
       setIsEditOpen(false);
       setEditingUser(null);
-      editForm.reset({
-        email: editingUser.email ?? "",
-        fullName: editingUser.profile.fullName ?? "",
-        role: editingUser.profile.role ?? "seller",
-        companyId: editingUser.profile.companyId || "",
-      });
+      editForm.reset();
       toast({
         title: "Usuario actualizado",
         description: "El usuario ha sido actualizado exitosamente.",
@@ -210,14 +212,14 @@ export default function UsersPage() {
     editForm.reset({
       email: user.email ?? "",
       fullName: user.profile.fullName ?? "",
-      role: user.profile.role ?? "seller",
+      role: user.profile.role ?? role_enum.seller,
       companyId: user.profile.companyId || "",
     });
     setIsEditOpen(true);
   };
 
   const handleDelete = (user: UserWithProfile) => {
-    if (user.profile?.role === "superadmin") {
+    if (user.profile?.role === role_enum.superadmin) {
       toast({
         title: "Error",
         description: "No se puede desactivar un usuario Superadmin",
@@ -253,13 +255,11 @@ export default function UsersPage() {
     }
   };
 
-  // Open the company modal (updated text)
   const handleOpenCompanyModal = (company: CompanyResponse) => {
     setSelectedCompany(company);
     setIsCompanyModalOpen(true);
   };
 
-  // Columns updated to change text if no company is set, in Spanish, and custom highlight
   const columns: Column<Record<string, unknown>>[] = [
     {
       id: "id",
@@ -305,7 +305,6 @@ export default function UsersPage() {
         const role = data.profile?.role;
         if (!role) return "N/A";
 
-        // Map each role to a particular color style
         const roleColorMap: Record<string, string> = {
           superadmin: "bg-red-100 text-red-700 border-red-600",
           company_admin: "bg-blue-100 text-blue-700 border-blue-600",
@@ -353,8 +352,8 @@ export default function UsersPage() {
       sortable: true,
       cell: ({ row }) => {
         const data = row as unknown as UserWithProfile;
-        return data.created_at
-          ? new Date(data.created_at).toLocaleDateString()
+        return data.createdAt
+          ? new Date(data.createdAt).toLocaleDateString()
           : "N/A";
       },
     },
@@ -430,7 +429,7 @@ export default function UsersPage() {
                         <SelectValue placeholder="Seleccionar rol" />
                       </SelectTrigger>
                       <SelectContent>
-                        {roleEnum.enumValues.map((role) => (
+                        {Object.values(role_enum).map((role) => (
                           <SelectItem key={role} value={role}>
                             {role
                               .replace("_", " ")
@@ -448,13 +447,13 @@ export default function UsersPage() {
                 name="companyId"
                 render={({ field }) => (
                   <FormItem
-                    className={createRole === "superadmin" ? "opacity-50" : ""}
+                    className={createRole === role_enum.superadmin ? "opacity-50" : ""}
                   >
                     <FormLabel>Empresa</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       value={field.value || undefined}
-                      disabled={createRole === "superadmin"}
+                      disabled={createRole === role_enum.superadmin}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Seleccionar empresa" />
@@ -467,7 +466,7 @@ export default function UsersPage() {
                         ))}
                       </SelectContent>
                     </Select>
-                    {createRole !== "superadmin" && <FormMessage />}
+                    {createRole !== role_enum.superadmin && <FormMessage />}
                   </FormItem>
                 )}
               />
@@ -534,7 +533,7 @@ export default function UsersPage() {
                         <SelectValue placeholder="Seleccionar rol" />
                       </SelectTrigger>
                       <SelectContent>
-                        {roleEnum.enumValues.map((role) => (
+                        {Object.values(role_enum).map((role) => (
                           <SelectItem key={role} value={role}>
                             {role
                               .replace("_", " ")
@@ -552,13 +551,13 @@ export default function UsersPage() {
                 name="companyId"
                 render={({ field }) => (
                   <FormItem
-                    className={editRole === "superadmin" ? "opacity-50" : ""}
+                    className={editRole === role_enum.superadmin ? "opacity-50" : ""}
                   >
                     <FormLabel>Empresa</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       value={field.value || undefined}
-                      disabled={editRole === "superadmin"}
+                      disabled={editRole === role_enum.superadmin}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Seleccionar empresa" />
@@ -571,7 +570,7 @@ export default function UsersPage() {
                         ))}
                       </SelectContent>
                     </Select>
-                    {editRole !== "superadmin" && <FormMessage />}
+                    {editRole !== role_enum.superadmin && <FormMessage />}
                   </FormItem>
                 )}
               />
@@ -589,7 +588,7 @@ export default function UsersPage() {
           <DialogHeader>
             <DialogTitle>Desactivar Usuario</DialogTitle>
             <DialogDescription>
-              {deletingUser?.profile?.role === "superadmin" ? (
+              {deletingUser?.profile?.role === role_enum.superadmin ? (
                 <span className="text-red-500">
                   No se puede desactivar un usuario Superadmin
                 </span>
@@ -602,7 +601,7 @@ export default function UsersPage() {
             </DialogDescription>
           </DialogHeader>
           <p className="text-muted-foreground">
-            {deletingUser?.profile?.role === "superadmin"
+            {deletingUser?.profile?.role === role_enum.superadmin
               ? "Los usuarios Superadmin no pueden ser desactivados por seguridad."
               : "¿Está seguro que desea desactivar este usuario?"}
           </p>
@@ -611,7 +610,7 @@ export default function UsersPage() {
               type="submit"
               disabled={
                 deleteUser.isPending ||
-                deletingUser?.profile?.role === "superadmin"
+                deletingUser?.profile?.role === role_enum.superadmin
               }
               onClick={confirmDelete}
             >
@@ -621,7 +620,7 @@ export default function UsersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Company Details Dialog (in Spanish) */}
+      {/* Company Details Dialog */}
       <Dialog open={isCompanyModalOpen} onOpenChange={setIsCompanyModalOpen}>
         <DialogContent>
           <DialogHeader>

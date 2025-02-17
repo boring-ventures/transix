@@ -30,7 +30,7 @@ import {
   createBusSchema,
   MaintenanceStatusLabel,
 } from "@/types/bus.types";
-import { maintenanceStatusEnum } from "@/db/schema";
+import { maintenance_status_enum } from "@prisma/client";
 import { useForm } from "react-hook-form";
 import { LoadingTable } from "@/components/table/loading-table";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -326,7 +326,7 @@ export default function BusesPage() {
                         <SelectValue placeholder="Seleccionar estado" />
                       </SelectTrigger>
                       <SelectContent>
-                        {maintenanceStatusEnum.enumValues.map((status) => (
+                        {Object.values(maintenance_status_enum).map((status: maintenance_status_enum) => (
                           <SelectItem key={status} value={status}>
                             {maintenanceStatusLabels[status]}
                           </SelectItem>

@@ -1,18 +1,18 @@
 ## Descripción
-Se juntaron las ramas 142 y Master, se quitó todo lo relacionado con drizzle (Mudanza a Prisma debido a complicaciones del equipo de desarrollo). Cliente y schema prisma añadidos y la migración de drizzle a prisma completada.
+Cambios en las dependencias de drizzle a prisma, cambios en total a 28 files. Hay algunos pequeños errores que arreglar, pero la mayoria de las dependencias se han cambiado.
 
 ## Tipo de Cambio
 <!-- Marca con una 'x' los tipos que aplican -->
-- [ ] 🐛 Corrección de Bug
+- [ x ] 🐛 Corrección de Bug
 - [ x ] ✨ Nueva Funcionalidad
 - [ ] 💄 Actualización de UI/UX
-- [ ] ♻️ Refactorización de Código
+- [ x] ♻️ Refactorización de Código
 - [ x ] 📝 Documentación
 - [ x ] 🔧 Configuración
 - [ ] 🚀 Mejora de Rendimiento
 
 ## ¿Cómo se ha Probado?
-Se han probado los cambios en la base de datos localmente, se hizo pull con prisma de lo actual que se tiene.
+Se han probado los cambios localmente.
 
 ## Screenshots (si aplica)
 No aplica
@@ -25,4 +25,4 @@ No aplica
 - [ x ] He verificado la compatibilidad con las funcionalidades existentes
 
 ## Notas Adicionales
-Falta adaptar la logica o todo lo posible debido a la migración a prisma. Hay que ver el detalle del porqué de las 40 tablas que se han creado al hacer pull a la base de datos.
+Ninguna.

@@ -1,13 +1,27 @@
-import { companies, branches } from "@/db/schema";
-import { InferSelectModel } from "drizzle-orm";
 import { z } from "zod";
 import { Profile } from "./user.types";
 
 /**
- * Database model types
+ * Base Types
  */
-export type Company = InferSelectModel<typeof companies>;
-export type Branch = InferSelectModel<typeof branches>;
+export type Company = {
+  id: string;
+  name: string;
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type Branch = {
+  id: string;
+  companyId: string;
+  name: string;
+  address: string | null;
+  city: string | null;
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 export type CompanyWithRelations = Company & {
   branches?: Branch[];

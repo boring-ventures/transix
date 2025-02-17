@@ -1,15 +1,77 @@
-import { buses, busSeats, busTypeTemplates, maintenanceStatusEnum, seatStatusEnum, seatTiers } from "@/db/schema";
-import { InferSelectModel } from "drizzle-orm";
 import { z } from "zod";
 import type { Company } from "./company.types";
+import { maintenance_status_enum, seat_status_enum } from "@prisma/client";
 
 /**
- * Database model types
+ * Base Types
  */
-export type Bus = InferSelectModel<typeof buses>;
-export type BusSeat = InferSelectModel<typeof busSeats>;
-export type BusTypeTemplate = InferSelectModel<typeof busTypeTemplates>;
-export type SeatTier = InferSelectModel<typeof seatTiers>;
+export type Bus = {
+  id: string;
+  plateNumber: string;
+  templateId: string;
+  isActive: boolean;
+  maintenanceStatus: maintenance_status_enum;
+  companyId: string;
+  seatMatrix: {
+    firstFloor: {
+      dimensions: {
+        rows: number;
+        seatsPerRow: number;
+      };
+      seats: SeatPosition[];
+    };
+    secondFloor?: {
+      dimensions: {
+        rows: number;
+        seatsPerRow: number;
+      };
+      seats: SeatPosition[];
+    };
+  };
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type BusSeat = {
+  id: string;
+  busId: string;
+  seatNumber: string;
+  tierId: string;
+  status: seat_status_enum;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type BusTypeTemplate = {
+  id: string;
+  companyId: string;
+  name: string;
+  description: string | null;
+  totalCapacity: number;
+  type: string;
+  seatsLayout: string;
+  seatTemplateMatrix: {
+    firstFloor: {
+      dimensions: {
+        rows: number;
+        seatsPerRow: number;
+      };
+      seats: SeatPosition[];
+    };
+    secondFloor?: {
+      dimensions: {
+        rows: number;
+        seatsPerRow: number;
+      };
+      seats: SeatPosition[];
+    };
+  };
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  company?: Company;
+};
 
 export type BusWithRelations = Bus & {
   company?: Company;
@@ -53,6 +115,8 @@ export const busTypeTemplateSchema = z.object({
   name: z.string().min(1, "El nombre es requerido").trim(),
   description: z.string().optional(),
   totalCapacity: z.number().min(1, "La capacidad debe ser mayor a 0"),
+  type: z.string().default("standard"),
+  seatsLayout: z.string().default(""),
   seatTemplateMatrix: z.object({
     firstFloor: z.object({
       dimensions: z.object({
@@ -96,34 +160,7 @@ export const busTypeTemplateSchema = z.object({
   isActive: z.boolean().default(true),
 });
 
-export const createBusTypeTemplateSchema = busTypeTemplateSchema.superRefine((data, ctx) => {
-  // Validate first floor seats have tiers (only for non-empty seats)
-  const firstFloorUnassigned = data.seatTemplateMatrix.firstFloor.seats.some(
-    seat => !seat.isEmpty && (!seat.tierId || seat.tierId === "")
-  );
-  if (firstFloorUnassigned) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Todos los asientos activos del primer piso deben tener un nivel asignado",
-      path: ["seatTemplateMatrix", "firstFloor", "seats"],
-    });
-  }
-
-  // Validate second floor seats have tiers if present (only for non-empty seats)
-  if (data.seatTemplateMatrix.secondFloor) {
-    const secondFloorUnassigned = data.seatTemplateMatrix.secondFloor.seats.some(
-      seat => !seat.isEmpty && (!seat.tierId || seat.tierId === "")
-    );
-    if (secondFloorUnassigned) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Todos los asientos activos del segundo piso deben tener un nivel asignado",
-        path: ["seatTemplateMatrix", "secondFloor", "seats"],
-      });
-    }
-  }
-});
-
+export const createBusTypeTemplateSchema = busTypeTemplateSchema;
 export const updateBusTypeTemplateSchema = busTypeTemplateSchema.partial();
 
 /**
@@ -134,7 +171,7 @@ const baseBusSchema = z.object({
   templateId: z.string().uuid("ID de plantilla inválido"),
   plateNumber: z.string().trim().min(1, "La placa es requerida"),
   isActive: z.boolean().default(true),
-  maintenanceStatus: z.enum(maintenanceStatusEnum.enumValues).default("active"),
+  maintenanceStatus: z.nativeEnum(maintenance_status_enum).default(maintenance_status_enum.active),
   seatMatrix: z
     .object({
       firstFloor: z.array(z.array(z.string())),
@@ -147,34 +184,20 @@ export const createBusSchema = z.object({
   companyId: z.string().min(1, "La empresa es requerida"),
   templateId: z.string().min(1, "La plantilla es requerida"),
   plateNumber: z.string().trim().min(1, "La placa es requerida"),
-  maintenanceStatus: z.enum(maintenanceStatusEnum.enumValues).default("active"),
+  maintenanceStatus: z.nativeEnum(maintenance_status_enum).default(maintenance_status_enum.active),
   isActive: z.boolean().default(true),
 });
 
 export const updateBusSchema = baseBusSchema.partial();
 
 /**
- * Seat Tier Schemas
- */
-const seatTierSchema = z.object({
-  companyId: z.string().uuid("ID de empresa inválido"),
-  name: z.string().min(1, "El nombre es requerido").trim(),
-  description: z.string().optional(),
-  basePrice: z.number().min(0, "El precio base debe ser mayor o igual a 0"),
-  isActive: z.boolean().default(true),
-});
-
-export const createSeatTierSchema = seatTierSchema;
-export const updateSeatTierSchema = seatTierSchema.partial();
-
-/**
  * Bus Seat Schemas
  */
 const busSeatSchema = z.object({
   busId: z.string().uuid("ID de bus inválido"),
-  seatNumber: z.string().trim().min(1, "El número de asiento es requerido"),
+  seatNumber: z.string().min(1, "El número de asiento es requerido"),
   tierId: z.string().uuid("ID de nivel inválido"),
-  status: z.enum(seatStatusEnum.enumValues).default("available"),
+  status: z.nativeEnum(seat_status_enum).default(seat_status_enum.available),
   isActive: z.boolean().default(true),
 });
 
@@ -190,9 +213,6 @@ export type UpdateBusTypeTemplateInput = z.infer<typeof updateBusTypeTemplateSch
 export type CreateBusInput = z.infer<typeof createBusSchema>;
 export type UpdateBusInput = z.infer<typeof updateBusSchema>;
 
-export type CreateSeatTierInput = z.infer<typeof createSeatTierSchema>;
-export type UpdateSeatTierInput = z.infer<typeof updateSeatTierSchema>;
-
 export type CreateBusSeatInput = z.infer<typeof createBusSeatSchema>;
 export type UpdateBusSeatInput = z.infer<typeof updateBusSeatSchema>;
 
@@ -200,11 +220,11 @@ export type UpdateBusSeatInput = z.infer<typeof updateBusSeatSchema>;
  * Helper Types for Labels
  */
 export type MaintenanceStatusLabel = {
-  [K in typeof maintenanceStatusEnum.enumValues[number]]: string;
+  [K in maintenance_status_enum]: string;
 };
 
 export type SeatStatusLabel = {
-  [K in typeof seatStatusEnum.enumValues[number]]: string;
+  [K in seat_status_enum]: string;
 };
 
 export type BusType = "standard" | "luxury" | "double_decker" | "mini";

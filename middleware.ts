@@ -28,7 +28,8 @@ export async function middleware(req: NextRequest) {
 
     if (!profile) {
       console.warn('[Middleware] Redirecting to setup - No profile')
-      return NextResponse.redirect(new URL('/setup', req.url))
+      //return NextResponse.redirect(new URL('/setup', req.url))
+      return null;
     }
 
     const role = profile.role as keyof typeof ROLE_ROUTES

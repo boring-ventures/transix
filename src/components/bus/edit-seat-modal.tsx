@@ -5,7 +5,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { BusSeat, SeatTier } from "@/types/bus.types";
+import { BusSeat, UpdateBusSeatInput, updateBusSeatSchema } from "@/types/bus.types";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { seatStatusEnum } from "@/db/schema";
+import { seat_status_enum, seat_tiers } from "@prisma/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { useUpdateSeatStatus } from "@/hooks/useBusSeats";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +25,7 @@ interface EditSeatModalProps {
   isOpen: boolean;
   onClose: () => void;
   seat: BusSeat;
-  seatTier?: SeatTier;
+  seatTier?: seat_tiers;
 }
 
 export const EditSeatModal = ({
@@ -110,16 +110,16 @@ export const EditSeatModal = ({
                   className={
                     seat.status === "maintenance"
                       ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-100"
-                      : seat.status === "disabled"
-                      ? "bg-gray-100 text-gray-800 hover:bg-gray-100"
-                      : "bg-green-100 text-green-800 hover:bg-green-100"
+                      : seat.status === "available"
+                      ? "bg-green-100 text-green-800 hover:bg-green-100"
+                      : "bg-gray-100 text-gray-800 hover:bg-gray-100"
                   }
                 >
                   {seat.status === "maintenance"
                     ? "Mantenimiento"
-                    : seat.status === "disabled"
-                    ? "Deshabilitado"
-                    : "Disponible"}
+                    : seat.status === "available"
+                    ? "Disponible"
+                    : "Deshabilitado"}
                 </Badge>
               </div>
               <div className="col-span-2">

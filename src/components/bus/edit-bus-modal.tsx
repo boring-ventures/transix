@@ -32,7 +32,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useUpdateBus } from "@/hooks/useBuses";
-import { maintenanceStatusEnum } from "@/db/schema";
+import { maintenance_status_enum } from "@prisma/client";
 import { Company } from "@/types/company.types";
 import { SeatMatrixPreview } from "./seat-matrix-preview";
 import { useSeatTiers } from "@/hooks/useSeatTiers";
@@ -313,7 +313,7 @@ export const EditBusModal = ({
                                   <SelectValue placeholder="Seleccionar estado" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {maintenanceStatusEnum.enumValues.map(
+                                  {Object.values(maintenance_status_enum).map(
                                     (status) => (
                                       <SelectItem key={status} value={status}>
                                         {status === "active"
