@@ -1,73 +1,45 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { schedule_status_enum, maintenance_status_enum, Prisma } from "@prisma/client";
-import { Route, RouteSchedule } from "@/types/route.types";
+import { addDays, format, parseISO, setHours, setMinutes } from "date-fns";
 
-// Mapa de días de la semana para la conversión
-const WEEKDAY_MAP: { [key: string]: string } = {
-  'Sunday': 'sunday',
-  'Monday': 'monday',
-  'Tuesday': 'tuesday',
-  'Wednesday': 'wednesday',
-  'Thursday': 'thursday',
-  'Friday': 'friday',
-  'Saturday': 'saturday'
-};
-
-export async function GET(req: Request) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(req.url);
-    const routeId = searchParams.get("routeId");
-
     const schedules = await prisma.schedules.findMany({
-      where: routeId ? {
-        route_id: routeId,
-      } : undefined,
       include: {
         routes: true,
-        buses: {
-          include: {
-            bus_type_templates: true,
-            bus_seats: true,
-          },
-        },
+        route_schedules: true,
+        buses: true,
       },
-      orderBy: [
-        { departure_date: 'asc' },
-        { estimated_arrival_time: 'asc' },
-      ],
     });
 
     // Transform the data to match the expected format
     const transformedSchedules = schedules.map(schedule => ({
       id: schedule.id,
       routeId: schedule.route_id,
-      routeName: schedule.routes.name,
+      routeScheduleId: schedule.route_schedule_id,
       busId: schedule.bus_id,
-      bus: schedule.buses ? {
-        id: schedule.buses.id,
-        plateNumber: schedule.buses.plate_number,
-        maintenanceStatus: schedule.buses.maintenance_status_enum,
-        template: schedule.buses.bus_type_templates ? {
-          id: schedule.buses.bus_type_templates.id,
-          name: schedule.buses.bus_type_templates.name,
-          type: schedule.buses.bus_type_templates.type,
-          totalCapacity: schedule.buses.bus_type_templates.total_capacity,
-          seatsLayout: schedule.buses.bus_type_templates.seats_layout,
-        } : null,
-        seats: schedule.buses.bus_seats.map(seat => seat.seat_number),
-      } : null,
       departureDate: schedule.departure_date,
       estimatedArrivalTime: schedule.estimated_arrival_time,
-      price: Number(schedule.price),
+      actualDepartureTime: schedule.actual_departure_time,
+      actualArrivalTime: schedule.actual_arrival_time,
+      price: schedule.price,
       status: schedule.status,
+      createdAt: schedule.created_at,
+      updatedAt: schedule.updated_at,
+      route: schedule.routes ? {
+        id: schedule.routes.id,
+        name: schedule.routes.name,
+        originId: schedule.routes.origin_id,
+        destinationId: schedule.routes.destination_id,
+        estimatedDuration: schedule.routes.estimated_duration,
+      } : null,
     }));
 
     return NextResponse.json(transformedSchedules);
   } catch (error) {
     console.error("Error fetching schedules:", error);
     return NextResponse.json(
-      { error: "Error fetching schedules" },
+      { error: "Failed to fetch schedules" },
       { status: 500 }
     );
   }
@@ -76,109 +48,86 @@ export async function GET(req: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { 
-      routeId, 
+    console.log('Received schedule creation request:', body);
+
+    const {
+      routeId,
       routeScheduleId,
+      departureTime,
+      operatingDays,
       startDate,
       endDate,
-      price = 0
+      price,
+      status = 'scheduled'
     } = body;
 
-    if (!routeId || !routeScheduleId || !startDate || !endDate) {
-      return NextResponse.json(
-        { error: "Datos incompletos" },
-        { status: 400 }
-      );
-    }
-
-    // Obtener el horario recurrente y la ruta
-    const routeSchedule = await prisma.route_schedules.findUnique({
-      where: { id: routeScheduleId },
-      include: { routes: true }
+    // Get the route for estimated duration
+    const route = await prisma.routes.findUnique({
+      where: { id: routeId },
     });
 
-    if (!routeSchedule) {
+    if (!route) {
       return NextResponse.json(
-        { error: "Horario recurrente no encontrado" },
+        { error: "Route not found" },
         { status: 404 }
       );
     }
 
-    // Generar los horarios para cada día dentro del rango
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const schedules = [];
+    // Parse dates
+    const start = parseISO(startDate);
+    const end = parseISO(endDate);
+    
+    // Parse time
+    const [hours, minutes] = departureTime.split(':').map(Number);
 
-    for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
-      // Obtener el día de la semana en formato correcto
-      const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
-      const dayOfWeek = WEEKDAY_MAP[dayName];
+    // Generate schedules for each day in the range
+    const schedulesToCreate = [];
+    let currentDate = start;
+
+    while (currentDate <= end) {
+      const dayOfWeek = format(currentDate, 'EEEE').toLowerCase();
       
-      if (routeSchedule.operating_days.includes(dayOfWeek)) {
-        // Crear fecha y hora de salida
-        const departureDateTime = new Date(date);
-        const departureTime = new Date(routeSchedule.departure_time);
-        departureDateTime.setHours(
-          departureTime.getHours(),
-          departureTime.getMinutes(),
-          0,
-          0
-        );
+      // Only create schedule if it's an operating day
+      if (operatingDays.includes(dayOfWeek)) {
+        // Set departure time
+        const departureDateTime = setMinutes(setHours(currentDate, hours), minutes);
+        
+        // Calculate estimated arrival time based on route duration
+        const estimatedArrivalTime = addDays(departureDateTime, 0);
+        estimatedArrivalTime.setMinutes(estimatedArrivalTime.getMinutes() + route.estimated_duration);
 
-        // Calcular hora de llegada estimada
-        const estimatedArrivalTime = new Date(departureDateTime);
-        estimatedArrivalTime.setMinutes(
-          estimatedArrivalTime.getMinutes() + routeSchedule.routes.estimated_duration
-        );
-
-        try {
-          const scheduleData: Prisma.schedulesUncheckedCreateInput = {
-            route_id: routeId,
-            route_schedule_id: routeScheduleId,
-            departure_date: departureDateTime,
-            estimated_arrival_time: estimatedArrivalTime,
-            price: price,
-            status: schedule_status_enum.scheduled
-          };
-
-          const schedule = await prisma.schedules.create({
-            data: scheduleData
-          });
-          schedules.push(schedule);
-        } catch (createError) {
-          console.error("Error creating individual schedule:", createError);
-          continue;
-        }
+        schedulesToCreate.push({
+          route_id: routeId,
+          route_schedule_id: routeScheduleId,
+          departure_date: departureDateTime,
+          estimated_arrival_time: estimatedArrivalTime,
+          price: price,
+          status: status,
+        });
       }
+      
+      // Move to next day
+      currentDate = addDays(currentDate, 1);
     }
 
-    if (schedules.length === 0) {
-      return NextResponse.json(
-        { error: "No se pudieron generar horarios para el rango de fechas especificado" },
-        { status: 400 }
-      );
-    }
+    console.log('Creating schedules:', schedulesToCreate);
 
-    // Transformar los horarios creados
-    const transformedSchedules = schedules.map(schedule => ({
-      id: schedule.id,
-      routeId: schedule.route_id,
-      routeScheduleId: schedule.route_schedule_id,
-      departureDate: schedule.departure_date,
-      estimatedArrivalTime: schedule.estimated_arrival_time,
-      price: Number(schedule.price),
-      status: schedule.status,
-      createdAt: schedule.created_at,
-      updatedAt: schedule.updated_at
-    }));
+    // Create all schedules
+    const createdSchedules = await prisma.schedules.createMany({
+      data: schedulesToCreate,
+    });
 
-    return NextResponse.json(transformedSchedules);
+    return NextResponse.json({
+      message: "Schedules created successfully",
+      count: createdSchedules.count,
+    });
+
   } catch (error) {
     console.error("Error creating schedules:", error);
     return NextResponse.json(
       { 
-        error: "Error al generar los horarios",
-        details: error instanceof Error ? error.message : "Error desconocido"
+        error: "Failed to create schedules",
+        details: error instanceof Error ? error.message : "Unknown error"
       },
       { status: 500 }
     );

@@ -26,53 +26,46 @@ export function SchedulesTable({
       id: "route",
       accessorKey: "routeId",
       header: "Ruta",
-      cell: ({ row }) => routes.find((r) => r.id === row.routeId)?.name || "",
+      cell: ({ row }) => {
+        const route = routes.find((r) => r.id === row.routeId);
+        return route ? route.name : "";
+      },
       sortable: true,
     },
     {
       id: "departureDate",
       accessorKey: "departureDate",
-      header: "Fecha Salida",
-      cell: ({ row }) => format(new Date(row.departureDate), "dd/MM/yyyy", { locale: es }),
+      header: "Fecha y Hora de Salida",
+      cell: ({ row }) => {
+        const date = new Date(row.departureDate);
+        return format(date, "dd/MM/yyyy HH:mm", { locale: es });
+      },
       sortable: true,
     },
     {
       id: "estimatedArrivalTime",
       accessorKey: "estimatedArrivalTime",
       header: "Llegada Estimada",
-      cell: ({ row }) => format(new Date(row.estimatedArrivalTime), "dd/MM/yyyy HH:mm", { locale: es }),
-      sortable: true,
-    },
-    {
-      id: "actualDepartureTime",
-      accessorKey: "actualDepartureTime",
-      header: "Salida Real",
-      cell: ({ row }) => row.actualDepartureTime 
-        ? format(new Date(row.actualDepartureTime), "dd/MM/yyyy HH:mm", { locale: es })
-        : "No registrada",
-      sortable: true,
-    },
-    {
-      id: "actualArrivalTime",
-      accessorKey: "actualArrivalTime",
-      header: "Llegada Real",
-      cell: ({ row }) => row.actualArrivalTime 
-        ? format(new Date(row.actualArrivalTime), "dd/MM/yyyy HH:mm", { locale: es })
-        : "No registrada",
+      cell: ({ row }) => {
+        if (!row.estimatedArrivalTime) return "No disponible";
+        return format(new Date(row.estimatedArrivalTime), "dd/MM/yyyy HH:mm", { locale: es });
+      },
       sortable: true,
     },
     {
       id: "bus",
       accessorKey: "busId",
       header: "Bus Asignado",
-      cell: ({ row }) => row.busId || "No asignado",
-      sortable: true,
-    },
-    {
-      id: "price",
-      accessorKey: "price",
-      header: "Precio",
-      cell: ({ row }) => `Bs. ${row.price}`,
+      cell: ({ row }) => {
+        if (!row.busId) {
+          return (
+            <span className="text-yellow-600 font-medium">
+              No asignado
+            </span>
+          );
+        }
+        return row.busId;
+      },
       sortable: true,
     },
     {
@@ -107,6 +100,7 @@ export function SchedulesTable({
     },
     {
       id: "actions",
+      accessorKey: "id",
       header: "Acciones",
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
@@ -117,6 +111,8 @@ export function SchedulesTable({
               e.stopPropagation();
               onAssignBus?.(row);
             }}
+            disabled={row.status !== 'scheduled'}
+            title={row.status !== 'scheduled' ? 'Solo se pueden asignar buses a viajes programados' : 'Asignar bus'}
           >
             <Bus className="h-4 w-4" />
           </Button>
@@ -126,13 +122,21 @@ export function SchedulesTable({
   ];
 
   return (
-    <DataTable
-      title="Horarios"
-      data={schedules}
-      columns={scheduleColumns}
-      searchable={true}
-      searchField="routeId"
-      onRowClick={(schedule) => onScheduleSelect(schedule)}
-    />
+    <div>
+      {schedules.length === 0 ? (
+        <div className="text-center py-4 text-muted-foreground">
+          No hay viajes programados para este horario
+        </div>
+      ) : (
+        <DataTable
+          title="Horarios"
+          data={schedules}
+          columns={scheduleColumns}
+          searchable={true}
+          searchField="routeId"
+          onRowClick={(schedule) => onScheduleSelect(schedule)}
+        />
+      )}
+    </div>
   );
 }

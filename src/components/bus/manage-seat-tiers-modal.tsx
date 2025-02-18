@@ -170,13 +170,15 @@ export const ManageSeatTiersModal = ({
                   <Input
                     type="number"
                     min={0}
+                    step="0.01"
                     value={newTier.basePrice}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      const value = e.target.value;
                       setNewTier({
                         ...newTier,
-                        basePrice: parseFloat(e.target.value),
-                      })
-                    }
+                        basePrice: value === "" ? 0 : parseFloat(value),
+                      });
+                    }}
                     required
                   />
                 </div>

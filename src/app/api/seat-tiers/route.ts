@@ -40,14 +40,21 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    
+    // Log the received data
+    console.log('Received data:', body);
+
     const validatedData = createSeatTierSchema.parse(body);
+    
+    // Log the validated data
+    console.log('Validated data:', validatedData);
 
     const tier = await prisma.seat_tiers.create({
       data: {
         company_id: validatedData.companyId,
         name: validatedData.name,
         description: validatedData.description,
-        base_price: validatedData.basePrice.toString(),
+        base_price: validatedData.basePrice,
         is_active: validatedData.isActive,
       },
       include: {
@@ -60,7 +67,7 @@ export async function POST(request: Request) {
       id: tier.id,
       name: tier.name,
       description: tier.description,
-      basePrice: tier.base_price,
+      basePrice: Number(tier.base_price),
       isActive: tier.is_active,
       companyId: tier.company_id,
       createdAt: tier.created_at,
@@ -75,6 +82,15 @@ export async function POST(request: Request) {
     return NextResponse.json(transformedTier);
   } catch (error) {
     console.error("Error creating seat tier:", error);
+    
+    // Mejorar el mensaje de error
+    if (error instanceof Error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 400 }
+      );
+    }
+    
     return NextResponse.json(
       { error: "Failed to create seat tier" },
       { status: 500 }

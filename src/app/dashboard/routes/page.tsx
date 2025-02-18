@@ -212,11 +212,14 @@ export default function Routes() {
       const nextWeek = new Date();
       nextWeek.setDate(today.getDate() + 7);
 
-      // Calculamos la hora de llegada estimada basada en la duración de la ruta
-      const departureTime = routeSchedule.departureTime;
-      const [hours, minutes] = departureTime.split(':').map(Number);
-      const departureDate = new Date(today);
-      departureDate.setHours(hours, minutes, 0, 0);
+      // Get the operating days for this schedule
+      const daysToGenerate = routeSchedule.operatingDays;
+      
+      // Show loading toast
+      toast({
+        title: "Generando viajes",
+        description: `Generando viajes para los próximos ${daysToGenerate.length} días operativos.`,
+      });
 
       const response = await fetch("/api/schedules", {
         method: "POST",
@@ -224,11 +227,12 @@ export default function Routes() {
         body: JSON.stringify({
           routeId: routeSchedule.routeId,
           routeScheduleId: routeSchedule.id,
-          departureDate: departureDate.toISOString(),
           departureTime: routeSchedule.departureTime,
-          price: 0, // Precio base, puede ajustarse según necesidades
+          operatingDays: daysToGenerate,
           startDate: today.toISOString().split('T')[0],
           endDate: nextWeek.toISOString().split('T')[0],
+          price: 0,
+          status: 'scheduled' // Explicitly set the initial status
         }),
       });
 
@@ -237,10 +241,14 @@ export default function Routes() {
         throw new Error(errorData.error || "Error al generar viajes");
       }
 
+      const result = await response.json();
+      
+      // Refresh the schedules data
       await mutateSchedules();
+
       toast({
         title: "Viajes generados",
-        description: "Los viajes han sido generados exitosamente.",
+        description: `Se han generado ${result.count || 'los'} viajes exitosamente.`,
       });
     } catch (error) {
       console.error("Error al generar viajes:", error);
@@ -251,6 +259,11 @@ export default function Routes() {
       });
     }
   };
+
+  // Filter schedules based on the selected route schedule
+  const filteredSchedules = schedules.filter((schedule: Schedule) => 
+    schedule.routeScheduleId === selectedRouteSchedule?.id
+  );
 
   return (
     <div className="space-y-6">
@@ -317,14 +330,15 @@ export default function Routes() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">Viajes Programados</h2>
+              <div className="text-sm text-muted-foreground">
+                {filteredSchedules.length} viajes encontrados
+              </div>
             </div>
             <SchedulesTable
-              schedules={schedules.filter((schedule: Schedule) =>
-                schedule.routeScheduleId === selectedRouteSchedule.id
-              )}
+              schedules={filteredSchedules}
               routes={routes}
               onScheduleSelect={handleScheduleSelect}
-              onAssignBus={(schedule) => {
+              onAssignBus={(schedule: Schedule) => {
                 setSelectedSchedule(schedule);
                 setIsAssignDialogOpen(true);
               }}

@@ -228,3 +228,16 @@ export type SeatStatusLabel = {
 };
 
 export type BusType = "standard" | "luxury" | "double_decker" | "mini";
+
+/**
+ * Seat Tier Schemas
+ */
+export const createSeatTierSchema = z.object({
+  companyId: z.string().uuid("ID de empresa inválido"),
+  name: z.string().min(1, "El nombre es requerido").trim(),
+  description: z.string().nullable(),
+  basePrice: z.number().min(0, "El precio base debe ser mayor o igual a 0"),
+  isActive: z.boolean().default(true),
+});
+
+export type CreateSeatTierInput = z.infer<typeof createSeatTierSchema>;
