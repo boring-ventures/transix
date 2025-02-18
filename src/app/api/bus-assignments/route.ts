@@ -8,8 +8,8 @@ const createAssignmentSchema = z.object({
   busId: z.string().uuid("ID de bus inválido"),
   routeId: z.string().uuid("ID de ruta inválido"),
   scheduleId: z.string().uuid("ID de horario inválido"),
-  startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato de hora inválido"),
-  endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato de hora inválido"),
+  startTime: z.string().datetime("Formato de fecha y hora inválido"),
+  endTime: z.string().datetime("Formato de fecha y hora inválido"),
 });
 
 export async function GET() {
@@ -62,45 +62,54 @@ export async function POST(request: Request) {
     // Validar datos de entrada
     const validatedData = createAssignmentSchema.parse(body);
     
-    // Verificar que el bus existe
+    // Verificar que el bus existe y está activo
     const bus = await prisma.buses.findUnique({
-      where: { id: validatedData.busId }
+      where: { 
+        id: validatedData.busId,
+        is_active: true,
+        maintenance_status_enum: 'active'
+      }
     });
 
     if (!bus) {
       return NextResponse.json(
-        { error: "Bus no encontrado" },
+        { error: "Bus no encontrado o no está disponible" },
         { status: 404 }
       );
     }
 
-    // Verificar que la ruta existe
+    // Verificar que la ruta existe y está activa
     const route = await prisma.routes.findUnique({
-      where: { id: validatedData.routeId }
+      where: { 
+        id: validatedData.routeId,
+        active: true
+      }
     });
 
     if (!route) {
       return NextResponse.json(
-        { error: "Ruta no encontrada" },
+        { error: "Ruta no encontrada o no está activa" },
         { status: 404 }
       );
     }
 
-    // Verificar que el schedule existe
+    // Verificar que el schedule existe y está en estado 'scheduled'
     const schedule = await prisma.schedules.findUnique({
-      where: { id: validatedData.scheduleId }
+      where: { 
+        id: validatedData.scheduleId,
+        status: 'scheduled'
+      }
     });
 
     if (!schedule) {
       return NextResponse.json(
-        { error: "Horario no encontrado" },
+        { error: "Horario no encontrado o no está disponible para asignación" },
         { status: 404 }
       );
     }
 
-    const today = new Date().toISOString().split('T')[0];
-    const startTime = new Date(`${today}T${validatedData.startTime}:00Z`);
-    const endTime = new Date(`${today}T${validatedData.endTime}:00Z`);
+    const startTime = new Date(validatedData.startTime);
+    const endTime = new Date(validatedData.endTime);
 
     // Verificar que la hora de fin es posterior a la hora de inicio
     if (endTime <= startTime) {
@@ -151,10 +160,28 @@ export async function POST(request: Request) {
         status: bus_assignment_status_enum.active,
       },
       include: {
-        buses: true,
+        buses: {
+          include: {
+            bus_type_templates: true
+          }
+        },
         routes: true,
       },
     });
+
+    // Actualizar el precio del schedule basado en el tipo de bus
+    if (assignment.buses.bus_type_templates) {
+      const basePrice = 50; // TODO: Obtener el precio base de la configuración
+      const multiplier = assignment.buses.bus_type_templates.type === 'luxury' ? 1.5 : 1;
+      
+      await prisma.schedules.update({
+        where: { id: validatedData.scheduleId },
+        data: {
+          price: basePrice * multiplier,
+          bus_id: validatedData.busId // Asignar el bus al schedule
+        }
+      });
+    }
 
     // Transformar la respuesta
     const transformedAssignment = {
@@ -169,7 +196,12 @@ export async function POST(request: Request) {
       bus: assignment.buses ? {
         id: assignment.buses.id,
         plateNumber: assignment.buses.plate_number,
-        maintenanceStatus: assignment.buses.maintenance_status_enum || 'active',
+        maintenanceStatus: assignment.buses.maintenance_status_enum,
+        template: assignment.buses.bus_type_templates ? {
+          id: assignment.buses.bus_type_templates.id,
+          name: assignment.buses.bus_type_templates.name,
+          type: assignment.buses.bus_type_templates.type
+        } : undefined
       } : null,
       route: assignment.routes ? {
         id: assignment.routes.id,
@@ -180,51 +212,9 @@ export async function POST(request: Request) {
     return NextResponse.json(transformedAssignment);
   } catch (error) {
     console.error("Error creating bus assignment:", error);
-    
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { 
-          error: "Datos de asignación inválidos",
-          details: error.errors
-        },
-        { status: 400 }
-      );
-    }
-
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      let errorMessage = "Error de base de datos";
-      let statusCode = 400;
-
-      switch (error.code) {
-        case 'P2002':
-          errorMessage = "Ya existe una asignación con estos datos";
-          break;
-        case 'P2003':
-          errorMessage = "El bus o la ruta no existen";
-          statusCode = 404;
-          break;
-        case 'P2025':
-          errorMessage = "No se encontró el registro a actualizar";
-          statusCode = 404;
-          break;
-        default:
-          errorMessage = "Error en la base de datos";
-      }
-
-      return NextResponse.json(
-        { 
-          error: errorMessage,
-          details: error.message,
-          code: error.code
-        },
-        { status: statusCode }
-      );
-    }
-
-    // Para cualquier otro tipo de error, devolver un error 500 con un mensaje genérico
     return NextResponse.json(
       { 
-        error: "Error interno del servidor",
+        error: "Error al asignar bus",
         details: error instanceof Error ? error.message : "Error desconocido"
       },
       { status: 500 }

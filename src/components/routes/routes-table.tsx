@@ -1,9 +1,12 @@
 import { DataTable } from "@/components/table/data-table";
 import { Column } from "@/components/table/types";
-import { Location, Route, RouteWithRelations, Schedule } from "@/types/route.types";
+import { Location, Route, RouteWithRelations, UpdateRouteInput } from "@/types/route.types";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { EditRouteDialog } from "./edit-route-dialog";
+import { DeleteRouteDialog } from "./delete-route-dialog";
+import { useToast } from "@/hooks/use-toast";
 
 interface RoutesTableProps {
   routes: RouteWithRelations[];
@@ -11,8 +14,10 @@ interface RoutesTableProps {
   onRouteSelect: (route: Route) => void;
   selectedRouteId?: string;
   onAdd?: () => void;
-  onEdit?: (route: Route) => void;
-  onDelete?: (route: Route) => void;
+  onEdit?: (routeId: string, data: UpdateRouteInput) => Promise<void>;
+  onDelete?: (routeId: string) => Promise<void>;
+  onGenerateSchedules?: (routeId: string, startDate: Date, endDate: Date) => Promise<void>;
+  onAssignBus?: (scheduleId: string) => Promise<void>;
   companyId: string;
 }
 
@@ -24,8 +29,47 @@ export function RoutesTable({
   onAdd,
   onEdit,
   onDelete,
+  onGenerateSchedules,
+  onAssignBus,
   companyId,
 }: RoutesTableProps) {
+  const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const { toast } = useToast();
+
+  const handleEditRoute = async (routeId: string, data: UpdateRouteInput) => {
+    try {
+      await onEdit?.(routeId, data);
+      toast({
+        title: "Ruta actualizada",
+        description: "La ruta ha sido actualizada exitosamente.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar la ruta. Por favor, intenta de nuevo.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteRoute = async (routeId: string) => {
+    try {
+      await onDelete?.(routeId);
+      toast({
+        title: "Ruta eliminada",
+        description: "La ruta ha sido eliminada exitosamente.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar la ruta. Por favor, intenta de nuevo.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const columns: Column<RouteWithRelations>[] = [
     {
       id: "name",
@@ -61,7 +105,11 @@ export function RoutesTable({
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => onEdit(route)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedRoute(route);
+                  setEditDialogOpen(true);
+                }}
               >
                 <Pencil className="h-4 w-4" />
               </Button>
@@ -70,7 +118,11 @@ export function RoutesTable({
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => onDelete(route)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedRoute(route);
+                  setDeleteDialogOpen(true);
+                }}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -82,10 +134,31 @@ export function RoutesTable({
   ];
 
   return (
-    <DataTable
-      columns={columns}
-      data={routes}
-      onRowClick={onRouteSelect}
-    />
+    <>
+      <DataTable
+        columns={columns}
+        data={routes}
+        onRowClick={onRouteSelect}
+      />
+
+      {selectedRoute && (
+        <>
+          <EditRouteDialog
+            open={editDialogOpen}
+            onOpenChange={setEditDialogOpen}
+            route={selectedRoute}
+            locations={locations}
+            onSubmit={handleEditRoute}
+          />
+
+          <DeleteRouteDialog
+            open={deleteDialogOpen}
+            onOpenChange={setDeleteDialogOpen}
+            route={selectedRoute}
+            onConfirm={handleDeleteRoute}
+          />
+        </>
+      )}
+    </>
   );
 }

@@ -75,18 +75,18 @@ const data = {
           url: "/dashboard/locations",
           icon: Map,
         },
-        {
+        /* {
           title: "Horarios",
           url: "/dashboard/routes/schedules",
           icon: Clock,
-        },
+        }, */
       ],
     },
-    {
+    /* {
       title: "Encomiendas",
       url: "/dashboard/parcels",
       icon: Package,
-    },
+    }, */
     {
       title: "Buses",
       url: "/dashboard/buses",

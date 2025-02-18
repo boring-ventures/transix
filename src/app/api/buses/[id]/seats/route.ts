@@ -1,18 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/db";
-import { busSeats } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { prisma } from "@/lib/prisma";
 import { updateBusSeatSchema } from "@/types/bus.types";
+import { Prisma } from "@prisma/client";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
-    try {
-      const { id } = await params;
-    const seats = await db.query.busSeats.findMany({
-      where: eq(busSeats.busId, id),
-      orderBy: (seats, { asc }) => [asc(seats.seatNumber)],
+  try {
+    const { id } = params;
+    const seats = await prisma.bus_seats.findMany({
+      where: { bus_id: id },
+      orderBy: { seat_number: "asc" },
     });
 
     return NextResponse.json(seats);
@@ -33,28 +32,44 @@ export async function PATCH(
     const body = await request.json();
     const validatedData = updateBusSeatSchema.parse(body);
 
-    const updatedSeat = await db
-      .update(busSeats)
-      .set({
-        ...validatedData,
-        updatedAt: new Date(),
-      })
-      .where(eq(busSeats.id, params.id))
-      .returning();
+    const dataToUpdate: Record<string, any> = {};
+    if (validatedData.busId !== undefined) {
+      dataToUpdate.bus_id = validatedData.busId;
+    }
+    if (validatedData.seatNumber !== undefined) {
+      dataToUpdate.seat_number = validatedData.seatNumber;
+    }
+    if (validatedData.tierId !== undefined) {
+      dataToUpdate.tier_id = validatedData.tierId;
+    }
+    if (validatedData.status !== undefined) {
+      dataToUpdate.status = validatedData.status;
+    }
+    if (validatedData.isActive !== undefined) {
+      dataToUpdate.is_active = validatedData.isActive;
+    }
+    dataToUpdate.updated_at = new Date();
 
-    if (!updatedSeat.length) {
+    const updatedSeat = await prisma.bus_seats.update({
+      where: { id: params.id },
+      data: dataToUpdate,
+    });
+
+    return NextResponse.json(updatedSeat);
+  } catch (error: any) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2025"
+    ) {
       return NextResponse.json(
         { error: "Asiento no encontrado" },
         { status: 404 }
       );
     }
-
-    return NextResponse.json(updatedSeat[0]);
-  } catch (error) {
     console.error("Error updating bus seat:", error);
     return NextResponse.json(
       { error: "Error al actualizar el asiento" },
       { status: 500 }
     );
   }
-} 
+}

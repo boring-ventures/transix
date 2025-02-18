@@ -30,6 +30,17 @@ export type Bus = {
   };
   createdAt: Date;
   updatedAt: Date;
+  template?: {
+    id: string;
+    name: string;
+    type: string;
+  };
+  assignments?: {
+    id: string;
+    status: 'active' | 'completed' | 'cancelled';
+    startTime: Date;
+    endTime: Date;
+  }[];
 };
 
 export type BusSeat = {

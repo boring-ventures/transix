@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { schedule_status_enum, bus_assignment_status_enum } from "@prisma/client";
 
 /**
  * Base Schemas
@@ -116,19 +117,41 @@ export type RouteSchedule = {
   route?: Route;
 };
 
+export type BusAssignment = {
+  id: string;
+  busId: string;
+  routeId: string;
+  scheduleId: string;
+  status: bus_assignment_status_enum;
+  assignedAt: Date;
+  startTime: Date;
+  endTime: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  bus?: {
+    id: string;
+    plateNumber: string;
+    template?: {
+      id: string;
+      name: string;
+    };
+  };
+};
+
 export type Schedule = {
   id: string;
   routeId: string;
   routeScheduleId: string;
-  busId: string;
+  busId: string | null;
   departureDate: Date;
   estimatedArrivalTime: Date;
   actualDepartureTime: Date | null;
   actualArrivalTime: Date | null;
   price: number;
-  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'delayed';
+  status: schedule_status_enum;
   createdAt: Date;
   updatedAt: Date;
+  busAssignments?: BusAssignment[];
 };
 
 export type RouteWithRelations = Route & {

@@ -6,7 +6,8 @@ import {
   CreateRouteScheduleInput,
   Route,
   RouteSchedule,
-  Schedule
+  Schedule,
+  UpdateRouteInput
 } from "@/types/route.types";
 import { RoutesStatsCards } from "@/components/routes/routes-stats-cards";
 import { RoutesTable } from "@/components/routes/routes-table";
@@ -56,6 +57,7 @@ export default function Routes() {
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isCreateScheduleDialogOpen, setIsCreateScheduleDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [newRoute, setNewRoute] = useState<CreateRouteInput>({
     name: "",
@@ -206,57 +208,50 @@ export default function Routes() {
     }
   };
 
-  const handleGenerateSchedules = async (routeSchedule: RouteSchedule) => {
+  const handleGenerateSchedules = async (routeSchedule: RouteSchedule, startDate: string, endDate: string) => {
     try {
-      const today = new Date();
-      const nextWeek = new Date();
-      nextWeek.setDate(today.getDate() + 7);
-
-      // Get the operating days for this schedule
-      const daysToGenerate = routeSchedule.operatingDays;
-      
-      // Show loading toast
-      toast({
-        title: "Generando viajes",
-        description: `Generando viajes para los próximos ${daysToGenerate.length} días operativos.`,
-      });
+      setIsSubmitting(true);
 
       const response = await fetch("/api/schedules", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           routeId: routeSchedule.routeId,
           routeScheduleId: routeSchedule.id,
           departureTime: routeSchedule.departureTime,
-          operatingDays: daysToGenerate,
-          startDate: today.toISOString().split('T')[0],
-          endDate: nextWeek.toISOString().split('T')[0],
-          price: 0,
-          status: 'scheduled' // Explicitly set the initial status
+          operatingDays: routeSchedule.operatingDays,
+          startDate,
+          endDate,
+          price: 0, // El precio se establecerá al asignar el bus
+          status: 'scheduled'
         }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Error al generar viajes");
+        const error = await response.json();
+        throw new Error(error.message || "Error al generar los horarios");
       }
 
       const result = await response.json();
       
-      // Refresh the schedules data
-      await mutateSchedules();
-
       toast({
-        title: "Viajes generados",
-        description: `Se han generado ${result.count || 'los'} viajes exitosamente.`,
+        title: "Horarios generados",
+        description: `Se han generado ${result.count} viajes exitosamente.`,
       });
+
+      // Actualizar la lista de schedules
+      await mutateSchedules();
     } catch (error) {
-      console.error("Error al generar viajes:", error);
+      console.error("Error generating schedules:", error);
       toast({
-        title: "Error al generar viajes",
-        description: error instanceof Error ? error.message : "Error desconocido",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Error al generar los horarios",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -264,6 +259,111 @@ export default function Routes() {
   const filteredSchedules = schedules.filter((schedule: Schedule) => 
     schedule.routeScheduleId === selectedRouteSchedule?.id
   );
+
+  const handleEditSchedule = async (scheduleId: string, data: { departureDate: string; departureTime: string; price: number }) => {
+    try {
+      const response = await fetch(`/api/schedules`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: scheduleId,
+          departure_date: new Date(`${data.departureDate}T${data.departureTime}`),
+          price: data.price,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update schedule");
+      }
+
+      await mutateSchedules();
+      toast({
+        title: "Horario actualizado",
+        description: "El horario ha sido actualizado exitosamente.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error al actualizar horario",
+        description: error instanceof Error ? error.message : "Error desconocido",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteSchedule = async (scheduleId: string) => {
+    try {
+      const response = await fetch(`/api/schedules?id=${scheduleId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete schedule");
+      }
+
+      await mutateSchedules();
+      toast({
+        title: "Horario eliminado",
+        description: "El horario ha sido eliminado exitosamente.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error al eliminar horario",
+        description: error instanceof Error ? error.message : "Error desconocido",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEditRoute = async (routeId: string, data: UpdateRouteInput) => {
+    try {
+      const response = await fetch(`/api/routes/${routeId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update route");
+      }
+
+      await refetch();
+      toast({
+        title: "Ruta actualizada",
+        description: "La ruta ha sido actualizada exitosamente.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error al actualizar ruta",
+        description: error instanceof Error ? error.message : "Error desconocido",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteRoute = async (routeId: string) => {
+    try {
+      const response = await fetch(`/api/routes/${routeId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || errorData.details?.message || "Error al eliminar ruta");
+      }
+
+      await refetch();
+      toast({
+        title: "Ruta eliminada",
+        description: "La ruta ha sido eliminada exitosamente.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error al eliminar ruta",
+        description: error instanceof Error ? error.message : "Error desconocido",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -301,14 +401,8 @@ export default function Routes() {
           onRouteSelect={handleRouteSelect}
           selectedRouteId={selectedRoute?.id}
           onAdd={() => setIsCreateDialogOpen(true)}
-          onEdit={(route) => {
-            setEditingRoute(route);
-            setIsEditOpen(true);
-          }}
-          onDelete={(route) => {
-            setDeletingRoute(route);
-            setIsDeleteOpen(true);
-          }}
+          onEdit={handleEditRoute}
+          onDelete={handleDeleteRoute}
           companyId={companyId}
         />
 
@@ -321,7 +415,12 @@ export default function Routes() {
               routeSchedules={routeSchedules as unknown as RouteSchedule[]}
               onRouteScheduleSelect={handleRouteScheduleSelect}
               selectedRouteSchedule={selectedRouteSchedule}
-              onGenerateSchedules={handleGenerateSchedules}
+              onGenerateSchedules={(routeSchedule) => {
+                const today = new Date();
+                const nextWeek = new Date();
+                nextWeek.setDate(today.getDate() + 7);
+                handleGenerateSchedules(routeSchedule, today.toISOString().split('T')[0], nextWeek.toISOString().split('T')[0]);
+              }}
             />
           </div>
         )}
@@ -342,6 +441,8 @@ export default function Routes() {
                 setSelectedSchedule(schedule);
                 setIsAssignDialogOpen(true);
               }}
+              onEditSchedule={handleEditSchedule}
+              onDeleteSchedule={handleDeleteSchedule}
             />
           </div>
         )}

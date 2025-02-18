@@ -16,13 +16,13 @@ import {
 } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, Clock } from "lucide-react";
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { Bus } from "@/types/bus.types";
 import { Route, Schedule } from "@/types/route.types";
-import { useBusAvailability } from "@/hooks/useBusAvailability";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { addMinutes, format, isAfter, isBefore, parseISO, setHours, setMinutes } from "date-fns";
 
 interface AssignBusDialogProps {
   open: boolean;
@@ -54,6 +54,58 @@ export function AssignBusDialog({
   const [endTime, setEndTime] = useState<string>("");
   const { toast } = useToast();
 
+  // Reset form when dialog opens
+  useEffect(() => {
+    if (open) {
+      setSelectedBus(undefined);
+      // Set default start time to schedule departure time
+      const defaultStartTime = format(new Date(schedule.departureDate), "HH:mm");
+      setStartTime(defaultStartTime);
+      // Set default end time to estimated arrival
+      const defaultEndTime = format(new Date(schedule.estimatedArrivalTime), "HH:mm");
+      setEndTime(defaultEndTime);
+    }
+  }, [open, schedule]);
+
+  // Filter available buses
+  const availableBuses = useMemo(() => {
+    return buses.filter(bus => {
+      // Check if bus is active and not in maintenance
+      if (!bus.isActive || bus.maintenanceStatus !== 'active') {
+        return false;
+      }
+
+      // Check existing assignments for this bus
+      const hasConflictingAssignment = bus.assignments?.some(assignment => {
+        if (assignment.status !== 'active') return false;
+
+        const assignmentStart = new Date(assignment.startTime);
+        const assignmentEnd = new Date(assignment.endTime);
+        const scheduleDate = new Date(schedule.departureDate);
+        
+        // Create datetime objects for comparison
+        const newStartTime = startTime ? setMinutes(
+          setHours(scheduleDate, parseInt(startTime.split(':')[0])),
+          parseInt(startTime.split(':')[1])
+        ) : scheduleDate;
+
+        const newEndTime = endTime ? setMinutes(
+          setHours(scheduleDate, parseInt(endTime.split(':')[0])),
+          parseInt(endTime.split(':')[1])
+        ) : addMinutes(scheduleDate, schedule.route?.estimatedDuration || 0);
+
+        // Check for overlap
+        return (
+          (isAfter(newStartTime, assignmentStart) && isBefore(newStartTime, assignmentEnd)) ||
+          (isAfter(newEndTime, assignmentStart) && isBefore(newEndTime, assignmentEnd)) ||
+          (isBefore(newStartTime, assignmentStart) && isAfter(newEndTime, assignmentEnd))
+        );
+      });
+
+      return !hasConflictingAssignment;
+    });
+  }, [buses, schedule, startTime, endTime]);
+
   const handleAssign = async () => {
     if (!selectedBus) {
       toast({
@@ -82,26 +134,32 @@ export function AssignBusDialog({
       return;
     }
 
-    try {
-      console.log("Enviando datos de asignación:", {
-        busId: selectedBus,
-        scheduleId: schedule.id,
-        routeId: schedule.routeId,
-        startTime,
-        endTime
-      });
+    // Validate time range
+    const scheduleDate = new Date(schedule.departureDate);
+    const startDateTime = new Date(scheduleDate);
+    startDateTime.setHours(parseInt(startTime.split(':')[0]), parseInt(startTime.split(':')[1]), 0);
+    
+    const endDateTime = new Date(scheduleDate);
+    endDateTime.setHours(parseInt(endTime.split(':')[0]), parseInt(endTime.split(':')[1]), 0);
 
+    if (isAfter(startDateTime, endDateTime)) {
+      toast({
+        title: "Error de validación",
+        description: "La hora de inicio debe ser anterior a la hora de fin",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
       await onAssign({ 
         busId: selectedBus,
         scheduleId: schedule.id,
         routeId: schedule.routeId,
-        startTime,
-        endTime
+        startTime: startDateTime.toISOString(),
+        endTime: endDateTime.toISOString()
       });
       onOpenChange(false);
-      setSelectedBus(undefined);
-      setStartTime("");
-      setEndTime("");
     } catch (error) {
       console.error("Error al asignar bus:", error);
       toast({
@@ -149,21 +207,31 @@ export function AssignBusDialog({
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
             <Label htmlFor="bus">Bus</Label>
-            <Select
-              value={selectedBus}
-              onValueChange={setSelectedBus}
-            >
-              <SelectTrigger id="bus">
-                <SelectValue placeholder="Selecciona un bus" />
-              </SelectTrigger>
-              <SelectContent>
-                {buses.map((bus: Bus) => (
-                  <SelectItem key={bus.id} value={bus.id}>
-                    {bus.plateNumber}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {availableBuses.length === 0 ? (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>No hay buses disponibles</AlertTitle>
+                <AlertDescription>
+                  Todos los buses están asignados o en mantenimiento para este horario.
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <Select
+                value={selectedBus}
+                onValueChange={setSelectedBus}
+              >
+                <SelectTrigger id="bus">
+                  <SelectValue placeholder="Selecciona un bus" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableBuses.map((bus) => (
+                    <SelectItem key={bus.id} value={bus.id}>
+                      {bus.plateNumber} ({bus.template?.name || 'N/A'})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           <div className="grid gap-2">
@@ -196,7 +264,7 @@ export function AssignBusDialog({
           </Button>
           <Button
             onClick={handleAssign}
-            disabled={!selectedBus || !startTime || !endTime || isSubmitting}
+            disabled={!selectedBus || !startTime || !endTime || isSubmitting || availableBuses.length === 0}
           >
             {isSubmitting ? "Asignando..." : "Asignar"}
           </Button>

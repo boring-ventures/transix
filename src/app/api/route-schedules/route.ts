@@ -65,7 +65,8 @@ export async function GET(request: NextRequest) {
         template: schedule.schedules[0].bus_assignments[0].buses.bus_type_templates ? {
           id: schedule.schedules[0].bus_assignments[0].buses.bus_type_templates.id,
           type: schedule.schedules[0].bus_assignments[0].buses.bus_type_templates.type,
-          seatsLayout: schedule.schedules[0].bus_assignments[0].buses.bus_type_templates.seats_layout,
+          // Se usa el campo seat_template_matrix en lugar de seats_layout (que es null)
+          seatsLayout: schedule.schedules[0].bus_assignments[0].buses.bus_type_templates.seat_template_matrix,
         } : undefined,
         seats: schedule.schedules[0].bus_assignments[0].buses.bus_seats.map(seat => ({
           id: seat.id,
