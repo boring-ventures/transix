@@ -117,25 +117,73 @@ export type RouteSchedule = {
   route?: Route;
 };
 
+export type BusTemplate = {
+  id: string;
+  name: string;
+  type: string;
+  seatsLayout: string;
+  seatTemplateMatrix: {
+    firstFloor: {
+      dimensions: {
+        rows: number;
+        seatsPerRow: number;
+      };
+      seats: {
+        id: string;
+        name: string;
+        tierId: string;
+        row: number;
+        column: number;
+        isEmpty: boolean;
+      }[];
+    };
+    secondFloor?: {
+      dimensions: {
+        rows: number;
+        seatsPerRow: number;
+      };
+      seats: {
+        id: string;
+        name: string;
+        tierId: string;
+        row: number;
+        column: number;
+        isEmpty: boolean;
+      }[];
+    };
+  };
+};
+
+export type BusSeat = {
+  id: string;
+  seatNumber: string;
+  status: string;
+  tier?: {
+    id: string;
+    name: string;
+    basePrice: number;
+  };
+};
+
+export type Bus = {
+  id: string;
+  plateNumber: string;
+  template?: BusTemplate;
+  seats: BusSeat[];
+};
+
 export type BusAssignment = {
   id: string;
   busId: string;
   routeId: string;
   scheduleId: string;
-  status: bus_assignment_status_enum;
+  status: string;
   assignedAt: Date;
   startTime: Date;
   endTime: Date;
   createdAt: Date;
   updatedAt: Date;
-  bus?: {
-    id: string;
-    plateNumber: string;
-    template?: {
-      id: string;
-      name: string;
-    };
-  };
+  bus?: Bus;
 };
 
 export type Schedule = {
@@ -152,6 +200,26 @@ export type Schedule = {
   createdAt: Date;
   updatedAt: Date;
   busAssignments?: BusAssignment[];
+  bus?: {
+    id: string;
+    plateNumber: string;
+    template?: {
+      id: string;
+      name: string;
+      type: string;
+      seatsLayout: string;
+    };
+    seats: {
+      id: string;
+      seatNumber: string;
+      status: string;
+      tier?: {
+        id: string;
+        name: string;
+        basePrice: number;
+      };
+    }[];
+  };
 };
 
 export type RouteWithRelations = Route & {

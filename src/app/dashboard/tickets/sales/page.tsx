@@ -10,6 +10,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowRight, ArrowLeft, Check } from "lucide-react";
@@ -19,10 +26,10 @@ import { useRoutes, useRouteSchedules } from "@/hooks/useRoutes";
 import { useLocations } from "@/hooks/useLocations";
 import { LoadingTable } from "@/components/table/loading-table";
 import { Route, RouteSchedule } from "@/types/route.types";
-import { Schedule } from "@/types/schedule.types";
+import { Schedule } from "@/types/route.types";
 import { BusType } from "@/types/bus.types";
-import { SeatMatrixPreview } from "@/components/bus/seat-matrix-preview";
-import { useSeatTiers } from "@/hooks/useSeatTiers";
+import { Location } from "@/types/route.types";
+import { useSchedulesByRouteSchedule } from "@/hooks/useSchedules";
 
 type Passenger = {
   name: string;
@@ -33,23 +40,38 @@ type Passenger = {
 
 export default function TicketSales() {
   const { toast } = useToast();
-  const { data: routes = [], isLoading: isLoadingInitial } = useRoutes();
-  const { data: locations = [] } = useLocations();
-  const { data: seatTiers = [] } = useSeatTiers();
+  const { data: routes = [], isLoading: isLoadingRoutes } = useRoutes();
+  const { data: locations = [], isLoading: isLoadingLocations } = useLocations();
+  
+  // Estados para el flujo de selección
+  const [selectedOrigin, setSelectedOrigin] = useState<Location | null>(null);
+  const [selectedDestination, setSelectedDestination] = useState<Location | null>(null);
   const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
-  const { data: schedules, isLoading: isLoadingSchedules } = useRouteSchedules(selectedRoute?.id);
-  const [selectedSchedule, setSelectedSchedule] = useState<RouteSchedule | null>(null);
+  const [selectedRouteSchedule, setSelectedRouteSchedule] = useState<RouteSchedule | null>(null);
+  const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
   const [passengers, setPassengers] = useState<Record<string, Passenger>>({});
   const [step, setStep] = useState(1);
 
-  // Mostrar loading solo al cargar inicialmente
-  if (isLoadingInitial) {
+  // Obtener horarios cuando se selecciona una ruta
+  const { data: routeSchedules = [], isLoading: isLoadingSchedules } = 
+    useRouteSchedules(selectedRoute?.id);
+
+  // Add the new hook for fetching schedules
+  const { data: availableSchedules = [], isLoading: isLoadingAvailableSchedules } = 
+    useSchedulesByRouteSchedule(selectedRouteSchedule?.id);
+
+  // Mostrar loading mientras se cargan los datos iniciales
+  if (isLoadingLocations || isLoadingRoutes) {
     return <LoadingTable columnCount={6} rowCount={10} />;
   }
 
-  // Filtrar solo las rutas activas
-  const activeRoutes = routes.filter(route => route.active);
+  // Filtrar rutas disponibles basadas en origen/destino seleccionados
+  const availableRoutes = routes.filter(route => 
+    route.active && 
+    (!selectedOrigin || route.originId === selectedOrigin.id) &&
+    (!selectedDestination || route.destinationId === selectedDestination.id)
+  );
 
   const handleSeatSelect = (seatNumber: string, price: number) => {
     setSelectedSeats((prev) => {
@@ -86,40 +108,38 @@ export default function TicketSales() {
   };
 
   const handleSubmit = () => {
-    // Here we would save to local storage
+    // Aquí iría la lógica de guardado
     toast({
       title: "Reserva Confirmada",
       description: "Los tickets han sido registrados exitosamente",
     });
-    setStep(4);
+    setStep(6); // Cambiamos a 6 pasos en total
   };
 
   const renderStepIndicator = () => {
+    const steps = [
+      { number: 1, label: "Origen/Destino" },
+      { number: 2, label: "Ruta" },
+      { number: 3, label: "Horario" },
+      { number: 4, label: "Viaje" },
+      { number: 5, label: "Pasajeros" },
+    ];
+
     return (
       <div className="relative mb-8">
         <div className="absolute top-1/2 left-0 right-0 h-px bg-gray-200" />
         <div className="relative flex justify-between">
-          {[
-            { number: 1, label: "Ruta" },
-            { number: 2, label: "Horario" },
-            { number: 3, label: "Pasajeros" },
-          ].map((s) => (
+          {steps.map((s) => (
             <div key={s.number} className="flex flex-col items-center">
               <div
                 className={`w-10 h-10 rounded-full border-2 flex items-center justify-center bg-white
-                  ${
-                    s.number <= step
-                      ? "border-primary text-primary"
-                      : "border-gray-200 text-gray-400"
-                  }`}
+                  ${s.number <= step ? "border-primary text-primary" : "border-gray-200 text-gray-400"}`}
               >
                 {s.number}
               </div>
-              <span
-                className={`mt-2 text-sm font-medium ${
-                  s.number <= step ? "text-primary" : "text-gray-400"
-                }`}
-              >
+              <span className={`mt-2 text-sm font-medium ${
+                s.number <= step ? "text-primary" : "text-gray-400"
+              }`}>
                 {s.label}
               </span>
             </div>
@@ -131,15 +151,76 @@ export default function TicketSales() {
 
   const renderStepContent = () => {
     switch (step) {
-      case 1:
+      case 1: // Selección de Origen/Destino
+        return (
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold">Seleccionar Origen y Destino</h2>
+            <div className="grid gap-4">
+              <div className="space-y-2">
+                <Label>Origen</Label>
+                <Select
+                  value={selectedOrigin?.id}
+                  onValueChange={(value) => {
+                    const origin = locations.find(loc => loc.id === value);
+                    setSelectedOrigin(origin || null);
+                    setSelectedRoute(null); // Resetear selecciones posteriores
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccione origen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {locations.map((location) => (
+                      <SelectItem key={location.id} value={location.id}>
+                        {location.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Destino</Label>
+                <Select
+                  value={selectedDestination?.id}
+                  onValueChange={(value) => {
+                    const destination = locations.find(loc => loc.id === value);
+                    setSelectedDestination(destination || null);
+                    setSelectedRoute(null); // Resetear selecciones posteriores
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccione destino" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {locations
+                      .filter(loc => loc.id !== selectedOrigin?.id)
+                      .map((location) => (
+                        <SelectItem key={location.id} value={location.id}>
+                          {location.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 2: // Selección de Ruta
         return (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">Seleccionar Ruta</h2>
-            {activeRoutes.map((route) => {
-              const origin = locations.find(loc => loc.id === route.originId);
-              const destination = locations.find(loc => loc.id === route.destinationId);
-              
-              return (
+            {availableRoutes.length === 0 ? (
+              <Card>
+                <CardContent className="pt-6">
+                  <p className="text-center text-muted-foreground">
+                    No hay rutas disponibles para el origen y destino seleccionados
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              availableRoutes.map((route) => (
                 <Card
                   key={route.id}
                   className={`cursor-pointer transition-colors hover:border-primary
@@ -149,48 +230,112 @@ export default function TicketSales() {
                   <CardHeader>
                     <CardTitle>{route.name}</CardTitle>
                     <CardDescription>
-                      {origin?.name} - {destination?.name}
-                      <br />
                       Duración estimada: {route.estimatedDuration} minutos
                     </CardDescription>
                   </CardHeader>
                 </Card>
-              );
-            })}
+              ))
+            )}
           </div>
         );
-      case 2:
+
+      case 3: // Selección de Horario Recurrente
         return (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">Seleccionar Horario</h2>
-            {schedules?.map((schedule) => (
-              <Card
-                key={schedule.id}
-                className={`cursor-pointer transition-colors hover:border-primary
-                ${selectedSchedule?.id === schedule.id ? "border-primary bg-primary/5" : ""}`}
-                onClick={() => {
-                  setSelectedSchedule(schedule);
-                  setStep(3);
-                  setSelectedSeats([]);
-                  setPassengers({});
-                }}
-              >
-                <CardHeader>
-                  <CardTitle>
-                    {new Date(`1970-01-01T${schedule.departureTime}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </CardTitle>
-                  <CardDescription>
-                    {selectedRoute?.name} - Días: {schedule.operatingDays.join(", ")}
-                  </CardDescription>
-                </CardHeader>
+            {isLoadingSchedules ? (
+              <LoadingTable columnCount={3} rowCount={5} />
+            ) : routeSchedules.length === 0 ? (
+              <Card>
+                <CardContent className="pt-6">
+                  <p className="text-center text-muted-foreground">
+                    No hay horarios disponibles para esta ruta
+                  </p>
+                </CardContent>
               </Card>
-            ))}
+            ) : (
+              routeSchedules.map((schedule) => (
+                <Card
+                  key={schedule.id}
+                  className={`cursor-pointer transition-colors hover:border-primary
+                    ${selectedRouteSchedule?.id === schedule.id ? "border-primary bg-primary/5" : ""}`}
+                  onClick={() => setSelectedRouteSchedule(schedule)}
+                >
+                  <CardHeader>
+                    <CardTitle>
+                      {new Date(`1970-01-01T${schedule.departureTime}`).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </CardTitle>
+                    <CardDescription>
+                      Días de operación: {schedule.operatingDays.join(", ")}
+                      {schedule.seasonStart && schedule.seasonEnd && (
+                        <div>
+                          Temporada: {new Date(schedule.seasonStart).toLocaleDateString()} - {new Date(schedule.seasonEnd).toLocaleDateString()}
+                        </div>
+                      )}
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              ))
+            )}
           </div>
         );
-      case 3:
-        const currentSchedule = schedules?.find((s) => s.id === selectedSchedule?.id);
+
+      case 4: // Selección de Viaje Específico
+        if (!selectedRouteSchedule) return null;
+
+        return (
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">Seleccionar Viaje</h2>
+            {isLoadingAvailableSchedules ? (
+              <LoadingTable columnCount={3} rowCount={5} />
+            ) : availableSchedules.length === 0 ? (
+              <Card>
+                <CardContent className="pt-6">
+                  <p className="text-center text-muted-foreground">
+                    No hay viajes disponibles para este horario
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              availableSchedules.map((schedule) => (
+                <Card
+                  key={schedule.id}
+                  className={`cursor-pointer transition-colors hover:border-primary
+                    ${selectedSchedule?.id === schedule.id ? "border-primary bg-primary/5" : ""}`}
+                  onClick={() => setSelectedSchedule(schedule)}
+                >
+                  <CardHeader>
+                    <CardTitle>
+                      {new Date(schedule.departureDate).toLocaleDateString()}
+                    </CardTitle>
+                    <CardDescription>
+                      Salida: {new Date(schedule.departureDate).toLocaleTimeString()}
+                      <br />
+                      Llegada est.: {new Date(schedule.estimatedArrivalTime).toLocaleTimeString()}
+                      {schedule.busAssignments?.[0]?.bus && (
+                        <div>
+                          Bus: {schedule.busAssignments[0].bus.plateNumber}
+                          {schedule.busAssignments[0].bus.template && 
+                            ` (${schedule.busAssignments[0].bus.template.name})`}
+                        </div>
+                      )}
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              ))
+            )}
+          </div>
+        );
+
+      case 5: // Selección de Asientos y Datos de Pasajeros
+        if (!selectedSchedule) return null;
+
+        const currentBus = selectedSchedule.busAssignments?.[0]?.bus;
         
-        if (!currentSchedule?.bus) {
+        if (!currentBus) {
           return (
             <div className="text-center py-8">
               <p className="text-muted-foreground">
@@ -200,37 +345,55 @@ export default function TicketSales() {
           );
         }
 
-        const availableSeats = currentSchedule.bus.seats
-          .filter(seat => seat.status === 'available')
-          .map(seat => seat.seatNumber);
+        console.log('Current Bus:', currentBus);
+        console.log('Bus Template:', currentBus.template);
+        console.log('Seat Template Matrix:', currentBus.template?.seatTemplateMatrix);
+        console.log('Bus Seats:', currentBus.seats);
 
         return (
           <div className="space-y-6">
             <h2 className="text-xl font-semibold">Seleccionar Asientos</h2>
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-sm text-muted-foreground">Bus: {currentSchedule.bus.plateNumber}</p>
-                <p className="text-sm text-muted-foreground">Tipo: {currentSchedule.bus.template?.type}</p>
+                <p className="text-sm text-muted-foreground">Bus: {currentBus.plateNumber}</p>
+                <p className="text-sm text-muted-foreground">Tipo: {currentBus.template?.name}</p>
               </div>
             </div>
 
-            {currentSchedule.bus.template?.seatsLayout ? (
+            {currentBus.template?.seatTemplateMatrix ? (
               <BusSeatMap
-                busType={currentSchedule.bus.template.type as BusType}
-                seatsLayout={currentSchedule.bus.template.seatsLayout}
+                busType={currentBus.template.type as BusType}
+                seatsLayout={JSON.stringify({
+                  firstFloor: {
+                    dimensions: currentBus.template.seatTemplateMatrix.firstFloor.dimensions,
+                    seats: currentBus.template.seatTemplateMatrix.firstFloor.seats.map(templateSeat => {
+                      const busSeat = currentBus.seats?.find(s => s.seatNumber === templateSeat.name);
+                      return {
+                        ...templateSeat,
+                        status: busSeat?.status || 'unavailable'
+                      };
+                    })
+                  },
+                  secondFloor: currentBus.template.seatTemplateMatrix.secondFloor ? {
+                    dimensions: currentBus.template.seatTemplateMatrix.secondFloor.dimensions,
+                    seats: currentBus.template.seatTemplateMatrix.secondFloor.seats.map(templateSeat => {
+                      const busSeat = currentBus.seats?.find(s => s.seatNumber === templateSeat.name);
+                      return {
+                        ...templateSeat,
+                        status: busSeat?.status || 'unavailable'
+                      };
+                    })
+                  } : undefined
+                })}
                 selectedSeats={selectedSeats}
-                onSeatSelect={(seatNumber) => {
-                  const seat = currentSchedule.bus?.seats.find(s => s.seatNumber === seatNumber);
-                  if (seat && seat.tier) {
-                    handleSeatSelect(seatNumber, Number(seat.tier.basePrice));
+                onSeatSelect={(seatName) => {
+                  const busSeat = currentBus.seats?.find(s => s.seatNumber === seatName);
+                  if (busSeat && busSeat.tier) {
+                    handleSeatSelect(seatName, Number(busSeat.tier.basePrice));
                   }
                 }}
-                occupiedSeats={currentSchedule.bus.seats
-                  .filter(seat => seat.status !== 'available')
-                  .map(seat => seat.seatNumber)}
-                availableSeats={availableSeats}
                 seatPrices={Object.fromEntries(
-                  currentSchedule.bus.seats
+                  (currentBus.seats || [])
                     .filter(seat => seat.tier)
                     .map(seat => [seat.seatNumber, Number(seat.tier?.basePrice)])
                 )}
@@ -298,7 +461,8 @@ export default function TicketSales() {
             )}
           </div>
         );
-      case 4:
+
+      case 6: // Confirmación
         return (
           <div className="text-center space-y-4">
             <Check className="w-16 h-16 text-green-500 mx-auto" />
@@ -307,7 +471,10 @@ export default function TicketSales() {
             <Button
               onClick={() => {
                 setStep(1);
+                setSelectedOrigin(null);
+                setSelectedDestination(null);
                 setSelectedRoute(null);
+                setSelectedRouteSchedule(null);
                 setSelectedSchedule(null);
                 setSelectedSeats([]);
                 setPassengers({});
@@ -324,26 +491,31 @@ export default function TicketSales() {
     <div className="max-w-4xl mx-auto p-6">
       <h1 className="text-3xl font-bold mb-6">Venta de Tickets</h1>
 
-      {step < 4 && renderStepIndicator()}
+      {step < 6 && renderStepIndicator()}
 
       <Card>
         <CardContent className="pt-6">{renderStepContent()}</CardContent>
         <CardFooter className="flex justify-between">
-          {step > 1 && step < 4 && (
+          {step > 1 && step < 6 && (
             <Button variant="outline" onClick={() => setStep((s) => s - 1)}>
               <ArrowLeft className="mr-2 h-4 w-4" /> Anterior
             </Button>
           )}
-          {step < 3 && (
+          {step < 5 && (
             <Button
               className="ml-auto"
               onClick={() => setStep((s) => s + 1)}
-              disabled={step === 1 ? !selectedRoute : !selectedSchedule}
+              disabled={
+                (step === 1 && (!selectedOrigin || !selectedDestination)) ||
+                (step === 2 && !selectedRoute) ||
+                (step === 3 && !selectedRouteSchedule) ||
+                (step === 4 && !selectedSchedule)
+              }
             >
               Siguiente <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           )}
-          {step === 3 && (
+          {step === 5 && (
             <Button
               className="ml-auto"
               onClick={handleSubmit}

@@ -2,22 +2,42 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { addDays, format, parseISO, setHours, setMinutes } from "date-fns";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const routeScheduleId = searchParams.get('routeScheduleId');
+
     const schedules = await prisma.schedules.findMany({
+      where: {
+        ...(routeScheduleId ? { route_schedule_id: routeScheduleId } : {}),
+        status: 'scheduled', // Only show scheduled trips
+      },
       include: {
         routes: true,
         route_schedules: true,
         buses: {
           include: {
-            bus_type_templates: true
+            bus_type_templates: true,
+            bus_seats: {
+              include: {
+                seat_tiers: true
+              }
+            }
           }
         },
         bus_assignments: {
+          where: {
+            status: 'active'
+          },
           include: {
             buses: {
               include: {
-                bus_type_templates: true
+                bus_type_templates: true,
+                bus_seats: {
+                  include: {
+                    seat_tiers: true
+                  }
+                }
               }
             }
           }
@@ -63,7 +83,20 @@ export async function GET() {
           template: assignment.buses.bus_type_templates ? {
             id: assignment.buses.bus_type_templates.id,
             name: assignment.buses.bus_type_templates.name,
-          } : undefined
+            type: assignment.buses.bus_type_templates.type,
+            seatsLayout: assignment.buses.bus_type_templates.seats_layout,
+            seatTemplateMatrix: assignment.buses.bus_type_templates.seat_template_matrix,
+          } : undefined,
+          seats: assignment.buses.bus_seats.map(seat => ({
+            id: seat.id,
+            seatNumber: seat.seat_number,
+            status: seat.status,
+            tier: seat.seat_tiers ? {
+              id: seat.seat_tiers.id,
+              name: seat.seat_tiers.name,
+              basePrice: seat.seat_tiers.base_price,
+            } : undefined
+          }))
         } : undefined
       }))
     }));
@@ -249,7 +282,20 @@ export async function PUT(request: Request) {
           template: assignment.buses.bus_type_templates ? {
             id: assignment.buses.bus_type_templates.id,
             name: assignment.buses.bus_type_templates.name,
-          } : undefined
+            type: assignment.buses.bus_type_templates.type,
+            seatsLayout: assignment.buses.bus_type_templates.seats_layout,
+            seatTemplateMatrix: assignment.buses.bus_type_templates.seat_template_matrix,
+          } : undefined,
+          seats: assignment.buses.bus_seats.map(seat => ({
+            id: seat.id,
+            seatNumber: seat.seat_number,
+            status: seat.status,
+            tier: seat.seat_tiers ? {
+              id: seat.seat_tiers.id,
+              name: seat.seat_tiers.name,
+              basePrice: seat.seat_tiers.base_price,
+            } : undefined
+          }))
         } : undefined
       }))
     };

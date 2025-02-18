@@ -12,13 +12,37 @@ interface Seat {
   isOccupied?: boolean;
 }
 
+interface SeatPosition {
+  id: string;
+  name: string;
+  tierId: string;
+  row: number;
+  column: number;
+  isEmpty: boolean;
+  status?: string;
+}
+
+interface FloorDimensions {
+  rows: number;
+  seatsPerRow: number;
+}
+
+interface FloorLayout {
+  dimensions: FloorDimensions;
+  seats: SeatPosition[];
+}
+
+interface BusLayout {
+  firstFloor: FloorLayout;
+  secondFloor?: FloorLayout;
+}
+
 interface BusSeatMapProps {
   busType: BusType;
   seatsLayout: string;
   selectedSeats: string[];
   onSeatSelect: (seatNumber: string) => void;
-  occupiedSeats: string[];
-  availableSeats: string[];
+  seatPrices: { [k: string]: number };
 }
 
 export const BusSeatMap: React.FC<BusSeatMapProps> = ({
@@ -26,113 +50,9 @@ export const BusSeatMap: React.FC<BusSeatMapProps> = ({
   seatsLayout,
   selectedSeats,
   onSeatSelect,
-  occupiedSeats,
-  availableSeats,
+  seatPrices,
 }) => {
-  const getBusLayout = (type: BusType): (Seat | null)[][] => {
-    switch (type) {
-      case "standard":
-        return [
-          [
-            { number: "1", tier: "economy" },
-            { number: "2", tier: "economy" },
-            null,
-            { number: "3", tier: "economy" },
-            { number: "4", tier: "economy" },
-          ],
-          [
-            { number: "5", tier: "economy" },
-            { number: "6", tier: "economy" },
-            null,
-            { number: "7", tier: "economy" },
-            { number: "8", tier: "economy" },
-          ],
-          [
-            { number: "9", tier: "business" },
-            { number: "10", tier: "business" },
-            null,
-            { number: "11", tier: "business" },
-            { number: "12", tier: "business" },
-          ],
-        ];
-      case "luxury":
-        return [
-          [
-            { number: "1", tier: "premium" },
-            null,
-            { number: "2", tier: "premium" },
-          ],
-          [
-            { number: "3", tier: "premium" },
-            null,
-            { number: "4", tier: "premium" },
-          ],
-          [
-            { number: "5", tier: "business" },
-            null,
-            { number: "6", tier: "business" },
-          ],
-          [
-            { number: "7", tier: "business" },
-            null,
-            { number: "8", tier: "business" },
-          ],
-        ];
-      case "double_decker":
-        return [
-          // First floor
-          [
-            { number: "1", tier: "premium" },
-            { number: "2", tier: "premium" },
-            null,
-            { number: "3", tier: "premium" },
-            { number: "4", tier: "premium" },
-          ],
-          [
-            { number: "5", tier: "business" },
-            { number: "6", tier: "business" },
-            null,
-            { number: "7", tier: "business" },
-            { number: "8", tier: "business" },
-          ],
-          // Second floor
-          [
-            { number: "9", tier: "economy" },
-            { number: "10", tier: "economy" },
-            null,
-            { number: "11", tier: "economy" },
-            { number: "12", tier: "economy" },
-          ],
-          [
-            { number: "13", tier: "economy" },
-            { number: "14", tier: "economy" },
-            null,
-            { number: "15", tier: "economy" },
-            { number: "16", tier: "economy" },
-          ],
-        ];
-      case "mini":
-        return [
-          [
-            { number: "1", tier: "business" },
-            null,
-            { number: "2", tier: "business" },
-          ],
-          [
-            { number: "3", tier: "economy" },
-            null,
-            { number: "4", tier: "economy" },
-          ],
-          [
-            { number: "5", tier: "economy" },
-            null,
-            { number: "6", tier: "economy" },
-          ],
-        ];
-      default:
-        return [];
-    }
-  };
+  const layout: BusLayout = JSON.parse(seatsLayout);
 
   const getTierColor = (tier: string) => {
     const colors: Record<string, string> = {
@@ -146,7 +66,53 @@ export const BusSeatMap: React.FC<BusSeatMapProps> = ({
     return colors[tier] || colors.default;
   };
 
-  const layout = getBusLayout(busType);
+  // Convert flat array of seats into a 2D matrix
+  const createSeatMatrix = (floor: FloorLayout) => {
+    const { dimensions, seats } = floor;
+    const matrix: (SeatPosition | null)[][] = Array(dimensions.rows)
+      .fill(null)
+      .map(() => Array(dimensions.seatsPerRow).fill(null));
+
+    seats.forEach((seat) => {
+      if (!seat.isEmpty) {
+        matrix[seat.row][seat.column] = seat;
+      }
+    });
+
+    return matrix;
+  };
+
+  const firstFloorMatrix = createSeatMatrix(layout.firstFloor);
+  const secondFloorMatrix = layout.secondFloor ? createSeatMatrix(layout.secondFloor) : null;
+
+  // Helper function to check if a seat is available
+  const isSeatAvailable = (seat: SeatPosition) => {
+    return seat.status === 'available';
+  };
+
+  // Helper function to check if a seat is occupied
+  const isSeatOccupied = (seat: SeatPosition) => {
+    return seat.status !== 'available';
+  };
+
+  // Helper function to get seat price
+  const getSeatPrice = (seatName: string) => {
+    return seatPrices[seatName] || 0;
+  };
+
+  // Helper function to get seat color
+  const getSeatColor = (seat: SeatPosition) => {
+    if (isSeatOccupied(seat)) {
+      return "bg-gray-300 text-gray-500 cursor-not-allowed hover:bg-gray-300";
+    }
+    if (selectedSeats.includes(seat.name)) {
+      return "ring-2 ring-primary";
+    }
+    if (!isSeatAvailable(seat)) {
+      return "opacity-50 cursor-not-allowed";
+    }
+    return getTierColor(seat.tierId);
+  };
 
   return (
     <div className="relative w-full max-w-md mx-auto">
@@ -157,14 +123,50 @@ export const BusSeatMap: React.FC<BusSeatMapProps> = ({
 
         {/* Seats container */}
         <div className="space-y-4">
-          {busType === "double_decker" && (
-            <div className="text-center font-medium mb-4">Segundo Piso</div>
+          {secondFloorMatrix && (
+            <>
+              <div className="text-center font-medium mb-4">Segundo Piso</div>
+              {secondFloorMatrix.map((row, rowIndex) => (
+                <div key={rowIndex} className="flex justify-center gap-4">
+                  {row.map((position, seatIndex) =>
+                    position === null ? (
+                      <div
+                        key={`space-${rowIndex}-${seatIndex}`}
+                        className="w-10"
+                      />
+                    ) : (
+                      <Button
+                        key={`seat-${rowIndex}-${seatIndex}`}
+                        variant="outline"
+                        size="sm"
+                        className={cn(
+                          "w-10 h-10 p-0",
+                          getSeatColor(position)
+                        )}
+                        onClick={() => {
+                          if (isSeatAvailable(position)) {
+                            onSeatSelect(position.name);
+                          }
+                        }}
+                        disabled={!isSeatAvailable(position)}
+                      >
+                        {position.name}
+                      </Button>
+                    )
+                  )}
+                </div>
+              ))}
+            </>
           )}
 
-          {layout.map((row, rowIndex) => (
+          {/* First Floor */}
+          {secondFloorMatrix && (
+            <div className="text-center font-medium mt-8 mb-4">Primer Piso</div>
+          )}
+          {firstFloorMatrix.map((row, rowIndex) => (
             <div key={rowIndex} className="flex justify-center gap-4">
-              {row.map((seat, seatIndex) =>
-                seat === null ? (
+              {row.map((position, seatIndex) =>
+                position === null ? (
                   <div
                     key={`space-${rowIndex}-${seatIndex}`}
                     className="w-10"
@@ -176,27 +178,21 @@ export const BusSeatMap: React.FC<BusSeatMapProps> = ({
                     size="sm"
                     className={cn(
                       "w-10 h-10 p-0",
-                      getTierColor(seat.tier),
-                      occupiedSeats.includes(seat.number) &&
-                        "bg-gray-300 text-gray-500 cursor-not-allowed hover:bg-gray-300"
+                      getSeatColor(position)
                     )}
-                    data-selected={selectedSeats.includes(seat.number)}
-                    onClick={() =>
-                      !occupiedSeats.includes(seat.number) &&
-                      onSeatSelect(seat.number)
-                    }
-                    disabled={occupiedSeats.includes(seat.number)}
+                    onClick={() => {
+                      if (isSeatAvailable(position)) {
+                        onSeatSelect(position.name);
+                      }
+                    }}
+                    disabled={!isSeatAvailable(position)}
                   >
-                    {seat.number}
+                    {position.name}
                   </Button>
                 )
               )}
             </div>
           ))}
-
-          {busType === "double_decker" && layout.length > 2 && (
-            <div className="text-center font-medium mt-8 mb-4">Primer Piso</div>
-          )}
         </div>
       </div>
 
