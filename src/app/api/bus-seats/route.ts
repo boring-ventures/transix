@@ -1,14 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/db";
-import { busSeats } from "@/db/schema";
-import { eq, inArray } from "drizzle-orm";
-import { z } from "zod";
+import { prisma } from "@/lib/prisma";
 import { updateBusSeatSchema } from "@/types/bus.types";
-
-const bulkUpdateSchema = z.object({
-  seatIds: z.array(z.string().uuid()),
-  data: updateBusSeatSchema.partial(),
-});
+import { Prisma } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,12 +15,31 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const seats = await db.query.busSeats.findMany({
-      where: eq(busSeats.busId, busId),
-      orderBy: (seats, { asc }) => [asc(seats.seatNumber)],
+    const seats = await prisma.bus_seats.findMany({
+      where: { bus_id: busId },
+      orderBy: { seat_number: 'asc' },
+      include: {
+        seat_tiers: true
+      }
     });
 
-    return NextResponse.json(seats);
+    // Transform the response to match the expected format
+    const transformedSeats = seats.map(seat => ({
+      id: seat.id,
+      busId: seat.bus_id,
+      seatNumber: seat.seat_number,
+      status: seat.status,
+      isActive: seat.is_active,
+      createdAt: seat.created_at,
+      updatedAt: seat.updated_at,
+      tier: seat.seat_tiers ? {
+        id: seat.seat_tiers.id,
+        name: seat.seat_tiers.name,
+        basePrice: seat.seat_tiers.base_price,
+      } : null
+    }));
+
+    return NextResponse.json(transformedSeats);
   } catch (error) {
     console.error("Error fetching bus seats:", error);
     return NextResponse.json(
@@ -40,16 +52,38 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const { seatIds, data } = bulkUpdateSchema.parse(body);
+    const { seatIds, data } = body;
 
-    const updatedSeats = await db
-      .update(busSeats)
-      .set({
-        ...data,
-        updatedAt: new Date(),
-      })
-      .where(inArray(busSeats.id, seatIds))
-      .returning();
+    // Validate the input data
+    const validatedData = updateBusSeatSchema.partial().parse(data);
+
+    // Transform the data to match Prisma schema
+    const dataToUpdate: Prisma.bus_seatsUpdateInput = {
+      updated_at: new Date(),
+    };
+
+    if (validatedData.status !== undefined) {
+      dataToUpdate.status = validatedData.status;
+    }
+    if (validatedData.isActive !== undefined) {
+      dataToUpdate.is_active = validatedData.isActive;
+    }
+    if (validatedData.tierId !== undefined) {
+      dataToUpdate.seat_tiers = { connect: { id: validatedData.tierId } };
+    }
+
+    // Update multiple seats
+    const updatedSeats = await prisma.$transaction(
+      seatIds.map((seatId: string) =>
+        prisma.bus_seats.update({
+          where: { id: seatId },
+          data: dataToUpdate,
+          include: {
+            seat_tiers: true
+          }
+        })
+      )
+    );
 
     if (!updatedSeats.length) {
       return NextResponse.json(
@@ -58,9 +92,31 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    return NextResponse.json(updatedSeats);
+    // Transform the response to match the expected format
+    const transformedSeats = updatedSeats.map(seat => ({
+      id: seat.id,
+      busId: seat.bus_id,
+      seatNumber: seat.seat_number,
+      status: seat.status,
+      isActive: seat.is_active,
+      createdAt: seat.created_at,
+      updatedAt: seat.updated_at,
+      tier: seat.seat_tiers ? {
+        id: seat.seat_tiers.id,
+        name: seat.seat_tiers.name,
+        basePrice: seat.seat_tiers.base_price,
+      } : null
+    }));
+
+    return NextResponse.json(transformedSeats);
   } catch (error) {
     console.error("Error updating bus seats:", error);
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      return NextResponse.json(
+        { error: "Error al actualizar los asientos: " + error.message },
+        { status: 400 }
+      );
+    }
     return NextResponse.json(
       { error: "Error al actualizar los asientos" },
       { status: 500 }
