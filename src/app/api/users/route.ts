@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { createUserSchema, createProfileSchema, insertUserSchema, insertProfileSchema } from "@/types/user.types";
 import { createClient } from '@supabase/supabase-js';
+import { insertUserSchema, insertProfileSchema } from "@/types/user.types";
 
 export async function GET(request: Request) {
   try {

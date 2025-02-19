@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createBusTypeTemplateSchema } from "@/types/bus.types";
-import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
 
 export async function GET() {

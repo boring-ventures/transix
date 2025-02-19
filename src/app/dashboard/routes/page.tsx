@@ -17,14 +17,13 @@ import { useBuses } from "@/hooks/useBuses";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { AssignBusDialog } from "@/components/routes/assign-bus-dialog";
-import { Plus, Pencil, Trash2, Bus, Clock } from "lucide-react";
+import { Plus, Clock } from "lucide-react";
 import { CreateRouteDialog } from "@/components/routes/create-route-dialog";
 import { CreateRouteScheduleDialog } from "@/components/routes/create-route-schedule-dialog";
 import { useLocations } from "@/hooks/useLocations";
 import { useRoutes, useRouteSchedules } from "@/hooks/useRoutes";
 import { LoadingTable } from "@/components/table/loading-table";
 import { useSchedules } from "@/hooks/useSchedules";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function Routes() {
   const { toast } = useToast();
@@ -34,7 +33,6 @@ export default function Routes() {
   const {
     data: routes = [],
     isLoading: isLoadingRoutes,
-    error: routesError,
     refetch
   } = useRoutes();
 

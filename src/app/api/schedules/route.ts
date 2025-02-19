@@ -368,7 +368,7 @@ export async function DELETE(request: Request) {
           details: {
             message: "El viaje tiene registros relacionados que impiden su eliminación",
             dependencies: Object.entries(dependencies)
-              .filter(([_, hasRecords]) => hasRecords)
+              .filter(([, hasRecords]) => hasRecords)
               .map(([type]) => type)
           }
         },

@@ -194,7 +194,7 @@ export async function DELETE(
           details: {
             message: "La ruta tiene registros relacionados que impiden su eliminación",
             dependencies: Object.entries(dependencies)
-              .filter(([_, hasRecords]) => hasRecords)
+              .filter(([, hasRecords]) => hasRecords)
               .map(([type]) => type)
           }
         },
