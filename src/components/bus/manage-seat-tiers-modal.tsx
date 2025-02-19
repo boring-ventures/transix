@@ -9,11 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useCreateSeatTier, useUpdateSeatTier } from "@/hooks/useSeatTiers";
-import {
-  SeatTier,
-  CreateSeatTierInput,
-  UpdateSeatTierInput,
-} from "@/types/bus.types";
+import { SeatTier, CreateSeatTierInput } from "@/types/bus.types";
 import { cn } from "@/lib/utils";
 import { getTierColor } from "@/lib/seat-tier-colors";
 
@@ -97,7 +93,7 @@ export const ManageSeatTiersModal = ({
         });
       }
       resetForm();
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Hubo un error al gestionar el tipo de asiento.",
@@ -159,7 +155,7 @@ export const ManageSeatTiersModal = ({
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Descripción</label>
                   <Input
-                    value={newTier.description}
+                    value={newTier.description || ""}
                     onChange={(e) =>
                       setNewTier({ ...newTier, description: e.target.value })
                     }

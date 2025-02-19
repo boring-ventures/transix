@@ -51,15 +51,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import type { CompanyResponse } from "@/types/company.types";
 import { useUserRoutes } from "@/hooks/useUserRoutes";
 
-interface CustomSession {
-  user: {
-    id: string;
-    email: string;
-    role: role_enum;
-    companyId: string | null;
-  };
-}
-
 export default function UsersPage() {
   const { userData } = useUserRoutes();
   const { data: users, isLoading: usersLoading } = useUsers();

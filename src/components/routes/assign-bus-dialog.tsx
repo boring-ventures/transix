@@ -15,14 +15,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, Clock } from "lucide-react";
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { AlertCircle } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
 import { Bus } from "@/types/bus.types";
 import { Route, Schedule } from "@/types/route.types";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { addMinutes, format, isAfter, isBefore, parseISO, setHours, setMinutes } from "date-fns";
+import { addMinutes, format, isAfter, isBefore, setHours, setMinutes } from "date-fns";
 
 interface AssignBusDialogProps {
   open: boolean;
@@ -92,7 +92,10 @@ export function AssignBusDialog({
         const newEndTime = endTime ? setMinutes(
           setHours(scheduleDate, parseInt(endTime.split(':')[0])),
           parseInt(endTime.split(':')[1])
-        ) : addMinutes(scheduleDate, schedule.route?.estimatedDuration || 0);
+        ) : addMinutes(
+          scheduleDate, 
+          route?.estimatedDuration || 0
+        );
 
         // Check for overlap
         return (
@@ -104,7 +107,7 @@ export function AssignBusDialog({
 
       return !hasConflictingAssignment;
     });
-  }, [buses, schedule, startTime, endTime]);
+  }, [buses, schedule, startTime, endTime, route]);
 
   const handleAssign = async () => {
     if (!selectedBus) {

@@ -23,7 +23,6 @@ interface BusAssignmentFormProps {
 }
 
 export function BusAssignmentForm({ 
-  routeId, 
   onSubmit,
   buses,
   isLoading = false

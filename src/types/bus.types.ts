@@ -8,6 +8,13 @@ import { maintenance_status_enum, seat_status_enum } from "@prisma/client";
 export interface Bus {
   id: string;
   plateNumber: string;
+  isActive: boolean;
+  maintenanceStatus: string;
+  assignments?: Array<{
+    startTime: string;
+    endTime: string;
+    status: string;
+  }>;
   template?: {
     id: string;
     name: string;
@@ -263,3 +270,12 @@ export const createSeatTierSchema = z.object({
 });
 
 export type CreateSeatTierInput = z.infer<typeof createSeatTierSchema>;
+
+export interface SeatTier {
+  id: string;
+  name: string;
+  description?: string;
+  basePrice: number;
+  companyId: string;
+  isActive: boolean;
+}

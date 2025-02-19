@@ -6,7 +6,6 @@ import localFont from "next/font/local";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { QueryProvider } from "@/providers/QueryProvider";
 import { Toaster } from "@/components/ui/toaster";
-import { SessionProvider } from "next-auth/react";
 
 const APP_NAME = "TRANSIX";
 const APP_DESCRIPTION = "Transportation Management System";

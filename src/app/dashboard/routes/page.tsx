@@ -37,10 +37,7 @@ export default function Routes() {
   } = useRoutes();
 
   const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
-  const {
-    data: routeSchedules = [],
-    isLoading: isLoadingRouteSchedules
-  } = useRouteSchedules(selectedRoute?.id);
+  const { data: routeSchedules = [] } = useRouteSchedules(selectedRoute?.id);
 
   const {
     data: schedules = [],
@@ -54,29 +51,17 @@ export default function Routes() {
   const [isAssigning, setIsAssigning] = useState(false);
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isCreateScheduleDialogOpen, setIsCreateScheduleDialogOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const [newRoute, setNewRoute] = useState<CreateRouteInput>({
-    name: "",
-    originId: "",
-    destinationId: "",
-    estimatedDuration: 120,
-    active: true,
-  });
-
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [editingRoute, setEditingRoute] = useState<Route | null>(null);
-  const [deletingRoute, setDeletingRoute] = useState<Route | null>(null);
-
+  const [isCreateScheduleDialogOpen, setIsCreateScheduleDialogOpen] =
+    useState(false);
   // Mostrar loading mientras se cargan los datos
-  if (isLoadingRoutes || isLoadingLocations || isLoadingBuses || isLoadingSchedules) {
+  if (
+    isLoadingRoutes ||
+    isLoadingLocations ||
+    isLoadingBuses ||
+    isLoadingSchedules
+  ) {
     return <LoadingTable columnCount={6} rowCount={10} />;
   }
-
-  // Filtrar solo las rutas activas
-  const activeRoutes = routes.filter(route => route.active);
 
   const handleRouteSelect = (route: Route) => {
     setSelectedRoute(route);
@@ -208,8 +193,6 @@ export default function Routes() {
 
   const handleGenerateSchedules = async (routeSchedule: RouteSchedule, startDate: string, endDate: string) => {
     try {
-      setIsSubmitting(true);
-
       const response = await fetch("/api/schedules", {
         method: "POST",
         headers: {
@@ -223,7 +206,7 @@ export default function Routes() {
           startDate,
           endDate,
           price: 0, // El precio se establecerá al asignar el bus
-          status: 'scheduled'
+          status: "scheduled",
         }),
       });
 
@@ -233,7 +216,7 @@ export default function Routes() {
       }
 
       const result = await response.json();
-      
+
       toast({
         title: "Horarios generados",
         description: `Se han generado ${result.count} viajes exitosamente.`,
@@ -245,11 +228,12 @@ export default function Routes() {
       console.error("Error generating schedules:", error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Error al generar los horarios",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Error al generar los horarios",
         variant: "destructive",
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 

@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createScheduleSchema } from "@/types/route.types";
+import {
+  CreateRouteScheduleInput,
+  createRouteScheduleSchema,
+} from "@/types/route.types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BusAvailabilityCheck } from "./BusAvailabilityCheck";
@@ -14,7 +17,7 @@ export function ScheduleForm({
   onSubmit,
 }: {
   routeId: string;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: CreateRouteScheduleInput) => void;
 }) {
   const [selectedBus, setSelectedBus] = useState("");
   const [departureDate, setDepartureDate] = useState<Date>();
@@ -23,15 +26,18 @@ export function ScheduleForm({
 
   const { data: route } = useRoute(routeId);
 
-  const form = useForm({
-    resolver: zodResolver(createScheduleSchema),
+  const form = useForm<CreateRouteScheduleInput>({
+    resolver: zodResolver(createRouteScheduleSchema),
   });
 
   const handleDepartureTimeChange = (time: string) => {
     setDepartureTime(time);
     // Calculate arrival time based on route duration
     if (route?.estimatedDuration) {
-      const calculatedArrivalTime = calculateArrivalTime(time, route.estimatedDuration);
+      const calculatedArrivalTime = calculateArrivalTime(
+        time,
+        route.estimatedDuration
+      );
       setArrivalTime(calculatedArrivalTime);
     }
   };
@@ -57,7 +63,7 @@ export function ScheduleForm({
         {/* Date and Time Inputs */}
         <Input
           type="date"
-          value={departureDate?.toISOString().split('T')[0]}
+          value={departureDate?.toISOString().split("T")[0]}
           onChange={(e) => setDepartureDate(new Date(e.target.value))}
         />
         <Input
@@ -82,13 +88,13 @@ export function ScheduleForm({
           />
         )}
 
-        <Button 
+        <Button
           type="submit"
           disabled={
-            !form.formState.isValid || 
-            !selectedBus || 
-            !departureDate || 
-            !departureTime || 
+            !form.formState.isValid ||
+            !selectedBus ||
+            !departureDate ||
+            !departureTime ||
             !arrivalTime ||
             !busAvailabilityData?.isAvailable
           }
