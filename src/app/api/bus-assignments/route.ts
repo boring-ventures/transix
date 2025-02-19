@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { bus_assignment_status_enum } from "@prisma/client";
-import { Prisma } from "@prisma/client";
 
 const createAssignmentSchema = z.object({
   busId: z.string().uuid("ID de bus inválido"),

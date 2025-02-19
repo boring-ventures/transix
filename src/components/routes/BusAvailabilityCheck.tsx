@@ -14,14 +14,12 @@ export function BusAvailabilityCheck({
   departureDate,
   departureTime,
   arrivalTime,
-  excludeScheduleId,
 }: BusAvailabilityCheckProps) {
   const { data, isLoading, error } = useBusAvailability(
     busId,
     departureDate,
     departureTime,
     arrivalTime,
-    excludeScheduleId
   );
 
   if (isLoading || error || data?.isAvailable) return null;

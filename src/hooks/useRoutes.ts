@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import type { 
-  Route, 
   RouteWithRelations, 
   RouteSchedule,
   CreateRouteInput, 
@@ -9,7 +8,6 @@ import type {
   CreateRouteScheduleInput,
   UpdateRouteScheduleInput 
 } from "@/types/route.types";
-import type { Schedule } from "@/types/schedule.types";
 
 const ROUTES_API_URL = "/api/routes";
 const ROUTE_SCHEDULES_API_URL = "/api/route-schedules";
@@ -75,9 +73,8 @@ export function useCreateRouteSchedule() {
       const { data: response } = await axios.post(ROUTE_SCHEDULES_API_URL, data);
       return response;
     },
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["route-schedules"] });
-      queryClient.invalidateQueries({ queryKey: ["route-schedules", variables.routeId] });
       queryClient.invalidateQueries({ queryKey: ["routes"] });
     },
   });
@@ -124,7 +121,7 @@ export function useUpdateRouteSchedule() {
       );
       return response;
     },
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["route-schedules"] });
       queryClient.invalidateQueries({ queryKey: ["routes"] });
     },

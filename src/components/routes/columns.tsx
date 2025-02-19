@@ -30,9 +30,7 @@ export const columns: ColumnDef<Route>[] = [
   },
   {
     id: "actions",
-    cell: ({ row }) => {
-      const route = row.original;
-
+    cell: () => {
       return (
         <Button variant="ghost" size="sm">
           <MoreHorizontal className="h-4 w-4" />

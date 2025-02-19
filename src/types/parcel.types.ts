@@ -87,5 +87,5 @@ export type UpdateParcelStatusUpdateInput = z.infer<typeof updateParcelStatusUpd
  * Helper Types for Labels
  */
 export type ParcelStatusLabel = {
-  [K in typeof parcel_status_enum[number]]: string;
+  [K in parcel_status_enum]: string;
 }; 

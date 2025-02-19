@@ -99,5 +99,5 @@ export type UpdateReassignmentInput = z.infer<typeof updateReassignmentSchema>;
  * Helper Types for Labels
  */
 export type TicketStatusLabel = {
-  [K in typeof ticket_status_enum[number]]: string;
+  [K in ticket_status_enum]: string;
 }; 

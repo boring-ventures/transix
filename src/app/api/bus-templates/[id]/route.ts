@@ -4,12 +4,13 @@ import { updateBusTypeTemplateSchema } from "@/types/bus.types";
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const template = await prisma.bus_type_templates.findUnique({
       where: {
-        id: params.id,
+        id,
       },
       include: {
         companies: true,
@@ -35,16 +36,17 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const validatedData = updateBusTypeTemplateSchema.parse(body);
 
     // Check if template exists
     const existingTemplate = await prisma.bus_type_templates.findUnique({
       where: {
-        id: params.id,
+        id,
       },
     });
 
@@ -58,7 +60,7 @@ export async function PUT(
     // Update template
     const updatedTemplate = await prisma.bus_type_templates.update({
       where: {
-        id: params.id,
+        id,
       },
       data: validatedData,
     });
@@ -81,13 +83,14 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     // Check if template exists
     const existingTemplate = await prisma.bus_type_templates.findUnique({
       where: {
-        id: params.id,
+        id,
       },
     });
 
@@ -101,7 +104,7 @@ export async function DELETE(
     // Soft delete by setting is_active to false
     const deletedTemplate = await prisma.bus_type_templates.update({
       where: {
-        id: params.id,
+        id,
       },
       data: {
         is_active: false,

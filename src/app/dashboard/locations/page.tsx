@@ -93,7 +93,7 @@ export default function LocationsPage() {
                 title: "Éxito",
                 description: "Ubicación actualizada correctamente",
             });
-        } catch (error) {
+        } catch {
             toast({
                 title: "Error",
                 description: "No se pudo actualizar la ubicación",
@@ -118,7 +118,7 @@ export default function LocationsPage() {
                 title: "Éxito",
                 description: "Ubicación eliminada correctamente",
             });
-        } catch (error) {
+        } catch {
             toast({
                 title: "Error",
                 description: "No se pudo eliminar la ubicación",
@@ -154,7 +154,7 @@ export default function LocationsPage() {
                 description: "Ubicación creada correctamente",
             });
             setIsCreateOpen(false);
-        } catch (error) {
+        } catch {
             toast({
                 title: "Error",
                 description: "No se pudo crear la ubicación",

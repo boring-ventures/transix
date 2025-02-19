@@ -4,7 +4,6 @@ import * as React from "react";
 import {
   LayoutDashboard,
   Users,
-  Package,
   Bus,
   CreditCard,
   Ticket,
@@ -12,12 +11,10 @@ import {
   ChevronDown,
   List,
   Building,
-  Clock,
 } from "lucide-react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useUserRoutes } from '@/hooks/useUserRoutes';
 
 import {

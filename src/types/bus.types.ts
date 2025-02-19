@@ -8,39 +8,51 @@ import { maintenance_status_enum, seat_status_enum } from "@prisma/client";
 export type Bus = {
   id: string;
   plateNumber: string;
-  templateId: string;
   isActive: boolean;
-  maintenanceStatus: maintenance_status_enum;
-  companyId: string;
-  seatMatrix: {
-    firstFloor: {
-      dimensions: {
-        rows: number;
-        seatsPerRow: number;
-      };
-      seats: SeatPosition[];
-    };
-    secondFloor?: {
-      dimensions: {
-        rows: number;
-        seatsPerRow: number;
-      };
-      seats: SeatPosition[];
-    };
-  };
-  createdAt: Date;
-  updatedAt: Date;
+  maintenanceStatus: string;
+  assignments?: Array<{
+    startTime: string;
+    endTime: string;
+    status: string;
+  }>;
   template?: {
     id: string;
     name: string;
     type: string;
+    seatTemplateMatrix?: {
+      firstFloor: {
+        dimensions: { rows: number; seatsPerRow: number };
+        seats: Array<{
+          id: string;
+          name: string;
+          tierId: string;
+          row: number;
+          column: number;
+          isEmpty: boolean;
+        }>;
+      };
+      secondFloor?: {
+        dimensions: { rows: number; seatsPerRow: number };
+        seats: Array<{
+          id: string;
+          name: string;
+          tierId: string;
+          row: number;
+          column: number;
+          isEmpty: boolean;
+        }>;
+      };
+    };
   };
-  assignments?: {
-    id: string;
-    status: 'active' | 'completed' | 'cancelled';
-    startTime: Date;
-    endTime: Date;
-  }[];
+  seats?: Array<{
+    seatNumber: string;
+    status: string;
+    tier?: {
+      id: string;
+      name: string;
+      basePrice: number;
+    };
+  }>;
 };
 
 export type BusSeat = {
@@ -52,6 +64,11 @@ export type BusSeat = {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+  tier?: {
+    id: string;
+    name: string;
+    basePrice: number;
+  };
 };
 
 export type BusTypeTemplate = {
@@ -100,6 +117,7 @@ export type SeatPosition = {
   row: number;
   column: number;
   isEmpty: boolean;
+  status: string;
 };
 
 export type FloorMatrix = {
@@ -145,6 +163,7 @@ export const busTypeTemplateSchema = z.object({
           row: z.number(),
           column: z.number(),
           isEmpty: z.boolean().default(false),
+          status: z.string().default("available"),
         })
       ),
     }),
@@ -164,6 +183,7 @@ export const busTypeTemplateSchema = z.object({
           row: z.number(),
           column: z.number(),
           isEmpty: z.boolean().default(false),
+          status: z.string().default("available"),
         })
       ),
     }).optional(),
@@ -251,4 +271,22 @@ export const createSeatTierSchema = z.object({
   isActive: z.boolean().default(true),
 });
 
+export const updateSeatTierSchema = createSeatTierSchema.partial();
+
 export type CreateSeatTierInput = z.infer<typeof createSeatTierSchema>;
+
+export interface SeatTier {
+  id: string;
+  name: string;
+  description?: string;
+  basePrice: number;
+  companyId: string;
+  isActive: boolean;
+}
+
+export type UpdateSeatTierInput = {
+  name?: string;
+  basePrice?: number;
+  description?: string | null;
+  isActive?: boolean;
+};

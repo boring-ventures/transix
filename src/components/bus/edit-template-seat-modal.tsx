@@ -4,7 +4,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -13,8 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { SeatTier, SeatPosition } from "@/types/bus.types";
-import { getTierColor } from "@/lib/seat-tier-colors";
+import { SeatPosition, SeatTier } from "@/types/bus.types";
 
 interface EditTemplateSeatModalProps {
   isOpen: boolean;

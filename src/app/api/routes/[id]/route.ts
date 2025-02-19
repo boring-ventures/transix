@@ -4,10 +4,10 @@ import { updateRouteSchema } from "@/types/route.types";
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const route = await prisma.routes.findUnique({
       where: { id },
       include: {
@@ -71,10 +71,10 @@ export async function GET(
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
     const routeData = updateRouteSchema.parse(body);
 
@@ -155,10 +155,10 @@ export async function PATCH(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     // Check if route exists
     const existingRoute = await prisma.routes.findUnique({
@@ -194,7 +194,7 @@ export async function DELETE(
           details: {
             message: "La ruta tiene registros relacionados que impiden su eliminación",
             dependencies: Object.entries(dependencies)
-              .filter(([_, hasRecords]) => hasRecords)
+              .filter(([, hasRecords]) => hasRecords)
               .map(([type]) => type)
           }
         },

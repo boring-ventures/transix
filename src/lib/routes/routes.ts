@@ -1,22 +1,19 @@
-import { and, eq } from "drizzle-orm";
-import { db } from "@/db";
-import { routes, schedules, routeSchedules } from "@/db/schema";
-import { CreateRouteInput, Route, RouteSchedule, CreateRouteScheduleInput } from "@/types/route.types";
+import { prisma } from "@/lib/prisma";
+import { CreateRouteInput, CreateRouteScheduleInput } from "@/types/route.types";
 
 /**
  * Creates a new route
  */
 export async function createRoute(input: CreateRouteInput) {
-  const [route] = await db
-    .insert(routes)
-    .values({
+  const route = await prisma.routes.create({
+    data: {
       name: input.name,
-      originId: input.originId,
-      destinationId: input.destinationId,
-      estimatedDuration: input.estimatedDuration,
+      origin_id: input.originId,
+      destination_id: input.destinationId,
+      estimated_duration: input.estimatedDuration,
       active: true,
-    })
-    .returning();
+    },
+  });
 
   return route;
 }
@@ -25,21 +22,16 @@ export async function createRoute(input: CreateRouteInput) {
  * Creates a new schedule for a route
  */
 export async function createRouteSchedule(input: CreateRouteScheduleInput) {
-  type RouteScheduleInsert = typeof routeSchedules.$inferInsert;
-  
-  const insertData: RouteScheduleInsert = {
-    routeId: input.routeId,
-    departureTime: input.departureTime,
-    operatingDays: input.operatingDays,
-    active: true,
-    seasonStart: input.seasonStart?.toISOString().split('T')[0] || null,
-    seasonEnd: input.seasonEnd?.toISOString().split('T')[0] || null,
-  };
-
-  const [routeSchedule] = await db
-    .insert(routeSchedules)
-    .values(insertData)
-    .returning();
+  const routeSchedule = await prisma.route_schedules.create({
+    data: {
+      route_id: input.routeId,
+      departure_time: new Date(`1970-01-01T${input.departureTime}:00.000Z`),
+      operating_days: input.operatingDays,
+      active: true,
+      season_start: input.seasonStart,
+      season_end: input.seasonEnd,
+    },
+  });
 
   return routeSchedule;
 }
@@ -56,15 +48,16 @@ export async function updateSchedule(
     status?: "scheduled" | "in_progress" | "completed" | "cancelled";
   }
 ) {
-  const [updatedSchedule] = await db
-    .update(schedules)
-    .set({
-      ...updates,
-      departureDate: updates.departureDate?.toISOString().split('T')[0],
-      updatedAt: new Date(),
-    })
-    .where(eq(schedules.id, id))
-    .returning();
+  const updatedSchedule = await prisma.schedules.update({
+    where: { id },
+    data: {
+      bus_id: updates.busId,
+      departure_date: updates.departureDate,
+      price: updates.price,
+      status: updates.status,
+      updated_at: new Date(),
+    },
+  });
 
   return updatedSchedule;
 }
@@ -77,24 +70,19 @@ export const createSchedule = async (
   price: number,
   routeScheduleId: string
 ) => {
-  type ScheduleInsert = typeof schedules.$inferInsert;
-
-  const insertData: ScheduleInsert = {
-    routeId,
-    busId,
-    routeScheduleId,
-    departureDate: departureDate.toISOString().split('T')[0],
-    estimatedArrivalTime: new Date(estimatedArrivalTime),
-    price,
-    status: 'scheduled' as const,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  };
-
-  const [schedule] = await db
-    .insert(schedules)
-    .values(insertData)
-    .returning();
+  const schedule = await prisma.schedules.create({
+    data: {
+      route_id: routeId,
+      bus_id: busId,
+      route_schedule_id: routeScheduleId,
+      departure_date: departureDate,
+      estimated_arrival_time: new Date(estimatedArrivalTime),
+      price,
+      status: 'scheduled',
+      created_at: new Date(),
+      updated_at: new Date()
+    },
+  });
 
   return schedule;
 };

@@ -5,7 +5,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { BusSeat, UpdateBusSeatInput, updateBusSeatSchema } from "@/types/bus.types";
+import { BusSeat, SeatTier } from "@/types/bus.types";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -15,8 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { seat_status_enum, seat_tiers } from "@prisma/client";
-import { Card, CardContent } from "@/components/ui/card";
+
 import { useUpdateSeatStatus } from "@/hooks/useBusSeats";
 import { Badge } from "@/components/ui/badge";
 import { useSeatTiers } from "@/hooks/useSeatTiers";
@@ -25,7 +24,7 @@ interface EditSeatModalProps {
   isOpen: boolean;
   onClose: () => void;
   seat: BusSeat;
-  seatTier?: seat_tiers;
+  seatTier?: SeatTier;
 }
 
 export const EditSeatModal = ({
@@ -161,7 +160,7 @@ export const EditSeatModal = ({
                 <SelectContent>
                   {seatTiers?.map((tier) => (
                     <SelectItem key={tier.id} value={tier.id}>
-                      {tier.name} - ${parseFloat(tier.basePrice).toFixed(2)}
+                      {tier.name} - ${parseFloat(tier.basePrice.toString()).toFixed(2)}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -1,11 +1,9 @@
-import { NextResponse } from "next/server";
-import { db } from "@/db";
-import { busAssignments } from "@/db/schema";
-import { and, eq, sql } from "drizzle-orm";
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
+    const searchParams = request.nextUrl.searchParams;
     const busId = searchParams.get("busId");
     const departureDate = searchParams.get("departureDate");
     const departureTime = searchParams.get("departureTime");
@@ -18,21 +16,27 @@ export async function GET(request: Request) {
       );
     }
 
-    // Convertir la fecha a formato ISO
+    // Convert date to ISO format
     const date = new Date(departureDate).toISOString().split('T')[0];
     
-    // Consulta corregida
-    const existingAssignments = await db
-      .select()
-      .from(busAssignments)
-      .where(
-        and(
-          eq(busAssignments.busId, busId),
-          sql`DATE(${busAssignments.startTime}) = ${date}::date`,
-          sql`${busAssignments.startTime}::time <= ${arrivalTime}::time`,
-          sql`${busAssignments.endTime}::time >= ${departureTime}::time`
-        )
-      );
+    // Check for existing assignments
+    const existingAssignments = await prisma.bus_assignments.findMany({
+      where: {
+        bus_id: busId,
+        AND: [
+          {
+            start_time: {
+              lte: `${date}T${arrivalTime}:00.000Z`
+            }
+          },
+          {
+            end_time: {
+              gte: `${date}T${departureTime}:00.000Z`
+            }
+          }
+        ]
+      }
+    });
 
     return NextResponse.json({
       isAvailable: existingAssignments.length === 0,

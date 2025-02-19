@@ -1,7 +1,7 @@
+'use client'
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { RoutesTable } from "@/components/routes/routes-table";
-import { Route, RouteWithRelations } from "@/types/route.types";
 import { Schedule } from "@/types/route.types";
 import { Bus } from "@/types/bus.types";
 import { AssignBusDialog } from "@/components/assign-bus-dialog";

@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { schedule_status_enum, bus_assignment_status_enum } from "@prisma/client";
+import { schedule_status_enum } from "@prisma/client";
 
 /**
  * Base Schemas
  */
-const locationSchema = z.object({
+export const locationSchema = z.object({
   name: z.string().min(1, "El nombre es requerido").trim(),
 });
 

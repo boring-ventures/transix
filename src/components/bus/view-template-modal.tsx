@@ -180,7 +180,7 @@ export const ViewTemplateModal = ({
                                   {tier.name}
                                 </span>
                                 <span className="text-sm text-muted-foreground">
-                                  ${parseFloat(tier.basePrice).toFixed(2)}
+                                  ${Number(tier.basePrice).toFixed(2)}
                                 </span>
                               </div>
                             </div>
