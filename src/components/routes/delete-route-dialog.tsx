@@ -38,36 +38,37 @@ export function DeleteRouteDialog({
     };
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Eliminar Ruta</DialogTitle>
-                    <DialogDescription>
-                        ¿Estás seguro de que deseas eliminar la ruta "{route.name}"?
-                        Esta acción no se puede deshacer y podría afectar a los horarios y viajes programados.
-                    </DialogDescription>
-                </DialogHeader>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Eliminar Ruta</DialogTitle>
+            <DialogDescription>
+              ¿Estás seguro de que deseas eliminar la ruta &ldquo;{route.name}
+              &rdquo;? Esta acción no se puede deshacer y podría afectar a los
+              horarios y viajes programados.
+            </DialogDescription>
+          </DialogHeader>
 
-                <DialogFooter>
-                    <div className="flex justify-end space-x-2">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => onOpenChange(false)}
-                        >
-                            Cancelar
-                        </Button>
-                        <Button
-                            type="button"
-                            variant="destructive"
-                            onClick={handleDelete}
-                            disabled={isDeleting}
-                        >
-                            {isDeleting ? "Eliminando..." : "Eliminar"}
-                        </Button>
-                    </div>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+          <DialogFooter>
+            <div className="flex justify-end space-x-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={isDeleting}
+              >
+                {isDeleting ? "Eliminando..." : "Eliminar"}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     );
 } 

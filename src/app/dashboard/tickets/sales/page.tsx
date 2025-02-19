@@ -325,7 +325,11 @@ export default function TicketSales() {
 
         return (
           <SeatSelectionStep
-            currentBus={currentBus}
+            currentBus={{
+              ...currentBus,
+              isActive: true,
+              maintenanceStatus: "OPERATIONAL",
+            }}
             selectedSeats={selectedSeats}
             onSeatSelect={handleSeatSelect}
             onTicketCreate={handleTicketCreate}

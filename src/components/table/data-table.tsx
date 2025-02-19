@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { TableProps, SortDirection, PaginationState, Column } from "./types";
+import { SortDirection, PaginationState, Column } from "./types";
 import { sortData, filterData, paginateData } from "./table-utils";
 
 interface DataTableProps<TData> {

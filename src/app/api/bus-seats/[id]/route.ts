@@ -5,10 +5,11 @@ import { Prisma } from "@prisma/client";
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const body = await request.json();
+    const { id } = await params;
     const validatedData = updateBusSeatSchema.parse(body);
 
     // Transform the data to match Prisma schema
@@ -17,7 +18,7 @@ export async function PATCH(
     };
 
     if (validatedData.busId !== undefined) {
-      dataToUpdate.bus_id = validatedData.busId;
+      dataToUpdate.buses = { connect: { id: validatedData.busId } };
     }
     if (validatedData.seatNumber !== undefined) {
       dataToUpdate.seat_number = validatedData.seatNumber;
@@ -29,11 +30,11 @@ export async function PATCH(
       dataToUpdate.is_active = validatedData.isActive;
     }
     if (validatedData.tierId !== undefined) {
-      dataToUpdate.tier_id = validatedData.tierId;
+      dataToUpdate.seat_tiers = { connect: { id: validatedData.tierId } };
     }
 
     const updatedSeat = await prisma.bus_seats.update({
-      where: { id: params.id },
+      where: { id },
       data: dataToUpdate,
       include: {
         seat_tiers: true

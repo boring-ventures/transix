@@ -1,15 +1,14 @@
-import { payments, paymentLines, invoices, paymentMethodEnum } from "@/db/schema";
-import { InferSelectModel } from "drizzle-orm";
 import { z } from "zod";
+import { payment_method_enum, type payments, type payment_lines, type invoices } from "@prisma/client";
 import { Ticket } from "./ticket.types";
 import { Parcel } from "./parcel.types";
 
 /**
  * Database model types
  */
-export type Payment = InferSelectModel<typeof payments>;
-export type PaymentLine = InferSelectModel<typeof paymentLines>;
-export type Invoice = InferSelectModel<typeof invoices>;
+export type Payment = payments;
+export type PaymentLine = payment_lines;
+export type Invoice = invoices;
 
 export type PaymentWithRelations = Payment & {
   lines?: PaymentLine[];
@@ -27,7 +26,7 @@ export type PaymentLineWithRelations = PaymentLine & {
  */
 const paymentSchema = z.object({
   amount: z.number().min(0, "El monto debe ser mayor o igual a 0"),
-  method: z.enum(paymentMethodEnum.enumValues),
+  method: z.nativeEnum(payment_method_enum),
 });
 
 export const createPaymentSchema = paymentSchema;
@@ -85,7 +84,7 @@ export type UpdateInvoiceInput = z.infer<typeof updateInvoiceSchema>;
  * Helper Types for Labels
  */
 export type PaymentMethodLabel = {
-  [K in typeof paymentMethodEnum.enumValues[number]]: string;
+  [K in payment_method_enum]: string;
 };
 
 export type TransactionType = 'ticket' | 'parcel' | 'other';

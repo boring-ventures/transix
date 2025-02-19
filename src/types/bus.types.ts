@@ -5,7 +5,7 @@ import { maintenance_status_enum, seat_status_enum } from "@prisma/client";
 /**
  * Base Types
  */
-export interface Bus {
+export type Bus = {
   id: string;
   plateNumber: string;
   isActive: boolean;
@@ -53,7 +53,7 @@ export interface Bus {
       basePrice: number;
     };
   }>;
-}
+};
 
 export type BusSeat = {
   id: string;
@@ -163,6 +163,7 @@ export const busTypeTemplateSchema = z.object({
           row: z.number(),
           column: z.number(),
           isEmpty: z.boolean().default(false),
+          status: z.string().default("available"),
         })
       ),
     }),
@@ -182,6 +183,7 @@ export const busTypeTemplateSchema = z.object({
           row: z.number(),
           column: z.number(),
           isEmpty: z.boolean().default(false),
+          status: z.string().default("available"),
         })
       ),
     }).optional(),
@@ -269,6 +271,8 @@ export const createSeatTierSchema = z.object({
   isActive: z.boolean().default(true),
 });
 
+export const updateSeatTierSchema = createSeatTierSchema.partial();
+
 export type CreateSeatTierInput = z.infer<typeof createSeatTierSchema>;
 
 export interface SeatTier {
@@ -279,3 +283,10 @@ export interface SeatTier {
   companyId: string;
   isActive: boolean;
 }
+
+export type UpdateSeatTierInput = {
+  name?: string;
+  basePrice?: number;
+  description?: string | null;
+  isActive?: boolean;
+};

@@ -7,6 +7,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { seat_status_enum } from "@prisma/client";
 
 interface SeatMatrixPreviewProps {
   matrix: SeatTemplateMatrix;
@@ -118,7 +119,7 @@ export const SeatMatrixPreview = ({
               }
 
               const seatContent = showLabels ? (
-                busSeat?.status === "disabled" ? (
+                busSeat?.status === seat_status_enum.maintenance ? (
                   ""
                 ) : (
                   seat.name
@@ -175,7 +176,7 @@ export const SeatMatrixPreview = ({
                             </p>
                             <p className="text-gray-700">
                               Precio: $
-                              {parseFloat(seatTier.basePrice).toFixed(2)}
+                              {Number(seatTier.basePrice).toFixed(2)}
                             </p>
                           </>
                         )}

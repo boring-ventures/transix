@@ -1,8 +1,4 @@
-import { and, between, eq, or, sql } from "drizzle-orm";
-import { db } from "@/db";
-import { schedules, busAssignments, routeSchedules } from "@/db/schema";
-import { Schedule } from "@/types/route.types";
-import { and as drizzleAnd, lt, gt } from "drizzle-orm";
+import { prisma } from "@/lib/prisma";
 
 /**
  * Checks if a bus is available for a given schedule
@@ -10,7 +6,6 @@ import { and as drizzleAnd, lt, gt } from "drizzle-orm";
  * @param departureDate The departure date
  * @param departureTime The departure time
  * @param arrivalTime The arrival time
- * @param excludeScheduleId Optional schedule ID to exclude from the check (useful for updates)
  * @returns true if the bus is available, false otherwise
  */
 export async function isBusAvailable(
@@ -18,24 +13,29 @@ export async function isBusAvailable(
   departureDate: Date,
   departureTime: string,
   arrivalTime: string,
-  excludeScheduleId?: string
 ): Promise<boolean> {
   try {
     const date = departureDate.toISOString().split('T')[0];
-    const startDateTime = new Date(`${date}T${departureTime}`);
-    const endDateTime = new Date(`${date}T${arrivalTime}`);
+    const startTime = `${date}T${departureTime}:00.000Z`;
+    const endTime = `${date}T${arrivalTime}:00.000Z`;
 
-    const existingAssignments = await db
-      .select()
-      .from(busAssignments)
-      .where(
-        and(
-          eq(busAssignments.busId, busId),
-          sql`DATE(${busAssignments.startTime}) = ${date}::date`,
-          sql`${busAssignments.startTime}::time <= ${arrivalTime}::time`,
-          sql`${busAssignments.endTime}::time >= ${departureTime}::time`
-        )
-      );
+    const existingAssignments = await prisma.bus_assignments.findMany({
+      where: {
+        bus_id: busId,
+        AND: [
+          {
+            start_time: {
+              lte: endTime,
+            },
+          },
+          {
+            end_time: {
+              gte: startTime,
+            },
+          },
+        ],
+      },
+    });
 
     return existingAssignments.length === 0;
   } catch (error) {
@@ -59,13 +59,12 @@ export async function getAvailableBuses(
   arrivalTime: string
 ): Promise<string[]> {
   // First, get all active buses for the company
-  const buses = await db.query.buses.findMany({
-    where: (buses, { eq, and }) => 
-      and(
-        eq(buses.companyId, companyId),
-        eq(buses.isActive, true),
-        eq(buses.maintenanceStatus, "active")
-      ),
+  const buses = await prisma.buses.findMany({
+    where: {
+      company_id: companyId,
+      is_active: true,
+      maintenance_status_enum: "active",
+    },
   });
 
   // Check availability for each bus
@@ -105,24 +104,23 @@ export function calculateArrivalTime(
   return departureDate.toTimeString().slice(0, 5);
 }
 
+/**
+ * Validates a route schedule
+ * @param routeId The ID of the route
+ * @param departureTime The departure time in HH:mm format
+ * @returns true if the route schedule is valid, false otherwise
+ */
 export async function validateRouteSchedule(
   routeId: string,
   departureTime: string,
-  operatingDays: string[],
-  seasonStart?: Date,
-  seasonEnd?: Date
 ): Promise<boolean> {
-  const existingSchedules = await db
-    .select()
-    .from(routeSchedules)
-    .where(
-      and(
-        eq(routeSchedules.routeId, routeId),
-        eq(routeSchedules.departureTime, departureTime),
-        eq(routeSchedules.active, true)
-      )
-    );
+  const existingSchedules = await prisma.route_schedules.findMany({
+    where: {
+      route_id: routeId,
+      departure_time: new Date(`1970-01-01T${departureTime}:00.000Z`),
+      active: true,
+    },
+  });
 
-  // Validar superposición de horarios y temporadas
   return existingSchedules.length === 0;
 }

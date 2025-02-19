@@ -3,15 +3,15 @@ import { prisma } from "@/lib/prisma";
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
     console.log("PATCH body:", body);
 
     // Verifica que el usuario exista
-    const existingUser = await prisma.users.findUnique({
+    const existingUser = await prisma.profiles.findUnique({
       where: { id },
     });
     if (!existingUser) {
@@ -57,13 +57,13 @@ export async function PATCH(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     // Verifica que el usuario exista
-    const existingUser = await prisma.users.findUnique({
+    const existingUser = await prisma.profiles.findUnique({
       where: { id },
     });
     if (!existingUser) {

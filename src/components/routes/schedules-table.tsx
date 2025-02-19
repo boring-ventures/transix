@@ -41,7 +41,7 @@ export function SchedulesTable({
         title: "Horario actualizado",
         description: "El horario ha sido actualizado exitosamente.",
       });
-    } catch (error) {
+    } catch{
       toast({
         title: "Error",
         description: "No se pudo actualizar el horario. Por favor, intenta de nuevo.",
@@ -57,7 +57,7 @@ export function SchedulesTable({
         title: "Horario eliminado",
         description: "El horario ha sido eliminado exitosamente.",
       });
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "No se pudo eliminar el horario. Por favor, intenta de nuevo.",

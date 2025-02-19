@@ -2,7 +2,6 @@ import { useState } from "react";
 import { BusSeatMap } from "@/components/bus/bus-seat-map";
 import { TicketForm } from "./ticket-form";
 import { Bus } from "@/types/bus.types";
-import { useSeatTiers } from "@/hooks/useSeatTiers";
 
 interface SeatSelectionStepProps {
   currentBus: Bus;
@@ -35,12 +34,10 @@ const DUMMY_SEAT_DATA = {
 };
 
 export function SeatSelectionStep({
-  currentBus,
   selectedSeats,
   onSeatSelect,
   onTicketCreate,
 }: SeatSelectionStepProps) {
-  const { data: seatTiers } = useSeatTiers();
   const [selectedSeat, setSelectedSeat] = useState<{
     number: string;
     id: string;

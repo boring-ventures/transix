@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { addDays, format, parseISO, setHours, setMinutes } from "date-fns";
+import { Decimal } from "@prisma/client/runtime/library";
 
 export async function GET(request: Request) {
   try {
@@ -14,15 +15,9 @@ export async function GET(request: Request) {
       },
       include: {
         routes: true,
-        route_schedules: true,
-        buses: {
+        route_schedules: {
           include: {
-            bus_type_templates: true,
-            bus_seats: {
-              include: {
-                seat_tiers: true
-              }
-            }
+            routes: true
           }
         },
         bus_assignments: {
@@ -80,6 +75,8 @@ export async function GET(request: Request) {
         bus: assignment.buses ? {
           id: assignment.buses.id,
           plateNumber: assignment.buses.plate_number,
+          isActive: assignment.buses.is_active ?? true,
+          maintenanceStatus: assignment.buses.maintenance_status_enum ?? 'OPERATIONAL',
           template: assignment.buses.bus_type_templates ? {
             id: assignment.buses.bus_type_templates.id,
             name: assignment.buses.bus_type_templates.name,
@@ -87,10 +84,24 @@ export async function GET(request: Request) {
             seatsLayout: assignment.buses.bus_type_templates.seats_layout,
             seatTemplateMatrix: assignment.buses.bus_type_templates.seat_template_matrix,
           } : undefined,
-          seats: assignment.buses.bus_seats.map(seat => ({
+          seats: assignment.buses.bus_seats.map((seat: {
+            id: string;
+            seat_number: string;
+            status: string | null;
+            seat_tiers?: {
+              id: string;
+              name: string;
+              base_price: Decimal;
+              created_at: Date;
+              updated_at: Date;
+              company_id: string;
+              is_active: boolean | null;
+              description: string | null;
+            };
+          }) => ({
             id: seat.id,
             seatNumber: seat.seat_number,
-            status: seat.status,
+            status: seat.status ?? 'available',
             tier: seat.seat_tiers ? {
               id: seat.seat_tiers.id,
               name: seat.seat_tiers.name,
@@ -236,14 +247,24 @@ export async function PUT(request: Request) {
         route_schedules: true,
         buses: {
           include: {
-            bus_type_templates: true
+            bus_type_templates: true,
+            bus_seats: {
+              include: {
+                seat_tiers: true
+              }
+            }
           }
         },
         bus_assignments: {
           include: {
             buses: {
               include: {
-                bus_type_templates: true
+                bus_type_templates: true,
+                bus_seats: {
+                  include: {
+                    seat_tiers: true
+                  }
+                }
               }
             }
           }
@@ -279,6 +300,8 @@ export async function PUT(request: Request) {
         bus: assignment.buses ? {
           id: assignment.buses.id,
           plateNumber: assignment.buses.plate_number,
+          isActive: assignment.buses.is_active ?? true,
+          maintenanceStatus: assignment.buses.maintenance_status_enum ?? 'OPERATIONAL',
           template: assignment.buses.bus_type_templates ? {
             id: assignment.buses.bus_type_templates.id,
             name: assignment.buses.bus_type_templates.name,
@@ -286,10 +309,24 @@ export async function PUT(request: Request) {
             seatsLayout: assignment.buses.bus_type_templates.seats_layout,
             seatTemplateMatrix: assignment.buses.bus_type_templates.seat_template_matrix,
           } : undefined,
-          seats: assignment.buses.bus_seats.map(seat => ({
+          seats: assignment.buses.bus_seats.map((seat: {
+            id: string;
+            seat_number: string;
+            status: string | null;
+            seat_tiers?: {
+              id: string;
+              name: string;
+              base_price: Decimal;
+              created_at: Date;
+              updated_at: Date;
+              company_id: string;
+              is_active: boolean | null;
+              description: string | null;
+            };
+          }) => ({
             id: seat.id,
             seatNumber: seat.seat_number,
-            status: seat.status,
+            status: seat.status ?? 'available',
             tier: seat.seat_tiers ? {
               id: seat.seat_tiers.id,
               name: seat.seat_tiers.name,

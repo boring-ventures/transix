@@ -130,7 +130,9 @@ export function ReservationPDF({ reservation }: ReservationPDFProps) {
             <View style={styles.ticketHeader}>
               <Text style={[styles.ticketCol, { fontSize: 10 }]}>Asiento</Text>
               <Text style={[styles.ticketCol, { fontSize: 10 }]}>Pasajero</Text>
-              <Text style={[styles.ticketCol, { fontSize: 10 }]}>Documento</Text>
+              <Text style={[styles.ticketCol, { fontSize: 10 }]}>
+                Documento
+              </Text>
               <Text style={[styles.ticketCol, { fontSize: 10 }]}>Tipo</Text>
               <Text style={[styles.ticketCol, { fontSize: 10 }]}>Precio</Text>
             </View>
@@ -140,12 +142,13 @@ export function ReservationPDF({ reservation }: ReservationPDFProps) {
                 <Text style={styles.ticketCol}>{ticket.passengerName}</Text>
                 <Text style={styles.ticketCol}>{ticket.documentId}</Text>
                 <Text style={styles.ticketCol}>
-                  {ticket.seatNumber <= 4 ? "VIP" : 
-                   ticket.seatNumber <= 8 ? "Ejecutivo" : "Económico"}
+                  {Number(ticket.seatNumber) <= 4
+                    ? "VIP"
+                    : Number(ticket.seatNumber) <= 8
+                    ? "Ejecutivo"
+                    : "Económico"}
                 </Text>
-                <Text style={styles.ticketCol}>
-                  ${ticket.price.toFixed(2)}
-                </Text>
+                <Text style={styles.ticketCol}>${ticket.price.toFixed(2)}</Text>
               </View>
             ))}
             <View style={styles.total}>

@@ -9,91 +9,79 @@ export async function GET(request: Request) {
     const userId = searchParams.get("userId");
     
     if (userId) {
-      const user = await prisma.users.findUnique({
-        where: { id: userId },
+      const profile = await prisma.profiles.findFirst({
+        where: { user_id: userId },
         include: {
-          profiles: {
-            where: { active: true },
-            include: { companies: true },
-          },
+          companies: true,
         },
       });
 
-      if (!user) {
+      if (!profile) {
         return NextResponse.json({ error: "User not found" }, { status: 404 });
       }
 
       const formattedUser = {
-        id: user.id,
-        email: user.email,
-        created_at: user.created_at,
-        updated_at: user.updated_at,
-        profile: user.profiles[0]
-          ? {
-              id: user.profiles[0].id,
-              fullName: user.profiles[0].full_name,
-              role: user.profiles[0].role,
-              active: user.profiles[0].active,
-              companyId: user.profiles[0].company_id,
-              branchId: user.profiles[0].branch_id,
-              createdAt: user.profiles[0].created_at,
-              updatedAt: user.profiles[0].updated_at,
-              company: user.profiles[0].companies
-                ? {
-                    id: user.profiles[0].companies.id,
-                    name: user.profiles[0].companies.name,
-                    active: user.profiles[0].companies.active,
-                    createdAt: user.profiles[0].companies.created_at,
-                    updatedAt: user.profiles[0].companies.updated_at,
-                  }
-                : null,
-            }
-          : null,
+        id: profile.user_id,
+        email: profile.email,
+        created_at: profile.created_at,
+        updated_at: profile.updated_at,
+        profile: {
+          id: profile.id,
+          fullName: profile.full_name,
+          role: profile.role,
+          active: profile.active,
+          companyId: profile.company_id,
+          branchId: profile.branch_id,
+          createdAt: profile.created_at,
+          updatedAt: profile.updated_at,
+          company: profile.companies
+            ? {
+                id: profile.companies.id,
+                name: profile.companies.name,
+                active: profile.companies.active,
+                createdAt: profile.companies.created_at,
+                updatedAt: profile.companies.updated_at,
+              }
+            : null,
+        },
       };
 
       return NextResponse.json(formattedUser);
     }
     
-    const users = await prisma.users.findMany({
+    const profiles = await prisma.profiles.findMany({
       where: {
-        profiles: {
-          some: { active: true },
-        },
+        active: true,
       },
       include: {
-        profiles: {
-          where: { active: true },
-          include: { companies: true },
-        },
+        companies: true,
       },
     });
 
-    const formattedUsers = users.map((user) => ({
-      id: user.id,
-      email: user.email,
-      created_at: user.created_at,
-      updated_at: user.updated_at,
-      profile: user.profiles[0]
-        ? {
-            id: user.profiles[0].id,
-            fullName: user.profiles[0].full_name,
-            role: user.profiles[0].role,
-            active: user.profiles[0].active,
-            companyId: user.profiles[0].company_id,
-            branchId: user.profiles[0].branch_id,
-            createdAt: user.profiles[0].created_at,
-            updatedAt: user.profiles[0].updated_at,
-            company: user.profiles[0].companies
-              ? {
-                  id: user.profiles[0].companies.id,
-                  name: user.profiles[0].companies.name,
-                  active: user.profiles[0].companies.active,
-                  createdAt: user.profiles[0].companies.created_at,
-                  updatedAt: user.profiles[0].companies.updated_at,
-                }
-              : null,
-          }
-        : null,
+    const formattedUsers = profiles.map((profile) => ({
+      id: profile.user_id,
+      email: profile.email,
+      created_at: profile.created_at,
+      updated_at: profile.updated_at,
+      profile: {
+        id: profile.id,
+        fullName: profile.full_name,
+        role: profile.role,
+        active: profile.active,
+        companyId: profile.company_id,
+        branchId: profile.branch_id,
+        createdAt: profile.created_at,
+        updatedAt: profile.updated_at,
+        company: profile.companies
+          ? {
+              id: profile.companies.id,
+              name: profile.companies.name,
+              active: profile.companies.active,
+              createdAt: profile.companies.created_at,
+              updatedAt: profile.companies.updated_at,
+            }
+          : null,
+      },
     }));
     return NextResponse.json(formattedUsers);
   } catch (error: unknown) {

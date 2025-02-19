@@ -2,7 +2,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { seat_status_enum, ticket_status_enum } from "@prisma/client";
 
 interface TicketFormProps {
   seatNumber: string;

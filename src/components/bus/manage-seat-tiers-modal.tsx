@@ -73,7 +73,7 @@ export const ManageSeatTiersModal = ({
         await updateSeatTier.mutateAsync({
           id: editingTier.id,
           name: newTier.name,
-          description: newTier.description,
+          description: newTier.description || "",
           basePrice: newTier.basePrice,
           isActive: newTier.isActive,
         });

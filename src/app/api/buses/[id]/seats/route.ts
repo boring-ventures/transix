@@ -5,7 +5,7 @@ import { Prisma } from "@prisma/client";
 
 export async function GET(
   request: NextRequest,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await context.params;
@@ -46,10 +46,11 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const body = await request.json();
+    const { id } = await params;
     const validatedData = updateBusSeatSchema.parse(body);
 
     const dataToUpdate: Prisma.bus_seatsUpdateInput = {
@@ -73,7 +74,7 @@ export async function PATCH(
     }
 
     const updatedSeat = await prisma.bus_seats.update({
-      where: { id: params.id },
+      where: { id },
       data: dataToUpdate,
       include: {
         seat_tiers: true,

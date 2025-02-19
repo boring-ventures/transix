@@ -104,6 +104,7 @@ export const SeatEditor = ({
             column: col,
             tierId: existingSeat?.tierId || "",
             isEmpty: existingSeat?.isEmpty || false,
+            status: existingSeat?.status || "available",
           });
         }
       }
@@ -144,7 +145,9 @@ export const SeatEditor = ({
             name: `2${name}`,
             row,
             column: col,
-            tierId: existingSeat?.tierId,
+            tierId: existingSeat?.tierId || "",
+            isEmpty: existingSeat?.isEmpty || false,
+            status: existingSeat?.status || "available",
           });
         }
       }

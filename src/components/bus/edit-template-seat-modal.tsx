@@ -12,13 +12,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { SeatPosition } from "@/types/bus.types";
-import { seat_tiers } from "@prisma/client";
+import { SeatPosition, SeatTier } from "@/types/bus.types";
+
 interface EditTemplateSeatModalProps {
   isOpen: boolean;
   onClose: () => void;
   seat: SeatPosition;
-  seatTiers: seat_tiers[];
+  seatTiers: SeatTier[];
   onUpdate: (seatId: string, updates: Partial<SeatPosition>) => void;
 }
 

@@ -20,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 
 const editScheduleSchema = z.object({
     departureDate: z.string().min(1, "La fecha de salida es requerida"),

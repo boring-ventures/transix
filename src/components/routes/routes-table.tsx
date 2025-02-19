@@ -25,13 +25,8 @@ export function RoutesTable({
   routes,
   locations,
   onRouteSelect,
-  selectedRouteId,
-  onAdd,
   onEdit,
   onDelete,
-  onGenerateSchedules,
-  onAssignBus,
-  companyId,
 }: RoutesTableProps) {
   const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -45,7 +40,7 @@ export function RoutesTable({
         title: "Ruta actualizada",
         description: "La ruta ha sido actualizada exitosamente.",
       });
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "No se pudo actualizar la ruta. Por favor, intenta de nuevo.",
@@ -61,7 +56,7 @@ export function RoutesTable({
         title: "Ruta eliminada",
         description: "La ruta ha sido eliminada exitosamente.",
       });
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "No se pudo eliminar la ruta. Por favor, intenta de nuevo.",

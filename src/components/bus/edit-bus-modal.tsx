@@ -71,7 +71,7 @@ export const EditBusModal = ({
   const { data: seatTiers } = useSeatTiers();
   const { data: busSeats, refetch: refetchBusSeats } = useBusSeats(bus.id);
   const bulkUpdateSeats = useBulkUpdateSeats();
-  const seatMatrix = bus.seatMatrix as SeatTemplateMatrix;
+  const seatMatrix = bus.template?.seatTemplateMatrix as SeatTemplateMatrix;
   const [selectedSeatId, setSelectedSeatId] = useState<string | undefined>(
     undefined
   );
@@ -83,8 +83,9 @@ export const EditBusModal = ({
     resolver: zodResolver(updateBusSchema),
     defaultValues: {
       plateNumber: bus.plateNumber,
-      companyId: bus.companyId || "",
-      maintenanceStatus: bus.maintenanceStatus || "active",
+      companyId: bus.company?.id || "",
+      maintenanceStatus: (bus.maintenanceStatus ||
+        "active") as maintenance_status_enum,
       isActive: bus.isActive ?? true,
     },
   });
@@ -93,8 +94,9 @@ export const EditBusModal = ({
     if (bus) {
       editForm.reset({
         plateNumber: bus.plateNumber,
-        companyId: bus.companyId || "",
-        maintenanceStatus: bus.maintenanceStatus || "active",
+        companyId: bus.company?.id || "",
+        maintenanceStatus: (bus.maintenanceStatus ||
+          "active") as maintenance_status_enum,
         isActive: bus.isActive ?? true,
       });
     }
@@ -358,8 +360,10 @@ export const EditBusModal = ({
                               Fecha de Creación
                             </h4>
                             <p className="text-sm">
-                              {bus.createdAt
-                                ? new Date(bus.createdAt).toLocaleDateString()
+                              {bus.template?.createdAt
+                                ? new Date(
+                                    bus.template.createdAt
+                                  ).toLocaleDateString()
                                 : "N/A"}
                             </p>
                           </div>
@@ -368,8 +372,10 @@ export const EditBusModal = ({
                               Última Actualización
                             </h4>
                             <p className="text-sm">
-                              {bus.updatedAt
-                                ? new Date(bus.updatedAt).toLocaleDateString()
+                              {bus.template?.updatedAt
+                                ? new Date(
+                                    bus.template.updatedAt
+                                  ).toLocaleDateString()
                                 : "N/A"}
                             </p>
                           </div>
@@ -553,10 +559,7 @@ export const EditBusModal = ({
                                           {tier.name}
                                         </span>
                                         <span className="text-sm text-muted-foreground">
-                                          $
-                                          {parseFloat(tier.basePrice).toFixed(
-                                            2
-                                          )}
+                                          ${tier.basePrice.toString()}
                                         </span>
                                       </div>
                                     </div>

@@ -73,6 +73,7 @@ const generateSeats = (
         column: col,
         tierId: existingSeat?.tierId || "",
         isEmpty: existingSeat?.isEmpty || false,
+        status: existingSeat?.status || "available",
       });
     }
   }
@@ -321,8 +322,7 @@ export const CreateTemplateModal = ({
               ...seat,
               id: `2${seat.name}`,
               name: `2${seat.name}`,
-              tierId: seat.tierId,
-              isEmpty: seat.isEmpty,
+              status: seat.status || "available",
             })),
           },
         };

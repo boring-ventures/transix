@@ -5,7 +5,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { BusSeat } from "@/types/bus.types";
+import { BusSeat, SeatTier } from "@/types/bus.types";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { seat_tiers } from "@prisma/client";
+
 import { useUpdateSeatStatus } from "@/hooks/useBusSeats";
 import { Badge } from "@/components/ui/badge";
 import { useSeatTiers } from "@/hooks/useSeatTiers";
@@ -24,7 +24,7 @@ interface EditSeatModalProps {
   isOpen: boolean;
   onClose: () => void;
   seat: BusSeat;
-  seatTier?: seat_tiers;
+  seatTier?: SeatTier;
 }
 
 export const EditSeatModal = ({
