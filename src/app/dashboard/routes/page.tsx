@@ -37,7 +37,11 @@ export default function Routes() {
   } = useRoutes();
 
   const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
-  const { data: routeSchedules = [] } = useRouteSchedules(selectedRoute?.id);
+  const { 
+    data: routeSchedules = [], 
+    isLoading: isLoadingRouteSchedules,
+    error: routeSchedulesError 
+  } = useRouteSchedules(selectedRoute?.id);
 
   const {
     data: schedules = [],
@@ -393,17 +397,25 @@ export default function Routes() {
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">Horarios Recurrentes: {selectedRoute.name}</h2>
             </div>
-            <RouteSchedulesTable
-              routeSchedules={routeSchedules as unknown as RouteSchedule[]}
-              onRouteScheduleSelect={handleRouteScheduleSelect}
-              selectedRouteSchedule={selectedRouteSchedule}
-              onGenerateSchedules={(routeSchedule) => {
-                const today = new Date();
-                const nextWeek = new Date();
-                nextWeek.setDate(today.getDate() + 7);
-                handleGenerateSchedules(routeSchedule, today.toISOString().split('T')[0], nextWeek.toISOString().split('T')[0]);
-              }}
-            />
+            {isLoadingRouteSchedules ? (
+              <LoadingTable columnCount={5} rowCount={5} />
+            ) : routeSchedulesError ? (
+              <div className="text-center p-4 text-red-500">
+                Error al cargar los horarios: {routeSchedulesError.message}
+              </div>
+            ) : (
+              <RouteSchedulesTable
+                routeSchedules={routeSchedules}
+                onRouteScheduleSelect={handleRouteScheduleSelect}
+                selectedRouteSchedule={selectedRouteSchedule}
+                onGenerateSchedules={(routeSchedule) => {
+                  const today = new Date();
+                  const nextWeek = new Date();
+                  nextWeek.setDate(today.getDate() + 7);
+                  handleGenerateSchedules(routeSchedule, today.toISOString().split('T')[0], nextWeek.toISOString().split('T')[0]);
+                }}
+              />
+            )}
           </div>
         )}
 

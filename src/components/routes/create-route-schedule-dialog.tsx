@@ -16,9 +16,11 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createRouteScheduleSchema } from "@/types/route.types";
@@ -54,7 +56,7 @@ export function CreateRouteScheduleDialog({
     defaultValues: {
       routeId: route.id,
       departureTime: "08:00",
-      operatingDays: ["monday", "wednesday", "friday"],
+      operatingDays: daysOfWeek.map(day => day.id),
       active: true,
       seasonStart: addDays(new Date(), -90),
       seasonEnd: new Date(),
@@ -80,7 +82,7 @@ export function CreateRouteScheduleDialog({
         <DialogHeader>
           <DialogTitle>Crear Nuevo Horario</DialogTitle>
           <DialogDescription>
-            Añade un nuevo horario para la ruta {route.name}
+            Añade un nuevo horario para la ruta "{route.name}"
           </DialogDescription>
         </DialogHeader>
 
@@ -203,15 +205,19 @@ export function CreateRouteScheduleDialog({
               control={form.control}
               name="active"
               render={({ field }) => (
-                <FormItem className="flex items-center space-x-2">
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                  <div className="space-y-0.5">
+                    <FormLabel>Horario Activo</FormLabel>
+                    <FormDescription className="text-sm text-muted-foreground">
+                      Activar o desactivar este horario
+                    </FormDescription>
+                  </div>
                   <FormControl>
-                    <Checkbox
+                    <Switch
                       checked={field.value}
                       onCheckedChange={field.onChange}
                     />
                   </FormControl>
-                  <FormLabel className="font-normal">Horario Activo</FormLabel>
-                  <FormMessage />
                 </FormItem>
               )}
             />
