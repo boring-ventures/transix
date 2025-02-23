@@ -353,74 +353,146 @@ export default function TicketSales() {
             </div>
           );
         }
-
-        // Ordenamos los asientos: primero por clase (tier_id) y luego por número (seatNumber)
-        const sortedSeats = [...currentBus.seats].sort((a: any, b: any) => {
-          if (a.tier_id === b.tier_id) {
-            return a.seatNumber.localeCompare(b.seatNumber, undefined, { numeric: true });
-          }
-          return a.tier_id.localeCompare(b.tier_id, undefined, { numeric: true });
-        });
-
-        // Calculamos la suma total del valor de los asientos seleccionados
-        const totalPrice = selectedSeats.reduce((acc: number, seatNumber: string) => {
-          const seatObj = currentBus.seats.find((s: any) => s.seatNumber === seatNumber);
-          const tier = seatTiers?.find((t: any) => t.id === seatObj?.tier?.id);
-          const price = tier ? Number(tier.basePrice) : 0;
-          return acc + price;
-        }, 0);
+        
+        // Se obtiene la plantilla desde la relación "bus_type_templates" y el campo "seat_template_matrix"
+        const seatTemplateMatrix = currentBus.template?.seatTemplateMatrix;
+        let templateData = null;
+        if (seatTemplateMatrix) {
+          templateData = typeof seatTemplateMatrix === "string" ? JSON.parse(seatTemplateMatrix) : seatTemplateMatrix;
+        }
+        
+        // Calculamos el precio total usando la plantilla (de lo contrario se usa el método anterior)
+        let totalPrice = 0;
+        if (templateData) {
+          const { rows, seatsPerRow } = templateData.firstFloor.dimensions;
+          totalPrice = selectedSeats.reduce((acc: number, seatId: string) => {
+            const seatObj = templateData.firstFloor.seats.find((s: any) => s.id === seatId);
+            const tier = seatTiers?.find((t: any) => t.id === seatObj?.tierId);
+            const price = tier ? Number(tier.basePrice) : 0;
+            return acc + price;
+          }, 0);
+        } else {
+          totalPrice = selectedSeats.reduce((acc: number, seatNumber: string) => {
+            const seatObj = currentBus.seats.find((s: any) => s.seatNumber === seatNumber);
+            const tier = seatTiers?.find((t: any) => t.id === seatObj?.tier?.id);
+            const price = tier ? Number(tier.basePrice) : 0;
+            return acc + price;
+          }, 0);
+        }
 
         return (
           <div className="flex flex-col md:flex-row md:space-x-6">
             {/* Columna izquierda: Mapa de asientos */}
             <div className="flex-1">
               <h2 className="text-xl font-semibold mb-4">Seleccionar Asiento</h2>
-              <div className="grid grid-cols-4 md:grid-cols-6 gap-4">
-                {sortedSeats.map((seat: any) => {
-                  const tier = seatTiers?.find((t: any) => t.id === seat.tier_id);
-                  const price = tier ? Number(tier.basePrice) : 0;
-                  const isSelected = selectedSeats.includes(seat.seatNumber);
-                  // Definir un mapping para los colores de acuerdo al nombre del tier.
-                  const colorsMapping: { [key: string]: string } = {
-                    Economico: "amber",    // Color amarillo/ámbar para asientos económicos
-                    Normal: "sky",         // Color azul cielo para asientos normales
-                    VIP: "purple",         // Color morado para asientos VIP
-                  };
-                  // Se asigna el color basado en el tier; si no hay match, se usa "gray" por defecto
-                  const seatColor = tier ? (colorsMapping[tier.name] || "gray") : "gray";
+              {templateData ? (
+                <div
+                  className="grid gap-4"
+                  // Se genera el grid dinámico según la cantidad de columnas definida
+                  style={{
+                    gridTemplateColumns: `repeat(${templateData.firstFloor.dimensions.seatsPerRow}, 1fr)`,
+                  }}
+                >
+                  {Array.from({
+                    length: templateData.firstFloor.dimensions.rows * templateData.firstFloor.dimensions.seatsPerRow
+                  }).map((_, index) => {
+                    const row = Math.floor(index / templateData.firstFloor.dimensions.seatsPerRow);
+                    const col = index % templateData.firstFloor.dimensions.seatsPerRow;
+                    // Se busca el asiento en la plantilla según la fila y columna
+                    const seat = templateData.firstFloor.seats.find((s: any) => s.row === row && s.column === col);
+                    if (!seat) {
+                      return <div key={index} />;
+                    }
 
-                  let bgClass = "";
-                  if (seat.status === "maintenance") {
-                    bgClass = "bg-yellow-100 text-yellow-800";
-                  } else if (seat.status === "available") {
-                    bgClass = `bg-${seatColor}-100 text-${seatColor}-800 hover:bg-${seatColor}-200`;
-                  } else {
-                    bgClass = "bg-gray-100 text-gray-800";
-                  }
-                  const borderClass = isSelected ? "border-2 border-blue-500" : "border border-transparent";
+                    const tier = seatTiers?.find((t: any) => t.id === seat.tierId);
+                    const price = tier ? Number(tier.basePrice) : 0;
+                    const isSelected = selectedSeats.includes(seat.id);
+                    const colorsMapping: { [key: string]: string } = {
+                      Economico: "green",
+                      Normal: "red",
+                      VIP: "blue",
+                    };
+                    const seatColor = tier ? (colorsMapping[tier.name] || "gray") : "gray";
 
-                  return (
-                    <button
-                      key={seat.id}
-                      disabled={seat.status !== "available" && !isSelected}
-                      onClick={() => handleSeatSelect(seat.seatNumber, price)}
-                      className={`p-4 rounded ${bgClass} ${borderClass} hover:opacity-80 flex flex-col items-center`}
-                    >
-                      <span className="font-bold">{seat.seatNumber}</span>
-                      <Badge variant="outline" className={bgClass}>
-                        {seat.status === "maintenance"
-                          ? "Mantenimiento"
-                          : seat.status === "available"
-                          ? "Disponible"
-                          : "Deshabilitado"}
-                      </Badge>
-                      {tier && (
-                        <span className="text-xs mt-1">{`$${price.toFixed(2)}`}</span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
+                    let bgClass = "";
+                    if (seat.status === "maintenance") {
+                      bgClass = "bg-yellow-100 text-yellow-800";
+                    } else if (seat.status === "available") {
+                      bgClass = `bg-${seatColor}-100 hover:bg-${seatColor}-200`;
+                    } else {
+                      bgClass = "bg-gray-100 text-gray-800";
+                    }
+                    const borderClass = isSelected ? "border-2 border-blue-500" : "border border-transparent";
+
+                    return (
+                      <button
+                        key={seat.id}
+                        disabled={seat.status !== "available" && !isSelected}
+                        onClick={() => handleSeatSelect(seat.id, price)}
+                        className={`p-4 rounded ${bgClass} ${borderClass} hover:opacity-80 flex flex-col items-center`}
+                      >
+                        <span className="font-bold">{seat.name}</span>
+                        <Badge variant="outline" className={bgClass}>
+                          {seat.status === "maintenance"
+                            ? "Mantenimiento"
+                            : seat.status === "available"
+                            ? "Disponible"
+                            : "Deshabilitado"}
+                        </Badge>
+                        {tier && (
+                          <span className="text-xs mt-1">{`$${price.toFixed(2)}`}</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                // Fallback: si no hay plantilla, se usa la lógica anterior
+                <div className="grid grid-cols-4 md:grid-cols-6 gap-4">
+                  {currentBus.seats.map((seat: any) => {
+                    const tier = seatTiers?.find((t: any) => t.id === seat.tier?.id);
+                    const price = tier ? Number(tier.basePrice) : 0;
+                    const isSelected = selectedSeats.includes(seat.seatNumber);
+                    const colorsMapping: { [key: string]: string } = {
+                      Economico: "green",
+                      Normal: "red",
+                      VIP: "blue",
+                    };
+                    const seatColor = seat.tier ? (colorsMapping[seat.tier.name] || "gray") : "gray";
+
+                    let bgClass = "";
+                    if (seat.status === "maintenance") {
+                      bgClass = "bg-yellow-100 text-yellow-800";
+                    } else if (seat.status === "available") {
+                      bgClass = `bg-${seatColor}-100 hover:bg-${seatColor}-200`;
+                    } else {
+                      bgClass = "bg-gray-100 text-gray-800";
+                    }
+                    const borderClass = isSelected ? "border-2 border-blue-500" : "border border-transparent";
+
+                    return (
+                      <button
+                        key={seat.id}
+                        disabled={seat.status !== "available" && !isSelected}
+                        onClick={() => handleSeatSelect(seat.seatNumber, price)}
+                        className={`p-4 rounded ${bgClass} ${borderClass} hover:opacity-80 flex flex-col items-center`}
+                      >
+                        <span className="font-bold">{seat.name}</span>
+                        <Badge variant="outline" className={bgClass}>
+                          {seat.status === "maintenance"
+                            ? "Mantenimiento"
+                            : seat.status === "available"
+                            ? "Disponible"
+                            : "Deshabilitado"}
+                        </Badge>
+                        {tier && (
+                          <span className="text-xs mt-1">{`$${price.toFixed(2)}`}</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Columna derecha: Formulario para registrar el ticket con datos comunes */}

@@ -5,7 +5,7 @@ import { maintenance_status_enum, seat_status_enum } from "@prisma/client";
 /**
  * Base Types
  */
-export type Bus = {
+export interface Bus {
   id: string;
   plateNumber: string;
   isActive: boolean;
@@ -53,7 +53,10 @@ export type Bus = {
       basePrice: number;
     };
   }>;
-};
+  bus_type_templates: {
+    seat_template_matrix: string | any;
+  };
+}
 
 export type BusSeat = {
   id: string;
