@@ -123,7 +123,65 @@ export default function BusesPage() {
 
   const onCreateSubmit = async (formData: CreateBusInput) => {
     try {
-      await createBus.mutateAsync(formData);
+      // Validación adicional antes de enviar
+      if (!formData.companyId || !formData.templateId || !formData.plateNumber) {
+        toast({
+          title: "Error de validación",
+          description: "Todos los campos son requeridos",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Validar formato de UUID
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(formData.companyId)) {
+        toast({
+          title: "Error de validación",
+          description: "ID de empresa inválido",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!uuidRegex.test(formData.templateId)) {
+        toast({
+          title: "Error de validación",
+          description: "ID de plantilla inválido",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Validar que la placa no esté vacía después de quitar espacios
+      const trimmedPlateNumber = formData.plateNumber.trim();
+      if (!trimmedPlateNumber) {
+        toast({
+          title: "Error de validación",
+          description: "La placa no puede estar vacía",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Validar formato de placa (opcional, ajusta según tus necesidades)
+      const plateRegex = /^[A-Z0-9-]+$/;
+      if (!plateRegex.test(trimmedPlateNumber)) {
+        toast({
+          title: "Error de validación",
+          description: "Formato de placa inválido. Use solo letras mayúsculas, números y guiones",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Actualizar la placa sin espacios y en mayúsculas
+      const dataToSend = {
+        ...formData,
+        plateNumber: trimmedPlateNumber.toUpperCase(),
+      };
+
+      await createBus.mutateAsync(dataToSend);
       setIsCreateOpen(false);
       createForm.reset();
       toast({
@@ -131,10 +189,8 @@ export default function BusesPage() {
         description: "El bus ha sido creado exitosamente.",
       });
     } catch (error) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Hubo un error al crear el bus.";
+      console.error("Error creating bus:", error);
+      const errorMessage = error instanceof Error ? error.message : "Hubo un error al crear el bus";
       toast({
         title: "Error",
         description: errorMessage,

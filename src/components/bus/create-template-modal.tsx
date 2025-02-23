@@ -122,12 +122,12 @@ export const CreateTemplateModal = ({
   });
 
   // Add form state logging
-  console.log("Form State:", {
+ /*  console.log("Form State:", {
     values: createForm.getValues(),
     errors: createForm.formState.errors,
     isDirty: createForm.formState.isDirty,
     isValid: createForm.formState.isValid,
-  });
+  }); */
 
   const [selectedTierIds, setSelectedTierIds] = useState<{
     firstFloor: string | null;

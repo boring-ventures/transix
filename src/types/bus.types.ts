@@ -212,8 +212,8 @@ const baseBusSchema = z.object({
 });
 
 export const createBusSchema = z.object({
-  companyId: z.string().min(1, "La empresa es requerida"),
-  templateId: z.string().min(1, "La plantilla es requerida"),
+  companyId: z.string().uuid("ID de empresa inválido"),
+  templateId: z.string().uuid("ID de plantilla inválido"),
   plateNumber: z.string().trim().min(1, "La placa es requerida"),
   maintenanceStatus: z.nativeEnum(maintenance_status_enum).default(maintenance_status_enum.active),
   isActive: z.boolean().default(true),

@@ -46,17 +46,41 @@ export function useCreateBus() {
 
   return useMutation({
     mutationFn: async (data: CreateBusInput) => {
-      const response = await axios.post(API_URL, data);
-      if (response.data.error) {
-        throw new Error(response.data.error);
+      try {
+        const response = await axios.post(API_URL, data);
+        
+        if (response.data.error) {
+          throw new Error(
+            response.data.details 
+              ? `${response.data.error}: ${response.data.details}`
+              : response.data.error
+          );
+        }
+        
+        return response.data;
+      } catch (error) {
+        if (axios.isAxiosError(error)) {
+          const errorData = error.response?.data;
+          let errorMessage = "Error al crear el bus";
+
+          if (errorData) {
+            if (errorData.details) {
+              errorMessage = `${errorData.error}: ${errorData.details}`;
+            } else if (errorData.error) {
+              errorMessage = errorData.error;
+            }
+          }
+          
+          throw new Error(errorMessage);
+        }
+        
+        throw error instanceof Error 
+          ? error 
+          : new Error("Error desconocido al crear el bus");
       }
-      return response.data;
     },
-    onError: (error: unknown) => {
-      if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.error || "Error al crear el bus");
-      }
-      throw error;
+    onError: (error) => {
+      console.error("Error in useCreateBus:", error);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["buses"] });

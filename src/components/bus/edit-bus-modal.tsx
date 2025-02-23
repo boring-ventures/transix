@@ -450,63 +450,73 @@ export const EditBusModal = ({
                           <div
                             className={cn(
                               "grid gap-6",
-                              seatMatrix.secondFloor
+                              seatMatrix?.secondFloor
                                 ? "grid-cols-2"
                                 : "grid-cols-1"
                             )}
                           >
-                            <div
-                              className={cn(
-                                !seatMatrix.secondFloor &&
-                                  "max-w-2xl mx-auto w-full"
-                              )}
-                            >
-                              <h4 className="text-sm font-medium mb-2">
-                                Primer Piso
-                              </h4>
-                              <div className="bg-gray-100 rounded-lg flex items-center justify-center min-h-[350px] w-full">
-                                <div className="w-full h-full flex items-center justify-center p-4">
-                                  <div className="w-full h-full flex items-center justify-center">
-                                    <SeatMatrixPreview
-                                      matrix={seatMatrix}
-                                      seatTiers={seatTiers || []}
-                                      className="justify-center scale-90 transform origin-center"
-                                      floor={1}
-                                      mode="bus"
-                                      variant="default"
-                                      seats={busSeats}
-                                      onSeatClick={handleSeatClick}
-                                      selectedSeatId={selectedSeatId}
-                                      selectedSeats={selectedSeats}
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-
-                            {seatMatrix.secondFloor && (
-                              <div>
-                                <h4 className="text-sm font-medium mb-2">
-                                  Segundo Piso
-                                </h4>
-                                <div className="bg-gray-100 rounded-lg flex items-center justify-center min-h-[350px] w-full">
-                                  <div className="w-full h-full flex items-center justify-center p-4">
-                                    <div className="w-full h-full flex items-center justify-center">
-                                      <SeatMatrixPreview
-                                        matrix={seatMatrix}
-                                        seatTiers={seatTiers || []}
-                                        className="justify-center scale-90 transform origin-center"
-                                        floor={2}
-                                        mode="bus"
-                                        variant="default"
-                                        seats={busSeats}
-                                        onSeatClick={handleSeatClick}
-                                        selectedSeatId={selectedSeatId}
-                                        selectedSeats={selectedSeats}
-                                      />
+                            {seatMatrix ? (
+                              <>
+                                <div
+                                  className={cn(
+                                    !seatMatrix.secondFloor &&
+                                      "max-w-2xl mx-auto w-full"
+                                  )}
+                                >
+                                  <h4 className="text-sm font-medium mb-2">
+                                    Primer Piso
+                                  </h4>
+                                  <div className="bg-gray-100 rounded-lg flex items-center justify-center min-h-[350px] w-full">
+                                    <div className="w-full h-full flex items-center justify-center p-4">
+                                      <div className="w-full h-full flex items-center justify-center">
+                                        <SeatMatrixPreview
+                                          matrix={seatMatrix}
+                                          seatTiers={seatTiers || []}
+                                          className="justify-center scale-90 transform origin-center"
+                                          floor={1}
+                                          mode="bus"
+                                          variant="default"
+                                          seats={busSeats}
+                                          onSeatClick={handleSeatClick}
+                                          selectedSeatId={selectedSeatId}
+                                          selectedSeats={selectedSeats}
+                                        />
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
+
+                                {seatMatrix.secondFloor && (
+                                  <div>
+                                    <h4 className="text-sm font-medium mb-2">
+                                      Segundo Piso
+                                    </h4>
+                                    <div className="bg-gray-100 rounded-lg flex items-center justify-center min-h-[350px] w-full">
+                                      <div className="w-full h-full flex items-center justify-center p-4">
+                                        <div className="w-full h-full flex items-center justify-center">
+                                          <SeatMatrixPreview
+                                            matrix={seatMatrix}
+                                            seatTiers={seatTiers || []}
+                                            className="justify-center scale-90 transform origin-center"
+                                            floor={2}
+                                            mode="bus"
+                                            variant="default"
+                                            seats={busSeats}
+                                            onSeatClick={handleSeatClick}
+                                            selectedSeatId={selectedSeatId}
+                                            selectedSeats={selectedSeats}
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </>
+                            ) : (
+                              <div className="text-center p-8 bg-muted rounded-lg">
+                                <p className="text-muted-foreground">
+                                  No hay una plantilla de asientos configurada para este bus.
+                                </p>
                               </div>
                             )}
                           </div>

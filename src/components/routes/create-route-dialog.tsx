@@ -29,6 +29,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createRouteSchema } from "@/types/route.types";
+import { useToast } from "@/hooks/use-toast";
 
 interface CreateRouteDialogProps {
   open: boolean;
@@ -44,6 +45,7 @@ export function CreateRouteDialog({
   locations,
 }: CreateRouteDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
 
   const form = useForm<CreateRouteInput>({
     resolver: zodResolver(createRouteSchema),
@@ -58,6 +60,16 @@ export function CreateRouteDialog({
 
   const handleSubmit = async (data: CreateRouteInput) => {
     try {
+      // Validación adicional antes de enviar
+      if (data.originId === data.destinationId) {
+        toast({
+          title: "Error de validación",
+          description: "El origen y destino no pueden ser el mismo lugar",
+          variant: "destructive",
+        });
+        return;
+      }
+
       setIsSubmitting(true);
       await onSubmit(data);
       form.reset();
@@ -103,7 +115,14 @@ export function CreateRouteDialog({
                   <FormItem>
                     <FormLabel>Origen</FormLabel>
                     <Select
-                      onValueChange={field.onChange}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        // Si el destino seleccionado es igual al nuevo origen, limpiamos el destino
+                        const currentDestination = form.getValues("destinationId");
+                        if (currentDestination === value) {
+                          form.setValue("destinationId", "");
+                        }
+                      }}
                       defaultValue={field.value}
                     >
                       <FormControl>
@@ -131,7 +150,19 @@ export function CreateRouteDialog({
                   <FormItem>
                     <FormLabel>Destino</FormLabel>
                     <Select
-                      onValueChange={field.onChange}
+                      onValueChange={(value) => {
+                        // Validación adicional al seleccionar destino
+                        const currentOrigin = form.getValues("originId");
+                        if (value === currentOrigin) {
+                          toast({
+                            title: "Error de selección",
+                            description: "El destino no puede ser igual al origen",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        field.onChange(value);
+                      }}
                       defaultValue={field.value}
                     >
                       <FormControl>
@@ -140,11 +171,13 @@ export function CreateRouteDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {locations.map((location) => (
-                          <SelectItem key={location.id} value={location.id}>
-                            {location.name}
-                          </SelectItem>
-                        ))}
+                        {locations
+                          .filter((location) => location.id !== form.getValues("originId"))
+                          .map((location) => (
+                            <SelectItem key={location.id} value={location.id}>
+                              {location.name}
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
