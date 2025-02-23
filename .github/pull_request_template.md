@@ -1,10 +1,10 @@
 ## Descripción
-Resolución de bugs parte #2 versión estable, se arreglaron más errores de buses y usuarios.
+Resolución de bugs parte #3 versión estable, se arreglaron errores al ingresar a nav bar y menú de usuario.
 
 ## Tipo de Cambio
 <!-- Marca con una 'x' los tipos que aplican -->
 - [ x ] 🐛 Corrección de Bug
-- [ x ] ✨ Nueva Funcionalidad
+- [ ] ✨ Nueva Funcionalidad
 - [ x ] 💄 Actualización de UI/UX
 - [ ] ♻️ Refactorización de Código
 - [ ] 📝 Documentación
@@ -15,7 +15,7 @@ Resolución de bugs parte #2 versión estable, se arreglaron más errores de bus
 Se han probado los cambios localmente.
 
 ## Screenshots (si aplica)
-image.png
+Para más detalles, se puede referenciar a las imagenes del Notion con respecto a los bugs corregidos.
 
 ## Lista de Verificación
 - [ x ] He realizado pruebas locales de los cambios
