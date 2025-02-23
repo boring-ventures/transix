@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useSeatTiers } from "@/hooks/useSeatTiers";
 import {
   Card,
   CardContent,
@@ -52,6 +54,9 @@ export default function TicketSales() {
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
   const [passengers, setPassengers] = useState<Record<string, Passenger>>({});
   const [step, setStep] = useState(1);
+  // Estados para datos comunes para el ticket (se aplican a todos los asientos seleccionados)
+  const [commonPassengerName, setCommonPassengerName] = useState("");
+  const [commonDocumentId, setCommonDocumentId] = useState("");
 
   // Obtener horarios cuando se selecciona una ruta
   const { data: routeSchedules = [], isLoading: isLoadingSchedules } =
@@ -82,6 +87,9 @@ export default function TicketSales() {
 
   // Add this state
   const [showPDF, setShowPDF] = useState(false);
+
+  // Estado para la lógica de asientos (consulta de niveles)
+  const { data: seatTiers } = useSeatTiers();
 
   // Mostrar loading mientras se cargan los datos iniciales
   if (isLoadingLocations || isLoadingRoutes) {
@@ -169,6 +177,29 @@ export default function TicketSales() {
     toast({
       title: "Ticket Creado",
       description: "El ticket ha sido creado exitosamente",
+    });
+  };
+
+  // Nueva función para registrar tickets para todos los asientos seleccionados utilizando datos comunes
+  const handleRegisterTickets = () => {
+    if (!selectedSchedule) return;
+    const currentBus = selectedSchedule.busAssignments?.[0]?.bus;
+    if (!currentBus) return;
+
+    selectedSeats.forEach((seatNumber) => {
+      const seatObj = currentBus.seats.find((s: any) => s.seatNumber === seatNumber);
+      const tier = seatTiers?.find((t: any) => t.id === seatObj?.tier?.id);
+      const price = tier ? Number(tier.basePrice) : 0;
+      handleTicketCreate({
+        seatId: seatNumber,
+        customerName: commonPassengerName,
+        documentId: commonDocumentId,
+        price: price,
+      });
+    });
+    toast({
+      title: "Tickets Registrados",
+      description: "Los tickets han sido creados para los asientos seleccionados",
     });
   };
 
@@ -323,17 +354,122 @@ export default function TicketSales() {
           );
         }
 
+        // Ordenamos los asientos: primero por clase (tier_id) y luego por número (seatNumber)
+        const sortedSeats = [...currentBus.seats].sort((a: any, b: any) => {
+          if (a.tier_id === b.tier_id) {
+            return a.seatNumber.localeCompare(b.seatNumber, undefined, { numeric: true });
+          }
+          return a.tier_id.localeCompare(b.tier_id, undefined, { numeric: true });
+        });
+
+        // Calculamos la suma total del valor de los asientos seleccionados
+        const totalPrice = selectedSeats.reduce((acc: number, seatNumber: string) => {
+          const seatObj = currentBus.seats.find((s: any) => s.seatNumber === seatNumber);
+          const tier = seatTiers?.find((t: any) => t.id === seatObj?.tier?.id);
+          const price = tier ? Number(tier.basePrice) : 0;
+          return acc + price;
+        }, 0);
+
         return (
-          <SeatSelectionStep
-            currentBus={{
-              ...currentBus,
-              isActive: true,
-              maintenanceStatus: "OPERATIONAL",
-            }}
-            selectedSeats={selectedSeats}
-            onSeatSelect={handleSeatSelect}
-            onTicketCreate={handleTicketCreate}
-          />
+          <div className="flex flex-col md:flex-row md:space-x-6">
+            {/* Columna izquierda: Mapa de asientos */}
+            <div className="flex-1">
+              <h2 className="text-xl font-semibold mb-4">Seleccionar Asiento</h2>
+              <div className="grid grid-cols-4 md:grid-cols-6 gap-4">
+                {sortedSeats.map((seat: any) => {
+                  const tier = seatTiers?.find((t: any) => t.id === seat.tier_id);
+                  const price = tier ? Number(tier.basePrice) : 0;
+                  const isSelected = selectedSeats.includes(seat.seatNumber);
+                  // Definir un mapping para los colores de acuerdo al nombre del tier.
+                  const colorsMapping: { [key: string]: string } = {
+                    Economico: "amber",    // Color amarillo/ámbar para asientos económicos
+                    Normal: "sky",         // Color azul cielo para asientos normales
+                    VIP: "purple",         // Color morado para asientos VIP
+                  };
+                  // Se asigna el color basado en el tier; si no hay match, se usa "gray" por defecto
+                  const seatColor = tier ? (colorsMapping[tier.name] || "gray") : "gray";
+
+                  let bgClass = "";
+                  if (seat.status === "maintenance") {
+                    bgClass = "bg-yellow-100 text-yellow-800";
+                  } else if (seat.status === "available") {
+                    bgClass = `bg-${seatColor}-100 text-${seatColor}-800 hover:bg-${seatColor}-200`;
+                  } else {
+                    bgClass = "bg-gray-100 text-gray-800";
+                  }
+                  const borderClass = isSelected ? "border-2 border-blue-500" : "border border-transparent";
+
+                  return (
+                    <button
+                      key={seat.id}
+                      disabled={seat.status !== "available" && !isSelected}
+                      onClick={() => handleSeatSelect(seat.seatNumber, price)}
+                      className={`p-4 rounded ${bgClass} ${borderClass} hover:opacity-80 flex flex-col items-center`}
+                    >
+                      <span className="font-bold">{seat.seatNumber}</span>
+                      <Badge variant="outline" className={bgClass}>
+                        {seat.status === "maintenance"
+                          ? "Mantenimiento"
+                          : seat.status === "available"
+                          ? "Disponible"
+                          : "Deshabilitado"}
+                      </Badge>
+                      {tier && (
+                        <span className="text-xs mt-1">{`$${price.toFixed(2)}`}</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Columna derecha: Formulario para registrar el ticket con datos comunes */}
+            <div className="w-full md:w-1/3">
+              <h2 className="text-xl font-semibold mb-4">Registrar Ticket</h2>
+              {selectedSeats.length === 0 ? (
+                <p className="text-muted-foreground">
+                  No se ha seleccionado ningún asiento.
+                </p>
+              ) : (
+                <div className="space-y-4">
+                  <div className="mb-4">
+                    <span className="font-bold">Asientos seleccionados: </span>
+                    {selectedSeats.join(", ")}
+                  </div>
+                  <div className="mb-4">
+                    <span className="font-bold">Total: </span>
+                    <span>{`$${totalPrice.toFixed(2)}`}</span>
+                  </div>
+                  <div className="mb-2">
+                    <label className="block text-sm">Nombre del pasajero</label>
+                    <input
+                      type="text"
+                      value={commonPassengerName}
+                      onChange={(e) => setCommonPassengerName(e.target.value)}
+                      className="border rounded p-2 w-full bg-white text-black"
+                      placeholder="Ingrese el nombre"
+                    />
+                  </div>
+                  <div className="mb-2">
+                    <label className="block text-sm">Documento</label>
+                    <input
+                      type="text"
+                      value={commonDocumentId}
+                      onChange={(e) => setCommonDocumentId(e.target.value)}
+                      className="border rounded p-2 w-full bg-white text-black"
+                      placeholder="Ingrese el documento"
+                    />
+                  </div>
+                  <Button
+                    onClick={handleRegisterTickets}
+                    disabled={!commonPassengerName || !commonDocumentId}
+                  >
+                    Registrar Ticket
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
         );
 
       case 6: // Confirmación
