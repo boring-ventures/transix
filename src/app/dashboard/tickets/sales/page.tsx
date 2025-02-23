@@ -31,7 +31,8 @@ import { ReservationPDF } from "../../../../components/tickets/reservation-pdf";
 type Passenger = {
   name: string;
   document_id: string;
-  seat_number: string;
+  seatId: string;       // El UUID real del asiento
+  seatLabel: string;    // El label visible (ej. "4C")
   price: number;
 };
 
@@ -63,7 +64,12 @@ export default function TicketSales() {
 
   // Agregamos nuevos estados para el lookup del cliente
   const [lookupStatus, setLookupStatus] = useState<"idle" | "loading" | "found" | "not_found">("idle");
-  const [customerData, setCustomerData] = useState<{ name: string } | null>(null);
+  const [customerData, setCustomerData] = useState<{ 
+    id: string;
+    full_name: string;
+    phone?: string;
+    email?: string;
+  } | null>(null);
 
   // Obtener horarios cuando se selecciona una ruta
   const { data: routeSchedules = [], isLoading: isLoadingSchedules } =
@@ -78,12 +84,16 @@ export default function TicketSales() {
   // In the TicketSales component, add this state
   const [confirmedReservation, setConfirmedReservation] = useState<{
     reservationId: string;
-    tickets: Array<{
-      seatNumber: string;
-      passengerName: string;
-      documentId: string;
+    tickets: {
+      schedule_id: string;
+      customer_id: string | null;
+      bus_seat_id: string;
+      status: string;
       price: number;
-    }>;
+      notes: string;
+      purchased_by: string | null;
+      purchased_at: Date;
+    }[];
     totalAmount: number;
     schedule: {
       departureDate: string;
@@ -108,7 +118,12 @@ export default function TicketSales() {
         const data = await response.json();
         if (data && data.full_name) {
           // Cliente encontrado: actualizar el estado y los inputs con los datos del cliente
-          setCustomerData(data);
+          setCustomerData({
+            id: data.id,           // Asegurarse de guardar el id
+            full_name: data.full_name,
+            phone: data.phone || "",
+            email: data.email || ""
+          });
           setLookupStatus("found");
           setCommonPassengerName(data.full_name);
           setCommonPhone(data.phone || "");
@@ -149,22 +164,23 @@ export default function TicketSales() {
       (!selectedDestination || route.destinationId === selectedDestination.id)
   );
 
-  const handleSeatSelect = (seatNumber: string, price: number) => {
+  const handleSeatSelect = (seatId: string, price: number, seatLabel: string) => {
     setSelectedSeats((prev) => {
-      const newSeats = prev.includes(seatNumber)
-        ? prev.filter((s) => s !== seatNumber)
-        : [...prev, seatNumber];
+      const newSeats = prev.includes(seatId)
+        ? prev.filter((s) => s !== seatId)
+        : [...prev, seatId];
 
       const newPassengers = { ...passengers };
-      if (!prev.includes(seatNumber)) {
-        newPassengers[seatNumber] = {
+      if (!prev.includes(seatId)) {
+        newPassengers[seatId] = {
           name: "",
           document_id: "",
-          seat_number: seatNumber,
+          seatId: seatId,
+          seatLabel: seatLabel,
           price: price,
         };
       } else {
-        delete newPassengers[seatNumber];
+        delete newPassengers[seatId];
       }
       setPassengers(newPassengers);
 
@@ -172,35 +188,61 @@ export default function TicketSales() {
     });
   };
 
-  const handleSubmit = () => {
-    // Create dummy reservation data
-    const reservation = {
-      reservationId: `RES-${Math.random().toString(36).substr(2, 9)}`,
-      tickets: Object.entries(passengers).map(([seatNumber, passenger]) => ({
-        seatNumber,
-        passengerName: passenger.name,
-        documentId: passenger.document_id,
+  const handleSubmit = async () => {
+    try {
+      const ticketsToCreate = Object.entries(passengers).map(([seatId, passenger]) => ({
+        schedule_id: selectedSchedule!.id,
+        customer_id: customerData?.id || null,
+        bus_seat_id: seatId,
+        status: 'active' as const,
         price: passenger.price,
-        // The seat type will be determined by the seat number in the PDF
-      })),
-      totalAmount: Object.values(passengers).reduce((sum, p) => sum + p.price, 0),
-      schedule: {
-        departureDate: new Date(selectedSchedule!.departureDate).toLocaleDateString(),
-        departureTime: new Date(selectedSchedule!.departureDate).toLocaleTimeString(),
-        route: selectedRoute!.name,
-      },
-    };
+        notes: `Pasajero: ${passenger.name}, Documento: ${passenger.document_id}`,
+        purchased_by: null, // ID del vendedor si está disponible
+        purchased_at: new Date(),
+      }));
 
-    setConfirmedReservation(reservation);
-    toast({
-      title: "Reserva Confirmada",
-      description: "Los tickets han sido registrados exitosamente",
-    });
-    setStep(6);
+      const response = await fetch('/api/tickets', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ tickets: ticketsToCreate }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al crear los tickets');
+      }
+
+      const createdTickets = await response.json();
+      
+      setConfirmedReservation({
+        reservationId: `RES-${Math.random().toString(36).substr(2, 9)}`,
+        tickets: createdTickets,
+        totalAmount: Object.values(passengers).reduce((sum, p) => sum + p.price, 0),
+        schedule: {
+          departureDate: new Date(selectedSchedule!.departureDate).toLocaleDateString(),
+          departureTime: new Date(selectedSchedule!.departureDate).toLocaleTimeString(),
+          route: selectedRoute!.name,
+        },
+      });
+
+      toast({
+        title: "Reserva Confirmada",
+        description: "Los tickets han sido registrados exitosamente",
+      });
+      setStep(6);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Hubo un error al crear los tickets",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleTicketCreate = (ticketData: {
     seatId: string;
+    seatLabel: string;
     customerName: string;
     documentId: string;
     phone?: string;
@@ -208,13 +250,13 @@ export default function TicketSales() {
     notes?: string;
     price: number;
   }) => {
-    // Use ticketData to update state
     setPassengers((prev) => ({
       ...prev,
       [ticketData.seatId]: {
         name: ticketData.customerName,
         document_id: ticketData.documentId,
-        seat_number: ticketData.seatId,
+        seatId: ticketData.seatId,
+        seatLabel: ticketData.seatLabel,
         price: ticketData.price,
       },
     }));
@@ -231,12 +273,14 @@ export default function TicketSales() {
     const currentBus = selectedSchedule.busAssignments?.[0]?.bus;
     if (!currentBus) return;
 
-    selectedSeats.forEach((seatNumber) => {
-      const seatObj = currentBus.seats.find((s: any) => s.seatNumber === seatNumber);
+    selectedSeats.forEach((seatId) => {
+      // Buscar el asiento usando el UUID (seat.id)
+      const seatObj = currentBus.seats.find((s: any) => s.id === seatId);
       const tier = seatTiers?.find((t: any) => t.id === seatObj?.tier?.id);
       const price = tier ? Number(tier.basePrice) : 0;
       handleTicketCreate({
-        seatId: seatNumber,
+        seatId: seatId,
+        seatLabel: seatObj?.seatNumber ?? seatId, // Usa el label o, si no se encuentra, el id
         customerName: commonPassengerName,
         documentId: commonDocumentId,
         price: price,
@@ -411,14 +455,16 @@ export default function TicketSales() {
         if (templateData) {
           const { rows, seatsPerRow } = templateData.firstFloor.dimensions;
           totalPrice = selectedSeats.reduce((acc: number, seatId: string) => {
-            const seatObj = templateData.firstFloor.seats.find((s: any) => s.id === seatId);
-            const tier = seatTiers?.find((t: any) => t.id === seatObj?.tierId);
+            // Buscar el asiento real por su id (UUID)
+            const seatObj = currentBus.seats.find((s: any) => s.id === seatId);
+            const tier = seatTiers?.find((t: any) => t.id === seatObj?.tier?.id);
             const price = tier ? Number(tier.basePrice) : 0;
             return acc + price;
           }, 0);
         } else {
-          totalPrice = selectedSeats.reduce((acc: number, seatNumber: string) => {
-            const seatObj = currentBus.seats.find((s: any) => s.seatNumber === seatNumber);
+          totalPrice = selectedSeats.reduce((acc: number, seatId: string) => {
+            // Se modifica para usar el id real en lugar de seatNumber
+            const seatObj = currentBus.seats.find((s: any) => s.id === seatId);
             const tier = seatTiers?.find((t: any) => t.id === seatObj?.tier?.id);
             const price = tier ? Number(tier.basePrice) : 0;
             return acc + price;
@@ -439,26 +485,39 @@ export default function TicketSales() {
                   }}
                 >
                   {Array.from({
-                    length: templateData.firstFloor.dimensions.rows * templateData.firstFloor.dimensions.seatsPerRow
+                    length:
+                      templateData.firstFloor.dimensions.rows *
+                      templateData.firstFloor.dimensions.seatsPerRow,
                   }).map((_, index) => {
-                    const row = Math.floor(index / templateData.firstFloor.dimensions.seatsPerRow);
+                    const row = Math.floor(
+                      index / templateData.firstFloor.dimensions.seatsPerRow
+                    );
                     const col = index % templateData.firstFloor.dimensions.seatsPerRow;
-                    // Se busca el asiento en la plantilla según la fila y columna
-                    const seat = templateData.firstFloor.seats.find((s: any) => s.row === row && s.column === col);
+                    const seat = templateData.firstFloor.seats.find(
+                      (s: any) => s.row === row && s.column === col
+                    );
                     if (!seat) {
                       return <div key={index} />;
                     }
 
+                    // Buscar el asiento real en currentBus.seats usando que el número visible coincide
+                    const realSeat = currentBus.seats.find(
+                      (s: any) => s.seatNumber === seat.name
+                    );
+                    // Se utiliza el id real si se encontró; de lo contrario se usa el valor de la plantilla
+                    const realSeatId = realSeat?.id || seat.id;
+                    const isSelected = selectedSeats.includes(realSeatId);
+
+                    // Calcular precio a partir del tier (se puede mejorar obteniendo el tier del asiento real)
                     const tier = seatTiers?.find((t: any) => t.id === seat.tierId);
                     const price = tier ? Number(tier.basePrice) : 0;
-                    const isSelected = selectedSeats.includes(seat.id);
+
                     const colorsMapping: { [key: string]: string } = {
                       Economico: "green",
                       Normal: "red",
                       VIP: "blue",
                     };
                     const seatColor = tier ? (colorsMapping[tier.name] || "gray") : "gray";
-
                     let bgClass = "";
                     if (seat.status === "maintenance") {
                       bgClass = "bg-yellow-100 text-yellow-800";
@@ -467,13 +526,15 @@ export default function TicketSales() {
                     } else {
                       bgClass = "bg-gray-100 text-gray-800";
                     }
-                    const borderClass = isSelected ? "border-2 border-blue-500" : "border border-transparent";
+                    const borderClass = isSelected
+                      ? "border-2 border-blue-500"
+                      : "border border-transparent";
 
                     return (
                       <button
-                        key={seat.id}
+                        key={realSeatId} // se usa el id real
                         disabled={seat.status !== "available" && !isSelected}
-                        onClick={() => handleSeatSelect(seat.id, price)}
+                        onClick={() => handleSeatSelect(realSeatId, price, seat.name)} // se pasa id real
                         className={`p-4 rounded ${bgClass} ${borderClass} hover:opacity-80 flex flex-col items-center`}
                       >
                         <span className="font-bold">{seat.name}</span>
@@ -484,9 +545,7 @@ export default function TicketSales() {
                             ? "Disponible"
                             : "Deshabilitado"}
                         </Badge>
-                        {tier && (
-                          <span className="text-xs mt-1">{`$${price.toFixed(2)}`}</span>
-                        )}
+                        {tier && <span className="text-xs mt-1">{`$${price.toFixed(2)}`}</span>}
                       </button>
                     );
                   })}
@@ -497,7 +556,7 @@ export default function TicketSales() {
                   {currentBus.seats.map((seat: any) => {
                     const tier = seatTiers?.find((t: any) => t.id === seat.tier?.id);
                     const price = tier ? Number(tier.basePrice) : 0;
-                    const isSelected = selectedSeats.includes(seat.seatNumber);
+                    const isSelected = selectedSeats.includes(seat.id);
                     const colorsMapping: { [key: string]: string } = {
                       Economico: "green",
                       Normal: "red",
@@ -519,7 +578,7 @@ export default function TicketSales() {
                       <button
                         key={seat.id}
                         disabled={seat.status !== "available" && !isSelected}
-                        onClick={() => handleSeatSelect(seat.seatNumber, price)}
+                        onClick={() => handleSeatSelect(seat.id, price, seat.seatNumber)}
                         className={`p-4 rounded ${bgClass} ${borderClass} hover:opacity-80 flex flex-col items-center`}
                       >
                         <span className="font-bold">{seat.name}</span>
@@ -551,7 +610,7 @@ export default function TicketSales() {
                 <div className="space-y-4">
                   <div className="mb-4">
                     <span className="font-bold">Asientos seleccionados: </span>
-                    {selectedSeats.join(", ")}
+                    {Object.values(passengers).map(p => p.seatLabel).join(", ")}
                   </div>
                   <div className="mb-4">
                     <span className="font-bold">Total: </span>
@@ -660,22 +719,22 @@ export default function TicketSales() {
                   <h4 className="text-lg font-semibold p-4 border-b">Tickets</h4>
                   <div className="divide-y">
                     {confirmedReservation.tickets.map((ticket) => (
-                      <div key={ticket.seatNumber} className="p-4 grid grid-cols-4 gap-4">
+                      <div key={ticket.bus_seat_id} className="p-4 grid grid-cols-4 gap-4">
                         <div>
                           <p className="text-sm text-muted-foreground">Asiento</p>
-                          <p className="font-medium">{ticket.seatNumber}</p>
+                          <p className="font-medium">{ticket.bus_seat_id}</p>
                         </div>
                         <div>
                           <p className="text-sm text-muted-foreground">Pasajero</p>
-                          <p className="font-medium">{ticket.passengerName}</p>
+                          <p className="font-medium">{ticket.customer_id}</p>
                         </div>
                         <div>
                           <p className="text-sm text-muted-foreground">Documento</p>
-                          <p className="font-medium">{ticket.documentId}</p>
+                          <p className="font-medium">{ticket.status}</p>
                         </div>
                         <div>
                           <p className="text-sm text-muted-foreground">Precio</p>
-                          <p className="font-medium">${ticket.price.toFixed(2)}</p>
+                          <p className="font-medium">${ticket.price}</p>
                         </div>
                       </div>
                     ))}
@@ -688,6 +747,14 @@ export default function TicketSales() {
                       </span>
                     </div>
                   </div>
+                </div>
+
+                {/* Sección de vista previa de los datos de los tickets (en formato JSON) */}
+                <div className="bg-gray-100 p-4 rounded-lg">
+                  <h3 className="text-lg font-semibold">Vista Previa de Tickets</h3>
+                  <pre className="text-sm mt-2 whitespace-pre-wrap">
+                    {JSON.stringify(confirmedReservation.tickets, null, 2)}
+                  </pre>
                 </div>
 
                 <div className="flex justify-center gap-4 mt-6">
@@ -716,7 +783,17 @@ export default function TicketSales() {
 
                 {showPDF && (
                   <div className="mt-4">
-                    <ReservationPDF reservation={confirmedReservation} />
+                    {/* <ReservationPDF 
+                      reservation={{
+                        ...confirmedReservation!,
+                        tickets: confirmedReservation!.tickets.map(ticket => ({
+                          seatNumber: passengers[ticket.bus_seat_id].seatLabel,
+                          passengerName: ticket.passengerName,
+                          documentId: ticket.documentId,
+                          price: ticket.price
+                        }))
+                      }} 
+                    /> */}
                   </div>
                 )}
               </div>
