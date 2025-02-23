@@ -56,6 +56,7 @@ export function CreateRouteScheduleDialog({
     defaultValues: {
       routeId: route.id,
       departureTime: "08:00",
+      estimatedArrivalTime: "10:00",
       operatingDays: daysOfWeek.map(day => day.id),
       active: true,
       seasonStart: addDays(new Date(), -90),
@@ -91,19 +92,35 @@ export function CreateRouteScheduleDialog({
             onSubmit={form.handleSubmit(handleSubmit)}
             className="space-y-4"
           >
-            <FormField
-              control={form.control}
-              name="departureTime"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Hora de Salida</FormLabel>
-                  <FormControl>
-                    <Input type="time" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="departureTime"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Hora de Salida</FormLabel>
+                    <FormControl>
+                      <Input type="time" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="estimatedArrivalTime"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Hora de Llegada Estimada</FormLabel>
+                    <FormControl>
+                      <Input type="time" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <FormField

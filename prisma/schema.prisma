@@ -272,17 +272,18 @@ model payments {
 }
 
 model route_schedules {
-  id             String      @id @default(uuid()) @db.Uuid
-  route_id       String      @db.Uuid
-  departure_time DateTime    @db.Time(6)
-  operating_days String[]
-  active         Boolean?    @default(true)
-  season_start   DateTime?   @db.Date
-  season_end     DateTime?   @db.Date
-  created_at     DateTime    @default(now()) @db.Timestamptz(6)
-  updated_at     DateTime    @default(now()) @db.Timestamptz(6)
-  routes         routes      @relation(fields: [route_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "route_schedules_route_id_routes_id_fk")
-  schedules      schedules[]
+  id                     String      @id @default(uuid()) @db.Uuid
+  route_id               String      @db.Uuid
+  departure_time         DateTime    @db.Time(6)
+  estimated_arrival_time DateTime    @db.Time(6)
+  operating_days         String[]
+  active                 Boolean?    @default(true)
+  season_start           DateTime?   @db.Date
+  season_end             DateTime?   @db.Date
+  created_at             DateTime    @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime    @default(now()) @db.Timestamptz(6)
+  routes                 routes      @relation(fields: [route_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "route_schedules_route_id_routes_id_fk")
+  schedules              schedules[]
 
   @@schema("public")
 }

@@ -31,6 +31,7 @@ export const createRouteScheduleSchema = z.object({
   departureTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, {
     message: "La hora debe estar en formato HH:MM",
   }),
+  estimatedArrivalTime: z.string(),
   operatingDays: z.array(z.enum(operatingDaysEnum)).min(1, {
     message: "Debe seleccionar al menos un día de operación",
   }),

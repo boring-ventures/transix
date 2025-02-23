@@ -124,7 +124,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
   const [openMenus, setOpenMenus] = React.useState<string[]>([]);
 
-  const filteredNavMain = data.navMain.filter(item => 
+  const filteredNavMain = data.navMain.filter(item =>
     allowedRoutes.some(route => item.url === route || item.items?.some(subItem => allowedRoutes.includes(subItem.url)))
   );
 
@@ -142,7 +142,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarHeader className="p-3">
           <SidebarMenu>
             <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
+              <SidebarMenuButton size="lg" asChild>
                 <a href="/dashboard" className="flex items-center gap-2">
                   <div className="flex h-8 w-8 items-center justify-center rounded-md">
                     <Image
