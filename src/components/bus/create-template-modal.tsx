@@ -368,8 +368,23 @@ export const CreateTemplateModal = ({
 
   const onSubmit = async (formData: CreateBusTypeTemplateInput) => {
     try {
-      // Log the form data being submitted
-      console.log("Submitting form data:", JSON.stringify(formData, null, 2));
+      // Validar que todos los asientos no vacíos tengan un tipo asignado
+      const seatMatrix = formData.seatTemplateMatrix;
+      const unassignedFirstFloor = seatMatrix.firstFloor.seats.some(
+        seat => !seat.isEmpty && !seat.tierId
+      );
+      const unassignedSecondFloor = seatMatrix.secondFloor?.seats.some(
+        seat => !seat.isEmpty && !seat.tierId
+      );
+
+      if (unassignedFirstFloor || unassignedSecondFloor) {
+        toast({
+          title: "Error de validación",
+          description: "Todos los asientos deben tener un tipo de asiento asignado. Por favor, asigne un tipo a todos los asientos o márquelos como espacio vacío.",
+          variant: "destructive",
+        });
+        return;
+      }
 
       // Ensure companyId is selected
       if (!formData.companyId) {
@@ -381,39 +396,12 @@ export const CreateTemplateModal = ({
         return;
       }
 
-      // Log seat assignments before validation
-      console.log("Seat assignments:", {
-        firstFloor: formData.seatTemplateMatrix.firstFloor.seats.map((s) => ({
-          id: s.id,
-          isEmpty: s.isEmpty,
-          tierId: s.tierId,
-        })),
-        secondFloor: formData.seatTemplateMatrix.secondFloor?.seats.map(
-          (s) => ({
-            id: s.id,
-            isEmpty: s.isEmpty,
-            tierId: s.tierId,
-          })
-        ),
-      });
-
       // Validate with submission schema manually
       const result = createBusTypeTemplateSchema.safeParse(formData);
-
-      // Log validation result
-      console.log("Validation result:", {
-        success: result.success,
-        errors: !result.success ? result.error.format() : null,
-      });
 
       if (!result.success) {
         const errors = result.error.errors;
         errors.forEach((error) => {
-          console.log("Validation error:", {
-            path: error.path,
-            message: error.message,
-            code: error.code,
-          });
           toast({
             title: "Error de validación",
             description: `${error.path.join(".")}: ${error.message}`,
@@ -463,202 +451,204 @@ export const CreateTemplateModal = ({
           <Form {...createForm}>
             <form
               onSubmit={createForm.handleSubmit(onSubmit)}
-              className="flex-1 overflow-hidden"
+              className="flex flex-col h-full"
             >
-              <div className="grid grid-cols-2 gap-6 p-6 h-full">
-                {/* Left Column - Bus Details */}
-                <div className="space-y-6 overflow-auto pr-2">
-                  <div className="space-y-4 px-1">
-                    <FormField
-                      control={createForm.control}
-                      name="companyId"
-                      render={({ field }) => (
-                        <FormItem className="pb-1">
-                          <FormLabel>Empresa</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Seleccionar empresa" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {companies?.map((company) => (
-                                <SelectItem key={company.id} value={company.id}>
-                                  {company.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={createForm.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem className="pb-1">
-                          <FormLabel>Nombre</FormLabel>
-                          <FormControl>
-                            <Input {...field} className="w-full" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={createForm.control}
-                      name="description"
-                      render={({ field }) => (
-                        <FormItem className="pb-1">
-                          <FormLabel>Descripción</FormLabel>
-                          <FormControl>
-                            <Input {...field} className="w-full" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <div className="border-t pt-6">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg font-medium">Tipos de Asiento</h3>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={handleOpenSeatTierModal}
-                      >
-                        Gestionar Tipos de Asiento
-                      </Button>
+              <div className="flex-1 overflow-hidden">
+                <div className="grid grid-cols-2 gap-6 p-6 h-full">
+                  {/* Left Column - Bus Details */}
+                  <div className="space-y-6 overflow-y-auto max-h-[calc(90vh-12rem)] pr-2">
+                    <div className="space-y-4 px-1">
+                      <FormField
+                        control={createForm.control}
+                        name="companyId"
+                        render={({ field }) => (
+                          <FormItem className="pb-1">
+                            <FormLabel>Empresa</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
+                            >
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Seleccionar empresa" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {companies?.map((company) => (
+                                  <SelectItem key={company.id} value={company.id}>
+                                    {company.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={createForm.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem className="pb-1">
+                            <FormLabel>Nombre</FormLabel>
+                            <FormControl>
+                              <Input {...field} className="w-full" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={createForm.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem className="pb-1">
+                            <FormLabel>Descripción</FormLabel>
+                            <FormControl>
+                              <Input {...field} className="w-full" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </div>
-                    <div className="space-y-2">
-                      {seatTiers?.map((tier, index) => {
-                        const colorClasses = getTierColor(index);
-                        return (
-                          <div
-                            key={tier.id}
-                            className={cn(
-                              "border rounded p-3",
-                              colorClasses.bg,
-                              colorClasses.border
-                            )}
-                          >
-                            <h4 className="font-medium">{tier.name}</h4>
-                            {tier.description && (
-                              <p className="text-sm text-gray-500">
-                                {tier.description}
+
+                    <div className="border-t pt-6">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-medium">Tipos de Asiento</h3>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleOpenSeatTierModal}
+                        >
+                          Gestionar Tipos de Asiento
+                        </Button>
+                      </div>
+                      <div className="space-y-2">
+                        {seatTiers?.map((tier, index) => {
+                          const colorClasses = getTierColor(index);
+                          return (
+                            <div
+                              key={tier.id}
+                              className={cn(
+                                "border rounded p-3",
+                                colorClasses.bg,
+                                colorClasses.border
+                              )}
+                            >
+                              <h4 className="font-medium">{tier.name}</h4>
+                              {tier.description && (
+                                <p className="text-sm text-gray-500">
+                                  {tier.description}
+                                </p>
+                              )}
+                              <p className="text-sm">
+                                Precio Base: ${tier.basePrice}
                               </p>
-                            )}
-                            <p className="text-sm">
-                              Precio Base: ${tier.basePrice}
-                            </p>
-                          </div>
-                        );
-                      })}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Right Column - Seat Configuration */}
-                <div className="space-y-6 overflow-auto pr-2">
-                  <FormField
-                    control={createForm.control}
-                    name="seatTemplateMatrix"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Configuración de Asientos</FormLabel>
-                        <FormControl>
-                          <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-4">
-                                <div className="flex items-center gap-2">
-                                  <Switch
-                                    id="multi-select"
-                                    checked={isMultiSelectMode}
-                                    onCheckedChange={(checked) => {
-                                      setIsMultiSelectMode(checked);
-                                      if (!checked) setSelectedSeats([]);
-                                    }}
-                                  />
-                                  <Label htmlFor="multi-select">
-                                    Selección múltiple
-                                  </Label>
+                  {/* Right Column - Seat Configuration */}
+                  <div className="space-y-6 overflow-y-auto max-h-[calc(90vh-12rem)] pr-2">
+                    <FormField
+                      control={createForm.control}
+                      name="seatTemplateMatrix"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Configuración de Asientos</FormLabel>
+                          <FormControl>
+                            <div className="space-y-4">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                  <div className="flex items-center gap-2">
+                                    <Switch
+                                      id="multi-select"
+                                      checked={isMultiSelectMode}
+                                      onCheckedChange={(checked) => {
+                                        setIsMultiSelectMode(checked);
+                                        if (!checked) setSelectedSeats([]);
+                                      }}
+                                    />
+                                    <Label htmlFor="multi-select">
+                                      Selección múltiple
+                                    </Label>
+                                  </div>
                                 </div>
-                              </div>
-                              {selectedSeats.length > 0 && (
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm text-muted-foreground">
-                                    {selectedSeats.length} asientos
-                                    seleccionados
-                                  </span>
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button variant="outline" size="sm">
-                                        Acciones{" "}
-                                        <ChevronDown className="ml-2 h-4 w-4" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      <DropdownMenuItem
-                                        onClick={() =>
-                                          handleBulkAction("empty")
-                                        }
-                                      >
-                                        Marcar como espacio vacío
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        onClick={() => handleBulkAction("fill")}
-                                      >
-                                        Marcar como asiento
-                                      </DropdownMenuItem>
-                                      {seatTiers?.map((tier) => (
+                                {selectedSeats.length > 0 && (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm text-muted-foreground">
+                                      {selectedSeats.length} asientos
+                                      seleccionados
+                                    </span>
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button variant="outline" size="sm">
+                                          Acciones{" "}
+                                          <ChevronDown className="ml-2 h-4 w-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
                                         <DropdownMenuItem
-                                          key={tier.id}
                                           onClick={() =>
-                                            handleBulkAction("tier", tier.id)
+                                            handleBulkAction("empty")
                                           }
                                         >
-                                          Asignar nivel: {tier.name}
+                                          Marcar como espacio vacío
                                         </DropdownMenuItem>
-                                      ))}
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                </div>
-                              )}
-                            </div>
+                                        <DropdownMenuItem
+                                          onClick={() => handleBulkAction("fill")}
+                                        >
+                                          Marcar como asiento
+                                        </DropdownMenuItem>
+                                        {seatTiers?.map((tier) => (
+                                          <DropdownMenuItem
+                                            key={tier.id}
+                                            onClick={() =>
+                                              handleBulkAction("tier", tier.id)
+                                            }
+                                          >
+                                            Asignar nivel: {tier.name}
+                                          </DropdownMenuItem>
+                                        ))}
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  </div>
+                                )}
+                              </div>
 
-                            <div className="border rounded-lg p-4 bg-background">
-                              <SeatEditor
-                                value={field.value}
-                                onChange={handleMatrixChange}
-                                onSeatClick={handleSeatClick}
-                                selectedTierIds={selectedTierIds}
-                                onTierSelect={(floor, tierId) =>
-                                  setSelectedTierIds((prev) => ({
-                                    ...prev,
-                                    [floor]: tierId,
-                                  }))
-                                }
-                                seatTiers={seatTiers || []}
-                                onSecondFloorToggle={handleSecondFloorToggle}
-                                emptyStyle="dashed"
-                                selectedSeats={selectedSeats}
-                                isMultiSelectMode={isMultiSelectMode}
-                              />
+                              <div className="border rounded-lg p-4 bg-background">
+                                <SeatEditor
+                                  value={field.value}
+                                  onChange={handleMatrixChange}
+                                  onSeatClick={handleSeatClick}
+                                  selectedTierIds={selectedTierIds}
+                                  onTierSelect={(floor, tierId) =>
+                                    setSelectedTierIds((prev) => ({
+                                      ...prev,
+                                      [floor]: tierId,
+                                    }))
+                                  }
+                                  seatTiers={seatTiers || []}
+                                  onSecondFloorToggle={handleSecondFloorToggle}
+                                  emptyStyle="dashed"
+                                  selectedSeats={selectedSeats}
+                                  isMultiSelectMode={isMultiSelectMode}
+                                />
+                              </div>
                             </div>
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-4 p-6 border-t bg-muted/50">
+              <div className="flex items-center justify-end gap-4 p-6 border-t bg-muted/50 mt-auto">
                 <Button type="button" variant="outline" onClick={onClose}>
                   Cancelar
                 </Button>

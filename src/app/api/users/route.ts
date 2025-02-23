@@ -96,7 +96,14 @@ export async function POST(request: Request) {
     console.log("POST /api/users received");
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          autoRefreshToken: true,
+          persistSession: true,
+          detectSessionInUrl: true
+        }
+      }
     );
     const body = await request.json();
     console.log("Body recibido:", body);
@@ -122,6 +129,7 @@ export async function POST(request: Request) {
     const profile = await prisma.profiles.create({
       data: {
         user_id: authUser.user.id,
+        email: userData.email,
         full_name: profileData.fullName,
         role: profileData.role,
         company_id: profileData.companyId,

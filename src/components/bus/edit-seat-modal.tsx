@@ -151,7 +151,8 @@ export const EditSeatModal = ({
             <div className="space-y-2">
               <label className="text-sm font-medium">Nivel</label>
               <Select
-                defaultValue={seat.tierId}
+                key={seat.id}
+                value={seat.tierId}
                 onValueChange={handleTierChange}
               >
                 <SelectTrigger>

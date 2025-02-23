@@ -1,11 +1,11 @@
 ## Descripción
-Resolución de bugs parte #1 versión estable, se arreglaron los errores de rutas y buses pero siguen faltando detalles.
+Resolución de bugs parte #2 versión estable, se arreglaron más errores de buses y usuarios.
 
 ## Tipo de Cambio
 <!-- Marca con una 'x' los tipos que aplican -->
 - [ x ] 🐛 Corrección de Bug
 - [ x ] ✨ Nueva Funcionalidad
-- [ x] 💄 Actualización de UI/UX
+- [ x ] 💄 Actualización de UI/UX
 - [ ] ♻️ Refactorización de Código
 - [ ] 📝 Documentación
 - [ x ] 🔧 Configuración
@@ -20,7 +20,7 @@ image.png
 ## Lista de Verificación
 - [ x ] He realizado pruebas locales de los cambios
 - [ x ] He actualizado la documentación correspondiente
-- [ x] Los cambios mantienen o mejoran la accesibilidad
+- [ x ] Los cambios mantienen o mejoran la accesibilidad
 - [ ] Los cambios no generan nuevas advertencias o errores
 - [ x ] He verificado la compatibilidad con las funcionalidades existentes
 

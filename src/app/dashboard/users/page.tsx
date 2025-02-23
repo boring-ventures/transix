@@ -172,6 +172,7 @@ export default function UsersPage() {
           fullName: data.fullName,
           role: data.role,
           companyId: data.role === role_enum.superadmin ? null : data.companyId,
+          active: true,
         },
       };
       
@@ -184,6 +185,7 @@ export default function UsersPage() {
         description: "El usuario ha sido actualizado exitosamente.",
       });
     } catch (error) {
+      console.error("Error al actualizar usuario:", error);
       const errorMessage =
         error instanceof Error
           ? error.message
@@ -347,13 +349,13 @@ export default function UsersPage() {
     },
     {
       id: "createdAt",
-      accessorKey: "createdAt",
+      accessorKey: "created_at",
       header: "Fecha de Creación",
       sortable: true,
       cell: ({ row }) => {
         const data = row as unknown as UserWithProfile;
-        return data.createdAt
-          ? new Date(data.createdAt).toLocaleDateString()
+        return data.created_at
+          ? new Date(data.created_at).toLocaleDateString()
           : "N/A";
       },
     },

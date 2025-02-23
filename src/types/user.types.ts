@@ -9,8 +9,8 @@ export type User = {
   id: string;
   email: string;
   emailVerified: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
+  created_at: Date;
+  updated_at: Date;
 };
 
 export type Profile = {

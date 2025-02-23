@@ -60,7 +60,16 @@ export function useUpdateProfile() {
       data: Partial<CreateProfileInput>;
     }) => {
       const response = await axios.patch(`${API_URL}/${profileId}`, data);
+      if (response.data.error) {
+        throw new Error(response.data.error);
+      }
       return response.data;
+    },
+    onError: (error: unknown) => {
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.error || error.message);
+      }
+      throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });

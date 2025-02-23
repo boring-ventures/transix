@@ -308,7 +308,14 @@ export default function BusesPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Empresa</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select 
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        // Limpiar la plantilla seleccionada cuando se cambia de empresa
+                        createForm.setValue('templateId', '', { shouldValidate: true });
+                      }} 
+                      value={field.value}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Seleccionar empresa" />
                       </SelectTrigger>
@@ -340,33 +347,58 @@ export default function BusesPage() {
               <FormField
                 control={createForm.control}
                 name="templateId"
-                render={({ field }) => (
-                  <FormItem>
-                    <div className="flex items-center justify-between">
-                      <FormLabel>Plantilla</FormLabel>
-                      <Link
-                        href="/dashboard/buses/templates"
-                        className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
+                render={({ field }) => {
+                  const selectedCompanyId = createForm.getValues('companyId');
+                  const companyTemplates = templates?.filter(
+                    template => template.companyId === selectedCompanyId
+                  );
+                  const hasTemplates = companyTemplates && companyTemplates.length > 0;
+
+                  // Si no hay plantillas para la empresa seleccionada, asegurarse de que no haya ninguna plantilla seleccionada
+                  if (!hasTemplates && field.value) {
+                    createForm.setValue('templateId', '', { shouldValidate: true });
+                  }
+
+                  return (
+                    <FormItem>
+                      <div className="flex items-center justify-between">
+                        <FormLabel>Plantilla</FormLabel>
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href="/dashboard/buses/templates"
+                            className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
+                          >
+                            <Plus className="h-3 w-3" />
+                            Nueva plantilla
+                          </Link>
+                          {selectedCompanyId && !hasTemplates && (
+                            <span className="text-xs text-muted-foreground">
+                              (Esta empresa no tiene plantillas)
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <Select 
+                        key={selectedCompanyId} // Forzar re-render cuando cambia la empresa
+                        onValueChange={field.onChange} 
+                        value={hasTemplates ? field.value : ""}
+                        disabled={!hasTemplates}
                       >
-                        <Plus className="h-3 w-3" />
-                        Nueva plantilla
-                      </Link>
-                    </div>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar plantilla" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {templates?.map((template) => (
-                          <SelectItem key={template.id} value={template.id}>
-                            {template.name} ({template.totalCapacity} asientos)
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar plantilla" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {companyTemplates?.map((template) => (
+                            <SelectItem key={template.id} value={template.id}>
+                              {template.name} ({template.totalCapacity} asientos)
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
               <FormField
                 control={createForm.control}
