@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useSeatTiers } from "@/hooks/useSeatTiers";
@@ -107,6 +107,38 @@ export default function TicketSales() {
 
   // Estado para la lógica de asientos (consulta de niveles)
   const { data: seatTiers } = useSeatTiers();
+
+  // Agregar un nuevo estado para los tickets activos
+  const [activeTickets, setActiveTickets] = useState<{
+    [key: string]: boolean;
+  }>({});
+
+  // Agregar una función para cargar los tickets activos cuando se selecciona un schedule
+  const loadActiveTickets = async (scheduleId: string) => {
+    try {
+      const response = await fetch(`/api/tickets/active?scheduleId=${scheduleId}`);
+      if (!response.ok) throw new Error('Error loading tickets');
+      const tickets = await response.json();
+      
+      // Crear un objeto con los bus_seat_id como claves
+      const ticketsMap = tickets.reduce((acc: any, ticket: any) => {
+        acc[ticket.bus_seat_id] = true;
+        return acc;
+      }, {});
+      
+      setActiveTickets(ticketsMap);
+    } catch (error) {
+      console.error('Error loading active tickets:', error);
+      setActiveTickets({});
+    }
+  };
+
+  // Modificar el useEffect cuando se selecciona un schedule
+  useEffect(() => {
+    if (selectedSchedule?.id) {
+      loadActiveTickets(selectedSchedule.id);
+    }
+  }, [selectedSchedule]);
 
   // Función para consultar el cliente en base a su document_id
   const checkCustomer = async (docId: string) => {
@@ -519,7 +551,9 @@ export default function TicketSales() {
                     };
                     const seatColor = tier ? (colorsMapping[tier.name] || "gray") : "gray";
                     let bgClass = "";
-                    if (seat.status === "maintenance") {
+                    if (activeTickets[realSeatId]) {
+                      bgClass = "bg-red-100 text-red-800"; // Para asientos comprados
+                    } else if (seat.status === "maintenance") {
                       bgClass = "bg-yellow-100 text-yellow-800";
                     } else if (seat.status === "available") {
                       bgClass = `bg-${seatColor}-100 hover:bg-${seatColor}-200`;
@@ -532,14 +566,16 @@ export default function TicketSales() {
 
                     return (
                       <button
-                        key={realSeatId} // se usa el id real
-                        disabled={seat.status !== "available" && !isSelected}
-                        onClick={() => handleSeatSelect(realSeatId, price, seat.name)} // se pasa id real
+                        key={realSeatId}
+                        disabled={activeTickets[realSeatId] || (seat.status !== "available" && !isSelected)}
+                        onClick={() => handleSeatSelect(realSeatId, price, seat.name)}
                         className={`p-4 rounded ${bgClass} ${borderClass} hover:opacity-80 flex flex-col items-center`}
                       >
                         <span className="font-bold">{seat.name}</span>
                         <Badge variant="outline" className={bgClass}>
-                          {seat.status === "maintenance"
+                          {activeTickets[realSeatId]
+                            ? "Comprado"
+                            : seat.status === "maintenance"
                             ? "Mantenimiento"
                             : seat.status === "available"
                             ? "Disponible"
@@ -565,7 +601,9 @@ export default function TicketSales() {
                     const seatColor = seat.tier ? (colorsMapping[seat.tier.name] || "gray") : "gray";
 
                     let bgClass = "";
-                    if (seat.status === "maintenance") {
+                    if (activeTickets[seat.id]) {
+                      bgClass = "bg-red-100 text-red-800"; // Para asientos comprados
+                    } else if (seat.status === "maintenance") {
                       bgClass = "bg-yellow-100 text-yellow-800";
                     } else if (seat.status === "available") {
                       bgClass = `bg-${seatColor}-100 hover:bg-${seatColor}-200`;
@@ -577,13 +615,15 @@ export default function TicketSales() {
                     return (
                       <button
                         key={seat.id}
-                        disabled={seat.status !== "available" && !isSelected}
+                        disabled={activeTickets[seat.id] || (seat.status !== "available" && !isSelected)}
                         onClick={() => handleSeatSelect(seat.id, price, seat.seatNumber)}
                         className={`p-4 rounded ${bgClass} ${borderClass} hover:opacity-80 flex flex-col items-center`}
                       >
                         <span className="font-bold">{seat.name}</span>
                         <Badge variant="outline" className={bgClass}>
-                          {seat.status === "maintenance"
+                          {activeTickets[seat.id]
+                            ? "Comprado"
+                            : seat.status === "maintenance"
                             ? "Mantenimiento"
                             : seat.status === "available"
                             ? "Disponible"
