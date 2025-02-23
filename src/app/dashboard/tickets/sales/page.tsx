@@ -57,6 +57,13 @@ export default function TicketSales() {
   // Estados para datos comunes para el ticket (se aplican a todos los asientos seleccionados)
   const [commonPassengerName, setCommonPassengerName] = useState("");
   const [commonDocumentId, setCommonDocumentId] = useState("");
+  // Nuevos estados para almacenar teléfono y email del cliente
+  const [commonPhone, setCommonPhone] = useState("");
+  const [commonEmail, setCommonEmail] = useState("");
+
+  // Agregamos nuevos estados para el lookup del cliente
+  const [lookupStatus, setLookupStatus] = useState<"idle" | "loading" | "found" | "not_found">("idle");
+  const [customerData, setCustomerData] = useState<{ name: string } | null>(null);
 
   // Obtener horarios cuando se selecciona una ruta
   const { data: routeSchedules = [], isLoading: isLoadingSchedules } =
@@ -90,6 +97,44 @@ export default function TicketSales() {
 
   // Estado para la lógica de asientos (consulta de niveles)
   const { data: seatTiers } = useSeatTiers();
+
+  // Función para consultar el cliente en base a su document_id
+  const checkCustomer = async (docId: string) => {
+    if (!docId) return;
+    setLookupStatus("loading");
+    try {
+      const response = await fetch(`/api/customers?documentId=${docId}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.full_name) {
+          // Cliente encontrado: actualizar el estado y los inputs con los datos del cliente
+          setCustomerData(data);
+          setLookupStatus("found");
+          setCommonPassengerName(data.full_name);
+          setCommonPhone(data.phone || "");
+          setCommonEmail(data.email || "");
+        } else {
+          setLookupStatus("not_found");
+          setCustomerData(null);
+          setCommonPassengerName("");
+          setCommonPhone("");
+          setCommonEmail("");
+        }
+      } else {
+        setLookupStatus("not_found");
+        setCustomerData(null);
+        setCommonPassengerName("");
+        setCommonPhone("");
+        setCommonEmail("");
+      }
+    } catch (error) {
+      setLookupStatus("not_found");
+      setCustomerData(null);
+      setCommonPassengerName("");
+      setCommonPhone("");
+      setCommonEmail("");
+    }
+  };
 
   // Mostrar loading mientras se cargan los datos iniciales
   if (isLoadingLocations || isLoadingRoutes) {
@@ -528,8 +573,42 @@ export default function TicketSales() {
                       type="text"
                       value={commonDocumentId}
                       onChange={(e) => setCommonDocumentId(e.target.value)}
+                      onBlur={() => {
+                        if (commonDocumentId.trim() !== "") {
+                          checkCustomer(commonDocumentId);
+                        }
+                      }}
                       className="border rounded p-2 w-full bg-white text-black"
                       placeholder="Ingrese el documento"
+                    />
+                    {lookupStatus === "loading" && (
+                      <p className="text-sm text-gray-500 mt-1">Buscando cliente...</p>
+                    )}
+                    {lookupStatus === "found" && (
+                      <p className="text-sm text-green-500 mt-1">Cliente encontrado</p>
+                    )}
+                    {lookupStatus === "not_found" && (
+                      <p className="text-sm text-red-500 mt-1">Cliente no encontrado</p>
+                    )}
+                  </div>
+                  <div className="mb-2">
+                    <label className="block text-sm">Teléfono</label>
+                    <input
+                      type="text"
+                      value={commonPhone}
+                      onChange={(e) => setCommonPhone(e.target.value)}
+                      className="border rounded p-2 w-full bg-white text-black"
+                      placeholder="Ingrese el teléfono"
+                    />
+                  </div>
+                  <div className="mb-2">
+                    <label className="block text-sm">Email</label>
+                    <input
+                      type="email"
+                      value={commonEmail}
+                      onChange={(e) => setCommonEmail(e.target.value)}
+                      className="border rounded p-2 w-full bg-white text-black"
+                      placeholder="Ingrese el email"
                     />
                   </div>
                   <Button
