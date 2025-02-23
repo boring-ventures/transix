@@ -46,9 +46,20 @@ export function useUpdateSeatStatus() {
 
       return response.json() as Promise<BusSeat>;
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
+      // Invalidar la query de los asientos del bus
       queryClient.invalidateQueries({
         queryKey: ["bus-seats", data.busId],
+      });
+      
+      // Invalidar la query del bus para actualizar el SeatMatrixPreview
+      queryClient.invalidateQueries({
+        queryKey: ["buses", data.busId],
+      });
+      
+      // Invalidar la query general de buses
+      queryClient.invalidateQueries({
+        queryKey: ["buses"],
       });
     },
   });

@@ -59,6 +59,22 @@ const data = {
       ],
     },
     {
+      title: "Viajes",
+      icon: Bus,
+      items: [
+        {
+          title: "Lista de Viajes",
+          url: "/dashboard/trips",
+          icon: List,
+        },
+        {
+          title: "Liquidaciones",
+          url: "/dashboard/trips/settlements",
+          icon: CreditCard,
+        },
+      ],
+    },
+    {
       title: "Rutas",
       icon: Map,
       items: [

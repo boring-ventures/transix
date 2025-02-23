@@ -6,9 +6,11 @@ export const ROLE_ROUTES = {
     '/dashboard/companies',
     '/dashboard/finances',
     '/dashboard/buses',
-    '/dashboard/buses/bus-templates', //Borrar luego
-    '/dashboard/tickets/sales', //Borrar luego
+    '/dashboard/buses/bus-templates', // Borrar luego
+    '/dashboard/tickets/sales', // Borrar luego
     '/dashboard/locations', // Borrar luego
+    '/dashboard/trips', // Borrar luego
+    '/dashboard/trips/settlements', // Borrar luego
     '/dashboard/routes',
     '/dashboard/tickets',
     '/dashboard/parcels'

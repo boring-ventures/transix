@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { schedule_status_enum } from "@prisma/client";
+import { schedule_status_enum, passenger_status_enum } from "@prisma/client";
 
 /**
  * Base Schemas
@@ -81,9 +81,13 @@ export type Route = {
   originId: string;
   destinationId: string;
   estimatedDuration: number;
+  departureLane: string;
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
+  company?: Company;
+  origin?: Location;
+  destination?: Location;
 };
 
 export type RouteSchedule = {
@@ -192,6 +196,8 @@ export type Schedule = {
   routeId: string;
   routeScheduleId: string;
   busId: string | null;
+  primaryDriverId?: string;
+  secondaryDriverId?: string;
   departureDate: Date;
   estimatedArrivalTime: Date;
   actualDepartureTime: Date | null;
@@ -221,6 +227,9 @@ export type Schedule = {
       };
     }[];
   };
+  route?: Route;
+  primaryDriver?: Driver;
+  secondaryDriver?: Driver;
 };
 
 export type RouteWithRelations = Route & {
@@ -245,3 +254,27 @@ export type CreateRouteInput = z.infer<typeof createRouteSchema>;
 export type UpdateRouteInput = z.infer<typeof updateRouteSchema>;
 export type CreateRouteScheduleInput = z.infer<typeof createRouteScheduleSchema>;
 export type UpdateRouteScheduleInput = z.infer<typeof updateRouteScheduleSchema>;
+
+export interface Company {
+    id: string;
+    name: string;
+}
+
+export interface Driver {
+    id: string;
+    fullName: string;
+    documentId: string;
+    licenseNumber: string;
+    licenseCategory: string;
+    active: boolean;
+    companyId: string;
+}
+
+export interface PassengerList {
+    id: string;
+    scheduleId: string;
+    fullName: string;
+    documentId?: string;
+    seatNumber: string;
+    status: passenger_status_enum;
+}
