@@ -82,6 +82,7 @@ export function RouteSchedulesTable({
           <TableHeader>
             <TableRow>
               <TableHead>Hora de Salida</TableHead>
+              <TableHead>Hora de Llegada</TableHead>
               <TableHead>Días de Operación</TableHead>
               <TableHead>Temporada</TableHead>
               <TableHead>Estado</TableHead>
@@ -103,6 +104,12 @@ export function RouteSchedulesTable({
                     <div className="flex items-center gap-2">
                       <Clock className="h-4 w-4" />
                       {schedule.departureTime}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      {schedule.estimatedArrivalTime}
                     </div>
                   </TableCell>
                   <TableCell>

@@ -95,6 +95,7 @@ export type RouteSchedule = {
   id: string;
   routeId: string;
   departureTime: string;
+  estimatedArrivalTime: string;
   operatingDays: typeof operatingDaysEnum[number][];
   active: boolean;
   seasonStart: Date | null;

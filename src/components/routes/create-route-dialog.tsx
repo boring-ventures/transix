@@ -167,7 +167,7 @@ export function CreateRouteDialog({
               name="departureLane"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Andén de Salida</FormLabel>
+                  <FormLabel>Carril de Salida</FormLabel>
                   <FormControl>
                     <Input {...field} />
                   </FormControl>

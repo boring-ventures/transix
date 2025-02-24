@@ -108,6 +108,7 @@ export async function POST(request: Request) {
         data: {
           route_id: route.id,
           departure_time: new Date(`1970-01-01T${body.schedule.departureTime}:00.000Z`),
+          estimated_arrival_time: new Date(`1970-01-01T${body.schedule.departureTime}:00.000Z`),
           operating_days: body.schedule.operatingDays,
           active: body.schedule.active,
           season_start: body.schedule.seasonStart,

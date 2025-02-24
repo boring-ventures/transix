@@ -43,6 +43,7 @@ export async function GET(request: NextRequest) {
       id: schedule.id,
       routeId: schedule.route_id,
       departureTime: schedule.departure_time.toTimeString().slice(0, 5),
+      estimatedArrivalTime: schedule.estimated_arrival_time.toTimeString().slice(0, 5),
       operatingDays: schedule.operating_days,
       active: schedule.active,
       seasonStart: schedule.season_start,
