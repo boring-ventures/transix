@@ -117,6 +117,7 @@ export function PassengerList({ passengers, schedule }: PassengerListProps) {
                             </TableHeader>
                             <TableBody>
                                 {passengers.map((passenger) => (
+                                    console.log(passenger),
                                     <TableRow key={passenger.id}>
                                         <TableCell>{passenger.seatNumber}</TableCell>
                                         <TableCell>{passenger.fullName}</TableCell>

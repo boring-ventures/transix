@@ -110,12 +110,12 @@ export function TripList() {
                                     </Badge>
                                 </TableCell>
                                 <TableCell>
-                                    {schedule.bus ? (
+                                    {schedule.busAssignments && schedule.busAssignments.length > 0 ? (
                                         <div className="flex flex-col gap-1">
-                                            <span>{schedule.bus.plateNumber}</span>
-                                            {schedule.bus.template && (
+                                            <span>{schedule.busAssignments[0]?.bus?.plateNumber}</span>
+                                            {schedule.busAssignments[0]?.bus?.template && (
                                                 <Badge variant="outline" className="w-fit">
-                                                    {schedule.bus.template.name}
+                                                    {schedule.busAssignments[0]?.bus?.template?.name}
                                                 </Badge>
                                             )}
                                         </div>
