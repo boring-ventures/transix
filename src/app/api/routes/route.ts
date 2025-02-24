@@ -19,6 +19,7 @@ export async function GET() {
       originId: route.origin_id,
       destinationId: route.destination_id,
       estimatedDuration: route.estimated_duration,
+      departureLane: route.departure_lane,
       active: route.active,
       createdAt: route.created_at,
       updatedAt: route.updated_at,
@@ -68,7 +69,8 @@ export async function POST(request: Request) {
         origin_id: validatedData.originId,
         destination_id: validatedData.destinationId,
         estimated_duration: validatedData.estimatedDuration,
-        active: validatedData.active,
+        departure_lane: validatedData.departureLane,
+        active: true,
       },
       include: {
         locations_routes_origin_idTolocations: true,
@@ -83,6 +85,7 @@ export async function POST(request: Request) {
       originId: route.origin_id,
       destinationId: route.destination_id,
       estimatedDuration: route.estimated_duration,
+      departureLane: route.departure_lane,
       active: route.active,
       createdAt: route.created_at,
       updatedAt: route.updated_at,
@@ -143,6 +146,7 @@ export async function PATCH(request: Request) {
         origin_id: validatedData.originId,
         destination_id: validatedData.destinationId,
         estimated_duration: validatedData.estimatedDuration,
+        departure_lane: validatedData.departureLane,
         active: validatedData.active,
       },
       include: {
@@ -158,6 +162,7 @@ export async function PATCH(request: Request) {
       originId: route.origin_id,
       destinationId: route.destination_id,
       estimatedDuration: route.estimated_duration,
+      departureLane: route.departure_lane,
       active: route.active,
       createdAt: route.created_at,
       updatedAt: route.updated_at,
@@ -196,8 +201,9 @@ export async function DELETE(request: Request) {
       );
     }
 
-    const route = await prisma.routes.delete({
+    const route = await prisma.routes.update({
       where: { id: routeId },
+      data: { active: false },
     });
     
     // Transform the response to match the expected format
@@ -207,6 +213,7 @@ export async function DELETE(request: Request) {
       originId: route.origin_id,
       destinationId: route.destination_id,
       estimatedDuration: route.estimated_duration,
+      departureLane: route.departure_lane,
       active: route.active,
       createdAt: route.created_at,
       updatedAt: route.updated_at,

@@ -23,16 +23,43 @@ export async function POST(request: NextRequest) {
   try {
     const { tickets } = await request.json();
     
-    const createdTickets = await prismaClient.$transaction(
-      tickets.map((ticket: any) =>
-        prismaClient.tickets.create({
-          data: ticket
-        })
-      )
-    );
+    const createdTickets = await prismaClient.$transaction(async (prisma) => {
+      // Crear los tickets
+      const ticketsCreated = await Promise.all(
+        tickets.map((ticket: any) =>
+          prisma.tickets.create({
+            data: ticket
+          })
+        )
+      );
+
+      // Extraer información de pasajeros de las notas
+      const passengerData = tickets.map((ticket: any) => {
+        const noteMatch = ticket.notes.match(/Pasajero: (.*?), Documento: (.*?)$/);
+        return {
+          schedule_id: ticket.schedule_id,
+          full_name: noteMatch ? noteMatch[1] : "Sin nombre",
+          document_id: noteMatch ? noteMatch[2] : null,
+          seat_number: ticket.bus_seat_id,
+          status: "confirmed"
+        };
+      });
+
+      // Crear registros en passenger_lists
+      await Promise.all(
+        passengerData.map((passenger: any) =>
+          prisma.passenger_lists.create({
+            data: passenger
+          })
+        )
+      );
+
+      return ticketsCreated;
+    });
 
     return NextResponse.json(createdTickets);
   } catch (error: any) {
+    console.error("Error creating tickets:", error);
     return NextResponse.json(
       { error: "Error creating tickets", details: error.message },
       { status: 500 }

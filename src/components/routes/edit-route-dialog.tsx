@@ -52,7 +52,7 @@ export function EditRouteDialog({
             originId: route.originId,
             destinationId: route.destinationId,
             estimatedDuration: route.estimatedDuration,
-            active: route.active,
+            departureLane: route.departureLane,
         },
     });
 
@@ -145,6 +145,20 @@ export function EditRouteDialog({
                                             ))}
                                         </SelectContent>
                                     </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="departureLane"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Carril de Salida</FormLabel>
+                                    <FormControl>
+                                        <Input {...field} />
+                                    </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}

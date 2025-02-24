@@ -47,12 +47,17 @@ export function usePassengerList(scheduleId: string) {
     return useQuery({
         queryKey: ["passenger-list", scheduleId],
         queryFn: async () => {
+            if (!scheduleId) return [];
             const response = await fetch(`/api/trips/${scheduleId}/passengers`);
             if (!response.ok) {
+                if (response.status === 404) {
+                    return []; // Return empty array if no passengers found
+                }
                 throw new Error("Error al obtener la lista de pasajeros");
             }
             return response.json();
         },
+        enabled: !!scheduleId,
     });
 }
 

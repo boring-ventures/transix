@@ -8,11 +8,12 @@ export const locationSchema = z.object({
   name: z.string().min(1, "El nombre es requerido").trim(),
 });
 
-const routeSchema = z.object({
-  name: z.string().min(1, "El nombre es requerido").trim(),
-  originId: z.string().uuid("ID de origen inválido"),
-  destinationId: z.string().uuid("ID de destino inválido"),
+export const routeSchema = z.object({
+  name: z.string().min(1, "El nombre es requerido"),
+  originId: z.string().uuid("El origen es requerido"),
+  destinationId: z.string().uuid("El destino es requerido"),
   estimatedDuration: z.number().min(1, "La duración estimada debe ser mayor a 0"),
+  departureLane: z.string().min(1, "El carril de bus es requerido"),
   active: z.boolean().default(true),
 });
 
@@ -51,7 +52,7 @@ export const createRouteScheduleSchema = z.object({
   path: ["seasonStart"],
 });
 
-export const createRouteSchema = routeSchema;
+export const createRouteSchema = routeSchema.omit({ active: true });
 export const updateRouteSchema = routeSchema.partial();
 
 // For route schedules, we'll create a separate update schema since the base schema has refinements

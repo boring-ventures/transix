@@ -7,6 +7,7 @@ import { useState } from "react";
 import { EditRouteDialog } from "./edit-route-dialog";
 import { DeleteRouteDialog } from "./delete-route-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface RoutesTableProps {
   routes: RouteWithRelations[];
@@ -33,6 +34,9 @@ export function RoutesTable({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
 
+  const activeRoutes = routes.filter(route => route.active);
+  const inactiveRoutes = routes.filter(route => !route.active);
+
   const handleEditRoute = async (routeId: string, data: UpdateRouteInput) => {
     try {
       await onEdit?.(routeId, data);
@@ -53,13 +57,13 @@ export function RoutesTable({
     try {
       await onDelete?.(routeId);
       toast({
-        title: "Ruta eliminada",
-        description: "La ruta ha sido eliminada exitosamente.",
+        title: "Ruta desactivada",
+        description: "La ruta ha sido desactivada exitosamente.",
       });
     } catch {
       toast({
         title: "Error",
-        description: "No se pudo eliminar la ruta. Por favor, intenta de nuevo.",
+        description: "No se pudo desactivar la ruta. Por favor, intenta de nuevo.",
         variant: "destructive",
       });
     }
@@ -82,6 +86,11 @@ export function RoutesTable({
       accessorKey: "destination",
       header: "Destino",
       cell: ({ row }) => row.destination?.name,
+    },
+    {
+      id: "departureLane",
+      accessorKey: "departureLane",
+      header: "Carril",
     },
     {
       id: "duration",
@@ -130,11 +139,26 @@ export function RoutesTable({
 
   return (
     <>
-      <DataTable
-        columns={columns}
-        data={routes}
-        onRowClick={onRouteSelect}
-      />
+      <Tabs defaultValue="active" className="w-full">
+        <TabsList>
+          <TabsTrigger value="active">Rutas Activas</TabsTrigger>
+          <TabsTrigger value="inactive">Rutas Inactivas</TabsTrigger>
+        </TabsList>
+        <TabsContent value="active">
+          <DataTable
+            columns={columns}
+            data={activeRoutes}
+            onRowClick={onRouteSelect}
+          />
+        </TabsContent>
+        <TabsContent value="inactive">
+          <DataTable
+            columns={columns}
+            data={inactiveRoutes}
+            onRowClick={onRouteSelect}
+          />
+        </TabsContent>
+      </Tabs>
 
       {selectedRoute && (
         <>

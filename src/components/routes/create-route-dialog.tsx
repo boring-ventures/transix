@@ -25,7 +25,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createRouteSchema } from "@/types/route.types";
@@ -34,15 +33,15 @@ import { useToast } from "@/hooks/use-toast";
 interface CreateRouteDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: CreateRouteInput) => Promise<void>;
   locations: Location[];
+  onSubmit: (data: CreateRouteInput) => Promise<void>;
 }
 
 export function CreateRouteDialog({
   open,
   onOpenChange,
-  onSubmit,
   locations,
+  onSubmit,
 }: CreateRouteDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -53,8 +52,8 @@ export function CreateRouteDialog({
       name: "",
       originId: "",
       destinationId: "",
-      estimatedDuration: 120,
-      active: true,
+      estimatedDuration: 0,
+      departureLane: "",
     },
   });
 
@@ -98,93 +97,84 @@ export function CreateRouteDialog({
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nombre de la Ruta</FormLabel>
+                  <FormLabel>Nombre</FormLabel>
                   <FormControl>
-                    <Input placeholder="Santiago - La Vega" {...field} />
+                    <Input {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="originId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Origen</FormLabel>
-                    <Select
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        // Si el destino seleccionado es igual al nuevo origen, limpiamos el destino
-                        const currentDestination = form.getValues("destinationId");
-                        if (currentDestination === value) {
-                          form.setValue("destinationId", "");
-                        }
-                      }}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar origen" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {locations.map((location) => (
-                          <SelectItem key={location.id} value={location.id}>
-                            {location.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <FormField
+              control={form.control}
+              name="originId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Origen</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona el origen" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {locations.map((location) => (
+                        <SelectItem key={location.id} value={location.id}>
+                          {location.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-              <FormField
-                control={form.control}
-                name="destinationId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Destino</FormLabel>
-                    <Select
-                      onValueChange={(value) => {
-                        // Validación adicional al seleccionar destino
-                        const currentOrigin = form.getValues("originId");
-                        if (value === currentOrigin) {
-                          toast({
-                            title: "Error de selección",
-                            description: "El destino no puede ser igual al origen",
-                            variant: "destructive",
-                          });
-                          return;
-                        }
-                        field.onChange(value);
-                      }}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar destino" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {locations
-                          .filter((location) => location.id !== form.getValues("originId"))
-                          .map((location) => (
-                            <SelectItem key={location.id} value={location.id}>
-                              {location.name}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="destinationId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Destino</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona el destino" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {locations.map((location) => (
+                        <SelectItem key={location.id} value={location.id}>
+                          {location.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="departureLane"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Andén de Salida</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
@@ -196,8 +186,8 @@ export function CreateRouteDialog({
                     <Input
                       type="number"
                       min={1}
-                      {...field}
                       onChange={(e) => field.onChange(parseInt(e.target.value))}
+                      value={field.value}
                     />
                   </FormControl>
                   <FormMessage />
@@ -205,24 +195,7 @@ export function CreateRouteDialog({
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="active"
-              render={({ field }) => (
-                <FormItem className="flex items-center space-x-2">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <FormLabel className="font-normal">Ruta Activa</FormLabel>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <DialogFooter>
+            <div className="flex justify-end space-x-2">
               <Button
                 type="button"
                 variant="outline"
@@ -233,7 +206,7 @@ export function CreateRouteDialog({
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? "Creando..." : "Crear Ruta"}
               </Button>
-            </DialogFooter>
+            </div>
           </form>
         </Form>
       </DialogContent>

@@ -1,5 +1,5 @@
 ## Descripción
-Preparación de gestion de viajes. Se tuvo que hacer un cambio en el esquema de la base de datos para que se pueda guardar el campo de la viaje y ademas, agregar campos con respecto a las demas tasks.
+Ramas 225 y 223
 
 ## Tipo de Cambio
 <!-- Marca con una 'x' los tipos que aplican -->
