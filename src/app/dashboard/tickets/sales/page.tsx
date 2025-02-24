@@ -100,6 +100,7 @@ export default function TicketSales() {
       departureTime: string;
       route: string;
     };
+    purchaseTime?: string;
   } | null>(null);
 
   // Add this state
@@ -157,29 +158,62 @@ export default function TicketSales() {
             email: data.email || ""
           });
           setLookupStatus("found");
+          // Solo se reemplazan los datos si se encontró un cliente
           setCommonPassengerName(data.full_name);
           setCommonPhone(data.phone || "");
           setCommonEmail(data.email || "");
         } else {
           setLookupStatus("not_found");
           setCustomerData(null);
-          setCommonPassengerName("");
-          setCommonPhone("");
-          setCommonEmail("");
+          // No borrar los datos ya ingresados en el formulario
+          // Los campos commonPassengerName, commonPhone y commonEmail se mantienen intactos.
         }
       } else {
         setLookupStatus("not_found");
         setCustomerData(null);
-        setCommonPassengerName("");
-        setCommonPhone("");
-        setCommonEmail("");
+        // No borrar los datos ya ingresados en el formulario
       }
     } catch (error) {
       setLookupStatus("not_found");
       setCustomerData(null);
-      setCommonPassengerName("");
-      setCommonPhone("");
-      setCommonEmail("");
+      // No borrar los datos ya ingresados en el formulario
+    }
+  };
+
+  // Nueva función para registrar un nuevo cliente
+  const registerCustomer = async (): Promise<{
+    id: string;
+    full_name: string;
+    phone?: string;
+    email?: string;
+  }> => {
+    try {
+      const response = await fetch("/api/customers", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          documentId: commonDocumentId,
+          full_name: commonPassengerName,
+          phone: commonPhone,
+          email: commonEmail,
+        }),
+      });
+      if (!response.ok) {
+        throw new Error("Error al registrar el cliente");
+      }
+      const newCustomer = await response.json();
+      setCustomerData({
+        id: newCustomer.id,
+        full_name: newCustomer.full_name,
+        phone: newCustomer.phone || "",
+        email: newCustomer.email || "",
+      });
+      return newCustomer;
+    } catch (error) {
+      console.error("Error al registrar cliente", error);
+      throw error;
     }
   };
 
@@ -222,27 +256,56 @@ export default function TicketSales() {
 
   const handleSubmit = async () => {
     try {
-      const ticketsToCreate = Object.entries(passengers).map(([seatId, passenger]) => ({
-        schedule_id: selectedSchedule!.id,
-        customer_id: customerData?.id || null,
-        bus_seat_id: seatId,
-        status: 'active' as const,
-        price: passenger.price,
-        notes: `Pasajero: ${passenger.name}, Documento: ${passenger.document_id}`,
-        purchased_by: null, // ID del vendedor si está disponible
-        purchased_at: new Date(),
-      }));
+      // Registrar el cliente si no existe antes de crear los tickets
+      let effectiveCustomer = customerData;
+      if (!effectiveCustomer) {
+        effectiveCustomer = await registerCustomer();
+      }
 
-      const response = await fetch('/api/tickets', {
-        method: 'POST',
+      // Si no se han registrado tickets individualmente (es decir, no se ha llamado a handleRegisterTickets),
+      // se autocompletan usando los datos comunes y cada asiento seleccionado.
+      let filledPassengers = passengers;
+      if (selectedSeats.length > 0 && Object.keys(filledPassengers).length === 0) {
+        const currentBus = selectedSchedule!.busAssignments?.[0]?.bus;
+        const newPassengers: Record<string, Passenger> = {};
+        selectedSeats.forEach((seatId) => {
+          const seatObj = currentBus?.seats.find((s: any) => s.id === seatId);
+          const tier = seatTiers?.find((t: any) => t.id === seatObj?.tier?.id);
+          const price = tier ? Number(tier.basePrice) : 0;
+          newPassengers[seatId] = {
+            name: commonPassengerName,
+            document_id: commonDocumentId,
+            seatId: seatId,
+            seatLabel: seatObj?.seatNumber ?? seatId,
+            price: price,
+          };
+        });
+        filledPassengers = newPassengers;
+      }
+
+      const ticketsToCreate = Object.entries(filledPassengers).map(
+        ([seatId, passenger]) => ({
+          schedule_id: selectedSchedule!.id,
+          customer_id: effectiveCustomer.id, // Usar el id del cliente registrado
+          bus_seat_id: seatId,
+          status: "active" as const,
+          price: passenger.price,
+          notes: `Pasajero: ${passenger.name}, Documento: ${passenger.document_id}`,
+          purchased_by: null,
+          purchased_at: new Date(),
+        })
+      );
+
+      const response = await fetch("/api/tickets", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ tickets: ticketsToCreate }),
       });
 
       if (!response.ok) {
-        throw new Error('Error al crear los tickets');
+        throw new Error("Error al crear los tickets");
       }
 
       const createdTickets = await response.json();
@@ -250,12 +313,16 @@ export default function TicketSales() {
       setConfirmedReservation({
         reservationId: `RES-${Math.random().toString(36).substr(2, 9)}`,
         tickets: createdTickets,
-        totalAmount: Object.values(passengers).reduce((sum, p) => sum + p.price, 0),
+        totalAmount: Object.values(filledPassengers).reduce(
+          (sum, p) => sum + p.price,
+          0
+        ),
         schedule: {
           departureDate: new Date(selectedSchedule!.departureDate).toLocaleDateString(),
           departureTime: new Date(selectedSchedule!.departureDate).toLocaleTimeString(),
           route: selectedRoute!.name,
         },
+        purchaseTime: new Date().toLocaleTimeString(),
       });
 
       toast({
@@ -710,12 +777,6 @@ export default function TicketSales() {
                       placeholder="Ingrese el email"
                     />
                   </div>
-                  <Button
-                    onClick={handleRegisterTickets}
-                    disabled={!commonPassengerName || !commonDocumentId}
-                  >
-                    Registrar Ticket
-                  </Button>
                 </div>
               )}
             </div>
@@ -758,26 +819,29 @@ export default function TicketSales() {
                 <div className="border rounded-lg">
                   <h4 className="text-lg font-semibold p-4 border-b">Tickets</h4>
                   <div className="divide-y">
-                    {confirmedReservation.tickets.map((ticket) => (
-                      <div key={ticket.bus_seat_id} className="p-4 grid grid-cols-4 gap-4">
-                        <div>
-                          <p className="text-sm text-muted-foreground">Asiento</p>
-                          <p className="font-medium">{ticket.bus_seat_id}</p>
+                    {confirmedReservation.tickets.map((ticket) => {
+                      const ticketData = passengers[ticket.bus_seat_id] || {};
+                      return (
+                        <div key={ticket.bus_seat_id} className="p-4 grid grid-cols-4 gap-4">
+                          <div>
+                            <p className="text-sm text-muted-foreground">Asiento</p>
+                            <p className="font-medium">{ticketData.seatLabel || ticket.bus_seat_id}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Pasajero</p>
+                            <p className="font-medium">{ticketData.name ?? ticket.customer_id ?? ""}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Documento</p>
+                            <p className="font-medium">{ticketData.document_id || "N/A"}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Precio</p>
+                            <p className="font-medium">${ticket.price}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Pasajero</p>
-                          <p className="font-medium">{ticket.customer_id}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Documento</p>
-                          <p className="font-medium">{ticket.status}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Precio</p>
-                          <p className="font-medium">${ticket.price}</p>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                   <div className="p-4 border-t bg-muted">
                     <div className="flex justify-between items-center">
@@ -787,14 +851,6 @@ export default function TicketSales() {
                       </span>
                     </div>
                   </div>
-                </div>
-
-                {/* Sección de vista previa de los datos de los tickets (en formato JSON) */}
-                <div className="bg-gray-100 p-4 rounded-lg">
-                  <h3 className="text-lg font-semibold">Vista Previa de Tickets</h3>
-                  <pre className="text-sm mt-2 whitespace-pre-wrap">
-                    {JSON.stringify(confirmedReservation.tickets, null, 2)}
-                  </pre>
                 </div>
 
                 <div className="flex justify-center gap-4 mt-6">
@@ -823,17 +879,20 @@ export default function TicketSales() {
 
                 {showPDF && (
                   <div className="mt-4">
-                    {/* <ReservationPDF 
+                    <ReservationPDF 
                       reservation={{
-                        ...confirmedReservation!,
-                        tickets: confirmedReservation!.tickets.map(ticket => ({
-                          seatNumber: passengers[ticket.bus_seat_id].seatLabel,
-                          passengerName: ticket.passengerName,
-                          documentId: ticket.documentId,
-                          price: ticket.price
-                        }))
+                        ...confirmedReservation,
+                        tickets: confirmedReservation.tickets.map(ticket => {
+                          const ticketData = passengers[ticket.bus_seat_id] || {};
+                          return {
+                            seatNumber: ticketData.seatLabel || ticket.bus_seat_id,
+                            passengerName: ticketData.name ?? ticket.customer_id ?? "",
+                            documentId: ticketData.document_id || "N/A",
+                            price: ticket.price
+                          };
+                        })
                       }} 
-                    /> */}
+                    />
                   </div>
                 )}
               </div>
@@ -875,9 +934,7 @@ export default function TicketSales() {
             <Button
               className="ml-auto"
               onClick={handleSubmit}
-              disabled={Object.values(passengers).some(
-                (p) => !p.name || !p.document_id
-              )}
+              disabled={!commonPassengerName || !commonDocumentId || selectedSeats.length === 0}
             >
               Confirmar Reserva
             </Button>

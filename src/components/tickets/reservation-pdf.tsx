@@ -88,6 +88,7 @@ interface ReservationPDFProps {
       departureTime: string;
       route: string;
     };
+    purchaseTime?: string;
   };
 }
 
@@ -101,6 +102,11 @@ export function ReservationPDF({ reservation }: ReservationPDFProps) {
             <Text style={styles.reservationId}>
               Reserva #{reservation.reservationId}
             </Text>
+            {reservation.purchaseTime && (
+              <Text style={styles.reservationId}>
+                Hora de Compra: {reservation.purchaseTime}
+              </Text>
+            )}
           </View>
 
           <View style={styles.section}>
@@ -148,13 +154,13 @@ export function ReservationPDF({ reservation }: ReservationPDFProps) {
                     ? "Ejecutivo"
                     : "Económico"}
                 </Text>
-                <Text style={styles.ticketCol}>${ticket.price.toFixed(2)}</Text>
+                <Text style={styles.ticketCol}>${ticket.price}</Text>
               </View>
             ))}
             <View style={styles.total}>
               <Text style={{ fontSize: 12, fontWeight: "bold" }}>Total</Text>
               <Text style={{ fontSize: 12, fontWeight: "bold" }}>
-                ${reservation.totalAmount.toFixed(2)}
+                ${reservation.totalAmount}
               </Text>
             </View>
           </View>
