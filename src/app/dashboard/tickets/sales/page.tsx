@@ -17,8 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useRoutes, useRouteSchedules } from "@/hooks/useRoutes";
 import { useLocations } from "@/hooks/useLocations";
 import { LoadingTable } from "@/components/table/loading-table";
-import { Route, RouteSchedule } from "@/types/route.types";
-import { Schedule } from "@/types/route.types";
+import { Route, RouteSchedule, Schedule } from "@/types/route.types";
 import { Location } from "@/types/route.types";
 import { useSchedulesByRouteSchedule } from "@/hooks/useSchedules";
 import { StepIndicator } from "../../../../components/tickets/step-indicator";
@@ -64,6 +63,44 @@ type ConfirmedReservation = {
     route: string;
   };
   purchaseTime?: string;
+};
+
+// Actualizar el tipo de template para incluir seatTemplateMatrix
+type BusTemplate = {
+  id: string;
+  name: string;
+  type: string;
+  seatsLayout: string;
+  seatTemplateMatrix?: {
+    firstFloor: {
+      dimensions: {
+        rows: number;
+        seatsPerRow: number;
+      };
+      seats: {
+        id: string;
+        name: string;
+        tierId: string;
+        row: number;
+        column: number;
+        isEmpty: boolean;
+      }[];
+    };
+    secondFloor?: {
+      dimensions: {
+        rows: number;
+        seatsPerRow: number;
+      };
+      seats: {
+        id: string;
+        name: string;
+        tierId: string;
+        row: number;
+        column: number;
+        isEmpty: boolean;
+      }[];
+    };
+  };
 };
 
 export default function TicketSales() {
@@ -199,6 +236,22 @@ export default function TicketSales() {
     email?: string;
   }> => {
     try {
+      // Primero verificamos si el cliente ya existe
+      const existingCustomerResponse = await fetch(`/api/customers?documentId=${commonDocumentId}`);
+      if (existingCustomerResponse.ok) {
+        const existingCustomer = await existingCustomerResponse.json();
+        if (existingCustomer && existingCustomer.id) {
+          setCustomerData({
+            id: existingCustomer.id,
+            full_name: existingCustomer.full_name,
+            phone: existingCustomer.phone || "",
+            email: existingCustomer.email || "",
+          });
+          return existingCustomer;
+        }
+      }
+
+      // Si no existe, procedemos a crearlo
       const response = await fetch("/api/customers", {
         method: "POST",
         headers: {
@@ -211,19 +264,27 @@ export default function TicketSales() {
           email: commonEmail,
         }),
       });
+
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error("Error al registrar el cliente");
+        throw new Error(data.error || "Error al registrar el cliente");
       }
-      const newCustomer = await response.json();
+
       setCustomerData({
-        id: newCustomer.id,
-        full_name: newCustomer.full_name,
-        phone: newCustomer.phone || "",
-        email: newCustomer.email || "",
+        id: data.id,
+        full_name: data.full_name,
+        phone: data.phone || "",
+        email: data.email || "",
       });
-      return newCustomer;
+      return data;
     } catch (error) {
-      console.error("Error al registrar cliente", error);
+      console.error("Error al registrar cliente:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Error al registrar el cliente",
+        variant: "destructive",
+      });
       throw error;
     }
   };
@@ -274,7 +335,7 @@ export default function TicketSales() {
 
       let filledPassengers = passengers;
       if (selectedSeats.length > 0 && Object.keys(filledPassengers).length === 0) {
-        const currentBus = selectedSchedule!.busAssignments?.[0]?.bus;
+        const currentBus = selectedSchedule!.bus;
         const newPassengers: Record<string, Passenger> = {};
         selectedSeats.forEach((seatId) => {
           const seatObj = currentBus?.seats.find((s: any) => s.id === seatId);
@@ -397,7 +458,7 @@ export default function TicketSales() {
   // Nueva función para registrar tickets para todos los asientos seleccionados utilizando datos comunes
   const handleRegisterTickets = () => {
     if (!selectedSchedule) return;
-    const currentBus = selectedSchedule.busAssignments?.[0]?.bus;
+    const currentBus = selectedSchedule.bus;
     if (!currentBus) return;
 
     selectedSeats.forEach((seatId) => {
@@ -462,22 +523,16 @@ export default function TicketSales() {
                 </CardContent>
               </Card>
             ) : (
-              routeSchedules.map((schedule) => (
+              routeSchedules.map((schedule: RouteSchedule) => (
                 <Card
                   key={schedule.id}
                   className={`cursor-pointer transition-colors hover:border-primary
-                    ${
-                      selectedRouteSchedule?.id === schedule.id
-                        ? "border-primary bg-primary/5"
-                        : ""
-                    }`}
+                    ${selectedRouteSchedule?.id === schedule.id ? "border-primary bg-primary/5" : ""}`}
                   onClick={() => setSelectedRouteSchedule(schedule)}
                 >
                   <CardHeader>
                     <CardTitle>
-                      {new Date(
-                        `1970-01-01T${schedule.departureTime}`
-                      ).toLocaleTimeString([], {
+                      {new Date(`1970-01-01T${schedule.departureTime}`).toLocaleTimeString([], {
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
@@ -516,15 +571,11 @@ export default function TicketSales() {
                 </CardContent>
               </Card>
             ) : (
-              availableSchedules.map((schedule) => (
+              availableSchedules.map((schedule: Schedule) => (
                 <Card
                   key={schedule.id}
                   className={`cursor-pointer transition-colors hover:border-primary
-                    ${
-                      selectedSchedule?.id === schedule.id
-                        ? "border-primary bg-primary/5"
-                        : ""
-                    }`}
+                    ${selectedSchedule?.id === schedule.id ? "border-primary bg-primary/5" : ""}`}
                   onClick={() => setSelectedSchedule(schedule)}
                 >
                   <CardHeader>
@@ -532,18 +583,13 @@ export default function TicketSales() {
                       {new Date(schedule.departureDate).toLocaleDateString()}
                     </CardTitle>
                     <CardDescription>
-                      Salida:{" "}
-                      {new Date(schedule.departureDate).toLocaleTimeString()}
+                      Salida: {new Date(schedule.departureDate).toLocaleTimeString()}
                       <br />
-                      Llegada est.:{" "}
-                      {new Date(
-                        schedule.estimatedArrivalTime
-                      ).toLocaleTimeString()}
-                      {schedule.busAssignments?.[0]?.bus && (
+                      Llegada est.: {new Date(schedule.estimatedArrivalTime).toLocaleTimeString()}
+                      {schedule.bus && (
                         <div>
-                          Bus: {schedule.busAssignments[0].bus.plateNumber}
-                          {schedule.busAssignments[0].bus.template &&
-                            ` (${schedule.busAssignments[0].bus.template.name})`}
+                          Bus: {schedule.bus.plateNumber}
+                          {schedule.bus.template && ` (${schedule.bus.template.name})`}
                         </div>
                       )}
                     </CardDescription>
@@ -557,7 +603,7 @@ export default function TicketSales() {
       case 5:
         if (!selectedSchedule) return null;
 
-        const currentBus = selectedSchedule.busAssignments?.[0]?.bus;
+        const currentBus = selectedSchedule.bus;
 
         if (!currentBus) {
           return (
@@ -570,8 +616,8 @@ export default function TicketSales() {
           );
         }
         
-        // Se obtiene la plantilla desde la relación "bus_type_templates" y el campo "seat_template_matrix"
-        const seatTemplateMatrix = currentBus.template?.seatTemplateMatrix;
+        const template = currentBus.template as BusTemplate | undefined;
+        const seatTemplateMatrix = template?.seatTemplateMatrix;
         let templateData = null;
         if (seatTemplateMatrix) {
           templateData = typeof seatTemplateMatrix === "string" ? JSON.parse(seatTemplateMatrix) : seatTemplateMatrix;

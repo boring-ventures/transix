@@ -257,7 +257,7 @@ export default function RoutesPage() {
     schedule.routeScheduleId === selectedRouteSchedule?.id
   );
 
-  const handleEditSchedule = async (scheduleId: string, data: { departureDate: string; departureTime: string; price: number }) => {
+  const handleEditSchedule = async (scheduleId: string, data: { departureDate: string; departureTime: string; }) => {
     try {
       const response = await fetch(`/api/schedules`, {
         method: "PUT",
@@ -265,7 +265,6 @@ export default function RoutesPage() {
         body: JSON.stringify({
           id: scheduleId,
           departure_date: new Date(`${data.departureDate}T${data.departureTime}`),
-          price: data.price,
         }),
       });
 

@@ -49,7 +49,19 @@ export async function GET(request: Request) {
               }
             }
           }
-        }
+        },
+        buses: {
+          include: {
+            bus_type_templates: true,
+            bus_seats: {
+              include: {
+                seat_tiers: true
+              }
+            }
+          }
+        },
+        primary_driver: true,
+        secondary_driver: true
       },
     });
 
@@ -59,6 +71,8 @@ export async function GET(request: Request) {
       routeId: schedule.route_id,
       routeScheduleId: schedule.route_schedule_id,
       busId: schedule.bus_id,
+      primaryDriverId: schedule.primary_driver_id,
+      secondaryDriverId: schedule.secondary_driver_id,
       departureDate: schedule.departure_date,
       estimatedArrivalTime: schedule.estimated_arrival_time,
       actualDepartureTime: schedule.actual_departure_time,
@@ -74,6 +88,39 @@ export async function GET(request: Request) {
         destinationId: schedule.routes.destination_id,
         estimatedDuration: schedule.routes.estimated_duration,
       } : null,
+      bus: schedule.buses ? {
+        id: schedule.buses.id,
+        plateNumber: schedule.buses.plate_number,
+        template: schedule.buses.bus_type_templates ? {
+          id: schedule.buses.bus_type_templates.id,
+          name: schedule.buses.bus_type_templates.name,
+          type: schedule.buses.bus_type_templates.type,
+        } : undefined,
+        seats: schedule.buses.bus_seats.map(seat => ({
+          id: seat.id,
+          seatNumber: seat.seat_number,
+          status: seat.status,
+          tier: seat.seat_tiers ? {
+            id: seat.seat_tiers.id,
+            name: seat.seat_tiers.name,
+            basePrice: seat.seat_tiers.base_price
+          } : undefined
+        }))
+      } : undefined,
+      primaryDriver: schedule.primary_driver ? {
+        id: schedule.primary_driver.id,
+        fullName: schedule.primary_driver.full_name,
+        documentId: schedule.primary_driver.document_id,
+        licenseNumber: schedule.primary_driver.license_number,
+        licenseCategory: schedule.primary_driver.license_category,
+      } : undefined,
+      secondaryDriver: schedule.secondary_driver ? {
+        id: schedule.secondary_driver.id,
+        fullName: schedule.secondary_driver.full_name,
+        documentId: schedule.secondary_driver.document_id,
+        licenseNumber: schedule.secondary_driver.license_number,
+        licenseCategory: schedule.secondary_driver.license_category,
+      } : undefined,
     }));
 
     return NextResponse.json(transformedSchedules);
@@ -153,10 +200,10 @@ export async function POST(request: Request) {
           data: {
             route_id: routeId,
             route_schedule_id: routeScheduleId,
-            bus_id: busId || null,
+            bus_id: busId,
             primary_driver_id: primaryDriverId || null,
             secondary_driver_id: secondaryDriverId || null,
-            departure_date: date,
+            departure_date: departureDateTime,
             estimated_arrival_time: estimatedArrivalDateTime,
             actual_departure_time: null,
             actual_arrival_time: null,

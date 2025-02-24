@@ -95,7 +95,7 @@ export function RoutesTable({
     {
       id: "duration",
       accessorKey: "estimatedDuration",
-      header: "Duración (min)",
+      header: "Dur. Estimada (min)",
     },
     {
       id: "actions",

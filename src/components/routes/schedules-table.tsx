@@ -28,7 +28,7 @@ interface SchedulesTableProps {
   routes: Route[];
   onScheduleSelect: (schedule: Schedule) => void;
   onAssignBus?: (schedule: Schedule) => void;
-  onEditSchedule?: (scheduleId: string, data: { departureDate: string; departureTime: string; price: number }) => Promise<void>;
+  onEditSchedule?: (scheduleId: string, data: { departureDate: string; departureTime: string; }) => Promise<void>;
   onDeleteSchedule?: (scheduleId: string) => Promise<void>;
 }
 
@@ -44,7 +44,7 @@ export function SchedulesTable({
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
 
-  const handleEditSchedule = async (scheduleId: string, data: { departureDate: string; departureTime: string; price: number }) => {
+  const handleEditSchedule = async (scheduleId: string, data: { departureDate: string; departureTime: string; }) => {
     if (onEditSchedule) {
       await onEditSchedule(scheduleId, data);
       setEditDialogOpen(false);
@@ -170,10 +170,12 @@ export function SchedulesTable({
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <h4 className="font-medium mb-2">Bus Asignado</h4>
-                    {selectedSchedule.bus ? (
+                    {selectedSchedule?.bus ? (
                       <div className="text-sm">
                         <p>Placa: {selectedSchedule.bus.plateNumber}</p>
                         <p>Tipo: {selectedSchedule.bus.template?.type}</p>
+                        <p>Modelo: {selectedSchedule.bus.template?.name || 'N/A'}</p>
+                        <p>Asientos: {selectedSchedule.bus.seats?.length || 0}</p>
                       </div>
                     ) : (
                       <p className="text-sm text-muted-foreground">Sin bus asignado</p>
@@ -182,20 +184,33 @@ export function SchedulesTable({
                   <div>
                     <h4 className="font-medium mb-2">Conductores</h4>
                     <div className="text-sm">
-                      <p>Principal: {selectedSchedule.primaryDriver?.fullName || 'No asignado'}</p>
-                      <p>Secundario: {selectedSchedule.secondaryDriver?.fullName || 'No asignado'}</p>
+                      <div className="mb-2">
+                        <p className="font-medium text-muted-foreground">Principal:</p>
+                        {selectedSchedule?.primaryDriver ? (
+                          <>
+                            <p>{selectedSchedule.primaryDriver.fullName}</p>
+                            <p>Licencia: {selectedSchedule.primaryDriver.licenseNumber}</p>
+                            <p>Categoría: {selectedSchedule.primaryDriver.licenseCategory}</p>
+                          </>
+                        ) : (
+                          <p className="text-muted-foreground">No asignado</p>
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-medium text-muted-foreground">Secundario:</p>
+                        {selectedSchedule?.secondaryDriver ? (
+                          <>
+                            <p>{selectedSchedule.secondaryDriver.fullName}</p>
+                            <p>Licencia: {selectedSchedule.secondaryDriver.licenseNumber}</p>
+                            <p>Categoría: {selectedSchedule.secondaryDriver.licenseCategory}</p>
+                          </>
+                        ) : (
+                          <p className="text-muted-foreground">No asignado</p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-                {selectedSchedule.bus && (
-                  <div>
-                    <h4 className="font-medium mb-2">Detalles del Bus</h4>
-                    <div className="text-sm">
-                      <p>Asientos: {selectedSchedule.bus.seats?.length || 0}</p>
-                      <p>Modelo: {selectedSchedule.bus.template?.name || 'N/A'}</p>
-                    </div>
-                  </div>
-                )}
               </div>
             </DialogContent>
           </Dialog>
