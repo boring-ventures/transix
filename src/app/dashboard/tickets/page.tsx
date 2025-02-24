@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/table/data-table";
 import { Column } from "@/components/table/types";
@@ -30,53 +30,29 @@ type TicketWithDetails = {
 };
 
 export default function TicketList() {
-  // Mock data - this would come from local storage in production
-  const [tickets] = useState<TicketWithDetails[]>([
-    {
-      id: "1",
-      routeId: "1",
-      scheduleId: "1",
-      seatNumber: "A1",
-      seatTier: "economy",
-      passengerName: "Juan Pérez",
-      passengerCI: "1234567",
-      price: 50,
-      status: "confirmed",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      route: {
-        name: "La Paz - Santa Cruz",
-        origin: "La Paz",
-        destination: "Santa Cruz",
-      },
-      schedule: {
-        departureDate: "2024-01-20",
-        departureTime: "08:00",
-      },
-    },
-    {
-      id: "2",
-      routeId: "1",
-      scheduleId: "2",
-      seatNumber: "B2",
-      seatTier: "business",
-      passengerName: "María García",
-      passengerCI: "7654321",
-      price: 75,
-      status: "pending",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      route: {
-        name: "La Paz - Santa Cruz",
-        origin: "La Paz",
-        destination: "Santa Cruz",
-      },
-      schedule: {
-        departureDate: "2024-01-20",
-        departureTime: "14:00",
-      },
-    },
-  ]);
+  // Se elimina el estado con datos estáticos
+  const [tickets, setTickets] = useState<TicketWithDetails[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Se realiza el fetch de datos a nuestro endpoint del API
+  useEffect(() => {
+    async function fetchTickets() {
+      try {
+        const response = await fetch("/api/tickets");
+        if (response.ok) {
+          const data = await response.json();
+          setTickets(data);
+        } else {
+          console.error("Error al obtener los tickets:", response.statusText);
+        }
+      } catch (error) {
+        console.error("Error al obtener los tickets:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchTickets();
+  }, []);
 
   const columns: Column<TicketWithDetails>[] = [
     {
@@ -150,6 +126,15 @@ export default function TicketList() {
       },
     },
   ];
+
+  // Se muestra un estado de carga mientras se obtienen los datos
+  if (loading) {
+    return (
+      <div>
+        <p>Cargando tickets...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
