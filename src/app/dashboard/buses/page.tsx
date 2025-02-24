@@ -221,17 +221,17 @@ export default function BusesPage() {
     },
     {
       id: "template",
-      accessorKey: "template",
+      accessorKey: "bus_type_templates",
       header: "Plantilla",
       cell: ({ row }) => {
-        if (!row.template) {
+        if (!row.bus_type_templates) {
           return <span className="text-gray-400 italic">Sin plantilla</span>;
         }
         return (
           <div className="flex flex-col gap-1">
-            <span>{row.template.name}</span>
+            <span>{row.template?.name}</span>
             <Badge variant="secondary" className="w-fit">
-              {row.template.totalCapacity} asientos
+              {row.template?.totalCapacity} asientos
             </Badge>
           </div>
         );
