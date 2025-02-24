@@ -26,6 +26,8 @@ import { RouteSelectionStep } from "../../../../components/tickets/route-selecti
 import { SALES_STEPS } from "./types";
 import { SeatSelectionStep } from "../../../../components/tickets/seat-selection-step";
 import { ReservationPDF } from "../../../../components/tickets/reservation-pdf";
+import { TicketPDF } from "../../../../components/tickets/ticket-pdf";
+import { InvoicePDF } from "../../../../components/tickets/invoice-pdf";
 
 type Passenger = {
   name: string;
@@ -151,8 +153,9 @@ export default function TicketSales() {
   // In the TicketSales component, add this state
   const [confirmedReservation, setConfirmedReservation] = useState<ConfirmedReservation | null>(null);
 
-  // Add this state
-  const [showPDF, setShowPDF] = useState(false);
+  // Modify the showPDF state to handle both PDFs
+  const [showTicketPDF, setShowTicketPDF] = useState(false);
+  const [showInvoicePDF, setShowInvoicePDF] = useState(false);
 
   // Estado para la lógica de asientos (consulta de niveles)
   const { data: seatTiers } = useSeatTiers();
@@ -722,7 +725,7 @@ export default function TicketSales() {
                             ? "Disponible"
                             : "Deshabilitado"}
                         </Badge>
-                        {tier && <span className="text-xs mt-1">{`$${price.toFixed(2)}`}</span>}
+                        {tier && <span className="text-xs mt-1">{`Bs. ${price.toFixed(2)}`}</span>}
                       </button>
                     );
                   })}
@@ -771,7 +774,7 @@ export default function TicketSales() {
                             : "Deshabilitado"}
                         </Badge>
                         {tier && (
-                          <span className="text-xs mt-1">{`$${price.toFixed(2)}`}</span>
+                          <span className="text-xs mt-1">{`Bs. ${price.toFixed(2)}`}</span>
                         )}
                       </button>
                     );
@@ -795,7 +798,7 @@ export default function TicketSales() {
                   </div>
                   <div className="mb-4">
                     <span className="font-bold">Total: </span>
-                    <span>{`$${totalPrice.toFixed(2)}`}</span>
+                    <span>{`Bs. ${totalPrice.toFixed(2)}`}</span>
                   </div>
                   <div className="mb-2">
                     <label className="block text-sm">Nombre del pasajero</label>
@@ -922,7 +925,7 @@ export default function TicketSales() {
                           </div>
                           <div>
                             <p className="text-sm text-muted-foreground">Precio</p>
-                            <p className="font-medium">${ticket.price}</p>
+                            <p className="font-medium">Bs. {ticket.price}</p>
                           </div>
                         </div>
                       );
@@ -932,7 +935,7 @@ export default function TicketSales() {
                     <div className="flex justify-between items-center">
                       <span className="font-semibold">Total</span>
                       <span className="text-lg font-bold">
-                        ${confirmedReservation.totalAmount.toFixed(2)}
+                        Bs. {confirmedReservation.totalAmount.toFixed(2)}
                       </span>
                     </div>
                   </div>
@@ -941,9 +944,15 @@ export default function TicketSales() {
                 <div className="flex justify-center gap-4 mt-6">
                   <Button
                     variant="outline"
-                    onClick={() => setShowPDF(!showPDF)}
+                    onClick={() => setShowTicketPDF(!showTicketPDF)}
                   >
-                    {showPDF ? "Ocultar PDF" : "Ver PDF"}
+                    {showTicketPDF ? "Ocultar Boletos" : "Ver Boletos"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowInvoicePDF(!showInvoicePDF)}
+                  >
+                    {showInvoicePDF ? "Ocultar Factura" : "Ver Factura"}
                   </Button>
                   <Button
                     onClick={() => {
@@ -962,7 +971,7 @@ export default function TicketSales() {
                   </Button>
                 </div>
 
-                {showPDF && (
+                {showTicketPDF && (
                   <div className="mt-4">
                     <ReservationPDF 
                       reservation={{
@@ -974,6 +983,45 @@ export default function TicketSales() {
                           price: ticket.price
                         }))
                       }} 
+                    />
+                  </div>
+                )}
+
+                {showTicketPDF && confirmedReservation && (
+                  <div className="mt-4 space-y-4">
+                    {confirmedReservation.tickets.map((ticket, index) => (
+                      <TicketPDF
+                        key={index}
+                        ticket={{
+                          seatNumber: ticket.customerData.seatNumber,
+                          passengerName: ticket.customerData.fullName,
+                          documentId: ticket.customerData.documentId,
+                          price: Number(ticket.price)
+                        }}
+                        schedule={confirmedReservation.schedule}
+                        reservationId={confirmedReservation.reservationId}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {showInvoicePDF && confirmedReservation && (
+                  <div className="mt-4">
+                    <InvoicePDF
+                      invoiceData={{
+                        invoiceNumber: confirmedReservation.reservationId,
+                        customerName: confirmedReservation.tickets[0].customerData.fullName,
+                        customerId: confirmedReservation.tickets[0].customerData.documentId,
+                        customerPhone: confirmedReservation.tickets[0].customerData.phone,
+                        customerEmail: confirmedReservation.tickets[0].customerData.email,
+                        tickets: confirmedReservation.tickets.map(ticket => ({
+                          seatNumber: ticket.customerData.seatNumber,
+                          price: Number(ticket.price)
+                        })),
+                        totalAmount: Number(confirmedReservation.totalAmount),
+                        date: new Date().toLocaleDateString(),
+                        route: confirmedReservation.schedule.route
+                      }}
                     />
                   </div>
                 )}
