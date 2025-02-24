@@ -11,8 +11,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Edit, Eye, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { Edit, Eye, Trash2, Users } from "lucide-react";
+import { useState, useEffect } from "react";
 import { EditScheduleDialog } from "./edit-schedule-dialog";
 import {
   Dialog,
@@ -20,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useQuery } from "@tanstack/react-query";
 
 // Shows a table with the available schedules
 
@@ -43,6 +44,24 @@ export function SchedulesTable({
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+
+  // Usar React Query para manejar el estado de las listas de pasajeros
+  const { data: passengerLists } = useQuery({
+    queryKey: ['passenger-lists'],
+    queryFn: async () => {
+      const response = await fetch('/api/passenger-lists');
+      if (!response.ok) {
+        return [];
+      }
+      return response.json();
+    },
+    staleTime: 30000, // Los datos se consideran frescos por 30 segundos
+    gcTime: 5 * 60 * 1000, // Mantener en caché por 5 minutos
+  });
+
+  const hasPassengerList = (scheduleId: string) => {
+    return passengerLists?.some((list: any) => list.schedule_id === scheduleId) ?? false;
+  };
 
   const handleEditSchedule = async (scheduleId: string, data: { departureDate: string; departureTime: string; }) => {
     if (onEditSchedule) {
@@ -93,6 +112,7 @@ export function SchedulesTable({
               <TableHead>Fecha</TableHead>
               <TableHead>Hora</TableHead>
               <TableHead>Estado</TableHead>
+              <TableHead>Lista de Pasajeros</TableHead>
               <TableHead>Acciones</TableHead>
             </TableRow>
           </TableHeader>
@@ -111,6 +131,12 @@ export function SchedulesTable({
                 <TableCell>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(schedule.status)}`}>
                     {getStatusText(schedule.status)}
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <span className={`flex items-center gap-2 ${hasPassengerList(schedule.id) ? 'text-green-600' : 'text-gray-400'}`}>
+                    <Users className="h-4 w-4" />
+                    {hasPassengerList(schedule.id) ? 'Registrada' : 'Sin registrar'}
                   </span>
                 </TableCell>
                 <TableCell>

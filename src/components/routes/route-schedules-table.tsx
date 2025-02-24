@@ -261,29 +261,33 @@ export function RouteSchedulesTable({
           <DialogHeader>
             <DialogTitle>Generar Viajes</DialogTitle>
             <DialogDescription>
-              {selectedScheduleForGeneration?.seasonStart && selectedScheduleForGeneration?.seasonEnd ? (
-                <>
-                  Los viajes se generarán para el periodo:
-                  <div className="mt-2 p-2 bg-muted rounded-md">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      <span className="font-medium">
-                        {format(new Date(selectedScheduleForGeneration.seasonStart), "dd MMM yyyy", { locale: es })} -{" "}
-                        {format(new Date(selectedScheduleForGeneration.seasonEnd), "dd MMM yyyy", { locale: es })}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="mt-2">
-                    Días de operación: <span className="font-medium">{formatOperatingDays(selectedScheduleForGeneration.operatingDays)}</span>
-                  </div>
-                </>
-              ) : (
-                <div className="text-yellow-600">
-                  Este horario no tiene un periodo definido. Por favor, defina un periodo en la configuración del horario.
-                </div>
-              )}
+              {selectedScheduleForGeneration?.seasonStart && selectedScheduleForGeneration?.seasonEnd 
+                ? "Configure los detalles para generar los viajes en el periodo seleccionado"
+                : "Este horario no tiene un periodo definido. Por favor, defina un periodo en la configuración del horario."
+              }
             </DialogDescription>
           </DialogHeader>
+
+          {selectedScheduleForGeneration?.seasonStart && selectedScheduleForGeneration?.seasonEnd && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <h4 className="font-medium">Periodo de generación:</h4>
+                <div className="p-2 bg-muted rounded-md">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    <span className="font-medium">
+                      {format(new Date(selectedScheduleForGeneration.seasonStart), "dd MMM yyyy", { locale: es })} -{" "}
+                      {format(new Date(selectedScheduleForGeneration.seasonEnd), "dd MMM yyyy", { locale: es })}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <span className="font-medium">Días de operación: </span>
+                  <span>{formatOperatingDays(selectedScheduleForGeneration.operatingDays)}</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">

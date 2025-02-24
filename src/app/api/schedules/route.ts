@@ -425,15 +425,12 @@ export async function DELETE(request: Request) {
       );
     }
 
-    // Verify the schedule exists and check all its dependencies
+    // Verify the schedule exists and check critical dependencies
     const existingSchedule = await prisma.schedules.findUnique({
       where: { id },
       include: {
-        bus_assignments: true,
         tickets: true,
         parcels: true,
-        bus_logs: true,
-        occupancy_logs: true
       }
     });
 
@@ -452,21 +449,20 @@ export async function DELETE(request: Request) {
       );
     }
 
-    // Check for active dependencies
+    // Solo verificar tickets y parcels activos
     const dependencies = {
-      busAssignments: existingSchedule.bus_assignments.length > 0,
-      tickets: existingSchedule.tickets.length > 0,
-      parcels: existingSchedule.parcels.length > 0,
-      busLogs: existingSchedule.bus_logs.length > 0,
-      occupancyLogs: existingSchedule.occupancy_logs.length > 0
+      tickets: existingSchedule.tickets.some(ticket => ticket.status === 'active'),
+      parcels: existingSchedule.parcels.some(parcel => 
+        ['received', 'in_transit', 'ready_for_pickup'].includes(parcel.status || '')
+      ),
     };
 
     if (Object.values(dependencies).some(Boolean)) {
       return NextResponse.json(
         { 
-          error: "Cannot delete schedule with existing dependencies",
+          error: "Cannot delete schedule with active tickets or parcels",
           details: {
-            message: "El viaje tiene registros relacionados que impiden su eliminación",
+            message: "El viaje tiene tickets o encomiendas activas que impiden su eliminación",
             dependencies: Object.entries(dependencies)
               .filter(([, hasRecords]) => hasRecords)
               .map(([type]) => type)
@@ -476,13 +472,28 @@ export async function DELETE(request: Request) {
       );
     }
 
-    // If we reach this point, it's safe to delete
-    await prisma.schedules.delete({
-      where: { id }
-    });
+    // Eliminar registros relacionados que no son críticos
+    await prisma.$transaction([
+      // Eliminar asignaciones de bus
+      prisma.bus_assignments.deleteMany({
+        where: { schedule_id: id }
+      }),
+      // Eliminar logs de bus
+      prisma.bus_logs.deleteMany({
+        where: { schedule_id: id }
+      }),
+      // Eliminar logs de ocupación
+      prisma.occupancy_logs.deleteMany({
+        where: { schedule_id: id }
+      }),
+      // Finalmente eliminar el schedule
+      prisma.schedules.delete({
+        where: { id }
+      })
+    ]);
 
     return NextResponse.json({
-      message: "Schedule deleted successfully"
+      message: "Schedule and related records deleted successfully"
     });
   } catch (error) {
     console.error("Error deleting schedule:", error);
