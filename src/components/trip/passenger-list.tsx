@@ -15,6 +15,8 @@ import { Badge } from "@/components/ui/badge";
 import type { PassengerList as PassengerListType } from "@/types/trip.types";
 import type { Schedule } from "@/types/route.types";
 import { passenger_status_enum } from "@prisma/client";
+import { useState } from "react";
+import { ReservationPDF } from "@/components/tickets/reservation-pdf";
 
 interface PassengerListProps {
     passengers: PassengerListType[];
@@ -46,6 +48,28 @@ export function PassengerList({ passengers, schedule }: PassengerListProps) {
             default:
                 return "Desconocido";
         }
+    };
+
+    const [showPDF, setShowPDF] = useState(false);
+
+    const reservation = {
+        reservationId: "N/A",
+        schedule: {
+            departureDate: format(new Date(schedule.departureDate), "dd/MM/yyyy"),
+            departureTime: format(new Date(schedule.departureDate), "HH:mm"),
+            route:
+                schedule.route?.origin?.name && schedule.route?.destination?.name
+                    ? `${schedule.route.origin.name} - ${schedule.route.destination.name}`
+                    : schedule.route?.company?.name || "Flota",
+        },
+        tickets: passengers.map((passenger) => ({
+            seatNumber: passenger.seatNumber || "-",
+            passengerName: passenger.fullName,
+            documentId: passenger.documentId || "NO PORTA",
+            price: 0,
+        })),
+        totalAmount: 0,
+        purchaseTime: "",
     };
 
     return (
@@ -117,6 +141,7 @@ export function PassengerList({ passengers, schedule }: PassengerListProps) {
                             </TableHeader>
                             <TableBody>
                                 {passengers.map((passenger) => (
+                                    console.log(passenger),
                                     <TableRow key={passenger.id}>
                                         <TableCell>{passenger.seatNumber}</TableCell>
                                         <TableCell>{passenger.fullName}</TableCell>
@@ -135,6 +160,20 @@ export function PassengerList({ passengers, schedule }: PassengerListProps) {
                         </Table>
                     </CardContent>
                 </Card>
+            </div>
+
+            <div className="text-center print:hidden">
+                <button
+                    onClick={() => setShowPDF(!showPDF)}
+                    className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
+                >
+                    {showPDF ? "Ocultar PDF" : "Generar PDF"}
+                </button>
+                {showPDF && (
+                    <div className="mt-4">
+                        <ReservationPDF reservation={reservation} />
+                    </div>
+                )}
             </div>
         </div>
     );
