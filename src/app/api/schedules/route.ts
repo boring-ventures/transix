@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { addDays, format, parseISO, setHours, setMinutes, parse, eachDayOfInterval } from "date-fns";
-import { Decimal } from "@prisma/client/runtime/library";
-import { NextRequest } from "next/server";
+import { addDays, format, parseISO, setHours, setMinutes, eachDayOfInterval } from "date-fns";
+import type { NextRequest } from "next/server";
 import { z } from "zod";
-import { schedule_status_enum } from "@prisma/client";
 import { enUS } from "date-fns/locale";
 
 const updateScheduleSchema = z.object({

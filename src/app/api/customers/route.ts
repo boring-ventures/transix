@@ -20,11 +20,12 @@ export async function GET(request: Request) {
 
     if (customer) {
       return NextResponse.json(customer);
-    } else {
-      return NextResponse.json({ error: "Customer not found" }, { status: 404 });
     }
-  } catch (error: any) {
-    return NextResponse.json({ error: "Ha ocurrido un error", details: error.message }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json({ 
+      error: "Ha ocurrido un error", 
+      details: error instanceof Error ? error.message : "Error desconocido" 
+    }, { status: 500 });
   }
 }
 

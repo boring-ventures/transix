@@ -1,22 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { z } from "zod";
+import type { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
-
-const createTicketSchema = z.object({
-  scheduleId: z.string().uuid(),
-  customerId: z.string().uuid().optional(),
-  busSeatId: z.string().uuid(),
-  price: z.number(),
-  customerData: z.object({
-    fullName: z.string(),
-    documentId: z.string().optional(),
-    phone: z.string().optional(),
-    email: z.string().email().optional(),
-    seatNumber: z.string(),
-  }),
-  notes: z.string().optional(),
-});
 
 const prismaClient = new PrismaClient();
 
@@ -29,9 +12,14 @@ export async function POST(request: NextRequest) {
       // Crear los tickets sin la propiedad customerData
       const ticketsCreated = await Promise.all(
         tickets.map((ticket: any) => {
-          const { customerData, ...ticketData } = ticket;
           return prisma.tickets.create({
-            data: ticketData
+            data: {
+              schedule_id: ticket.schedule_id,
+              customer_id: ticket.customer_id,
+              bus_seat_id: ticket.bus_seat_id,
+              price: ticket.price,
+              status: ticket.status
+            }
           });
         })
       );

@@ -11,26 +11,22 @@ datasource db {
 }
 
 model profiles {
-  id         String    @id @db.Uuid @default(uuid())
-  user_id    String    @unique @db.Uuid // This is the reference to auth.users
-  email      String?
-  full_name  String?
-  role       role_enum @default(superadmin)
-  active     Boolean   @default(true)
-  created_at DateTime  @default(now()) @db.Timestamptz(6)
-  updated_at DateTime  @default(now()) @db.Timestamptz(6)
-
-  // Relaciones
+  id                    String                  @id @default(uuid()) @db.Uuid
+  company_id            String?                 @db.Uuid
+  full_name             String?
+  role                  role_enum               @default(superadmin)
+  branch_id             String?                 @db.Uuid
+  active                Boolean                 @default(true)
+  created_at            DateTime                @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime                @default(now()) @db.Timestamptz(6)
+  email                 String?
+  user_id               String                  @unique @db.Uuid
   bus_logs              bus_logs[]
   incidents             incidents[]
   parcel_status_updates parcel_status_updates[]
   branches              branches?               @relation(fields: [branch_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   companies             companies?              @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   tickets               tickets[]
-  
-  // Campos opcionales
-  branch_id  String?   @db.Uuid
-  company_id String?   @db.Uuid
 
   @@schema("public")
 }
@@ -144,9 +140,9 @@ model companies {
   branches           branches[]
   bus_type_templates bus_type_templates[]
   buses              buses[]
+  drivers            drivers[]
   profiles           profiles[]
   seat_tiers         seat_tiers[]
-  drivers            drivers[]
 
   @@schema("public")
 }
@@ -276,13 +272,13 @@ model route_schedules {
   id                     String      @id @default(uuid()) @db.Uuid
   route_id               String      @db.Uuid
   departure_time         DateTime    @db.Time(6)
-  estimated_arrival_time DateTime    @db.Time(6)
   operating_days         String[]
   active                 Boolean?    @default(true)
   season_start           DateTime?   @db.Date
   season_end             DateTime?   @db.Date
   created_at             DateTime    @default(now()) @db.Timestamptz(6)
   updated_at             DateTime    @default(now()) @db.Timestamptz(6)
+  estimated_arrival_time DateTime    @db.Time(6)
   routes                 routes      @relation(fields: [route_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "route_schedules_route_id_routes_id_fk")
   schedules              schedules[]
 
@@ -313,8 +309,6 @@ model schedules {
   route_id                                                             String                 @db.Uuid
   route_schedule_id                                                    String                 @db.Uuid
   bus_id                                                               String?                @db.Uuid
-  primary_driver_id                                                    String?                @db.Uuid
-  secondary_driver_id                                                  String?                @db.Uuid
   departure_date                                                       DateTime               @db.Date
   estimated_arrival_time                                               DateTime               @db.Timestamptz(6)
   actual_departure_time                                                DateTime?              @db.Timestamptz(6)
@@ -323,20 +317,22 @@ model schedules {
   status                                                               schedule_status_enum
   created_at                                                           DateTime               @default(now()) @db.Timestamptz(6)
   updated_at                                                           DateTime               @default(now()) @db.Timestamptz(6)
+  primary_driver_id                                                    String?                @db.Uuid
+  secondary_driver_id                                                  String?                @db.Uuid
   bus_assignments                                                      bus_assignments[]
   bus_logs                                                             bus_logs[]
   occupancy_logs                                                       occupancy_logs[]
   parcels                                                              parcels[]
+  passenger_lists                                                      passenger_lists[]
   buses                                                                buses?                 @relation(fields: [bus_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "schedules_bus_id_buses_id_fk")
+  primary_driver                                                       drivers?               @relation("primary_driver", fields: [primary_driver_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   routes                                                               routes                 @relation(fields: [route_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "schedules_route_id_routes_id_fk")
   route_schedules                                                      route_schedules        @relation(fields: [route_schedule_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "schedules_route_schedule_id_route_schedules_id_fk")
+  secondary_driver                                                     drivers?               @relation("secondary_driver", fields: [secondary_driver_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   ticket_reassignments_ticket_reassignments_new_schedule_idToschedules ticket_reassignments[] @relation("ticket_reassignments_new_schedule_idToschedules")
   ticket_reassignments_ticket_reassignments_old_schedule_idToschedules ticket_reassignments[] @relation("ticket_reassignments_old_schedule_idToschedules")
   tickets                                                              tickets[]
-  passenger_lists                                                      passenger_lists[]
   trip_settlements                                                     trip_settlements[]
-  primary_driver                                                       drivers?               @relation("primary_driver", fields: [primary_driver_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  secondary_driver                                                     drivers?               @relation("secondary_driver", fields: [secondary_driver_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@schema("public")
 }
@@ -404,46 +400,46 @@ model tickets {
 }
 
 model passenger_lists {
-  id           String    @id @default(uuid()) @db.Uuid
-  schedule_id  String    @db.Uuid
-  document_id  String?
-  full_name    String
-  seat_number  String
-  status       passenger_status_enum @default(confirmed)
-  created_at   DateTime  @default(now()) @db.Timestamptz(6)
-  updated_at   DateTime  @default(now()) @db.Timestamptz(6)
-  schedules    schedules @relation(fields: [schedule_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  id          String                @id @default(uuid()) @db.Uuid
+  schedule_id String                @db.Uuid
+  document_id String?
+  full_name   String
+  seat_number String
+  status      passenger_status_enum @default(confirmed)
+  created_at  DateTime              @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime              @default(now()) @db.Timestamptz(6)
+  schedules   schedules             @relation(fields: [schedule_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@schema("public")
 }
 
 model trip_settlements {
-  id            String    @id @default(uuid()) @db.Uuid
-  schedule_id   String    @db.Uuid
-  total_income  Decimal   @db.Decimal(10, 2)
-  total_expenses Decimal  @db.Decimal(10, 2)
-  net_amount    Decimal   @db.Decimal(10, 2)
-  status        settlement_status_enum @default(pending)
-  details       Json
-  settled_at    DateTime? @db.Timestamptz(6)
-  created_at    DateTime  @default(now()) @db.Timestamptz(6)
-  updated_at    DateTime  @default(now()) @db.Timestamptz(6)
-  schedules     schedules @relation(fields: [schedule_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  id             String                 @id @default(uuid()) @db.Uuid
+  schedule_id    String                 @db.Uuid
+  total_income   Decimal                @db.Decimal(10, 2)
+  total_expenses Decimal                @db.Decimal(10, 2)
+  net_amount     Decimal                @db.Decimal(10, 2)
+  status         settlement_status_enum @default(pending)
+  details        Json
+  settled_at     DateTime?              @db.Timestamptz(6)
+  created_at     DateTime               @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime               @default(now()) @db.Timestamptz(6)
+  schedules      schedules              @relation(fields: [schedule_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@schema("public")
 }
 
 model drivers {
-  id                String      @id @default(uuid()) @db.Uuid
-  company_id        String      @db.Uuid
-  full_name        String
-  document_id      String
-  license_number   String
-  license_category String
-  active           Boolean     @default(true)
-  created_at       DateTime    @default(now()) @db.Timestamptz(6)
-  updated_at       DateTime    @default(now()) @db.Timestamptz(6)
-  companies        companies   @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  id                     String      @id @default(uuid()) @db.Uuid
+  company_id             String      @db.Uuid
+  full_name              String
+  document_id            String
+  license_number         String
+  license_category       String
+  active                 Boolean     @default(true)
+  created_at             DateTime    @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime    @default(now()) @db.Timestamptz(6)
+  companies              companies   @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   schedules_as_primary   schedules[] @relation("primary_driver")
   schedules_as_secondary schedules[] @relation("secondary_driver")
 

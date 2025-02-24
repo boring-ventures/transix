@@ -20,7 +20,7 @@ export async function GET(request: Request) {
     });
 
     return new Response(JSON.stringify(tickets));
-  } catch (error) {
+  } catch {
     return new Response('Error fetching tickets', { status: 500 });
   }
 } 

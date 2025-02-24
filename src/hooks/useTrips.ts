@@ -1,7 +1,17 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { settlement_status_enum } from "@prisma/client";
+import type { settlement_status_enum } from "@prisma/client";
+
+interface Fare {
+    seatNumber: string;
+    amount: number;
+}
+
+interface Expense {
+    description: string;
+    amount: number;
+}
 
 interface TripSettlement {
     id: string;
@@ -12,8 +22,8 @@ interface TripSettlement {
     status: settlement_status_enum;
     settledAt: Date | null;
     details: {
-        fares: any[];
-        expenses: any[];
+        fares: Fare[];
+        expenses: Expense[];
         packages: number;
     };
 }
@@ -23,8 +33,8 @@ interface CreateTripSettlementData {
     totalIncome: number;
     totalExpenses: number;
     details: {
-        fares: any[];
-        expenses: any[];
+        fares: Fare[];
+        expenses: Expense[];
         packages: number;
     };
 }
@@ -35,8 +45,8 @@ interface UpdateTripSettlementData {
         totalIncome: number;
         totalExpenses: number;
         details: {
-            fares: any[];
-            expenses: any[];
+            fares: Fare[];
+            expenses: Expense[];
             packages: number;
         };
         status: settlement_status_enum;
