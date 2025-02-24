@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { ROLE_ROUTES } from '../config/roleRoutes';
+import axios from 'axios';
 
 export function useUserRoutes() {
 
@@ -24,23 +25,24 @@ export function useUserRoutes() {
           companyId: '',
         });
 
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role, company_id')
-          .eq('user_id', user.id)
-          .single();
+        try {
+          // Usar el endpoint de API en lugar de Supabase directamente
+          const response = await axios.get(`/api/users?userId=${user.id}`);
+          const profile = response.data.profile;
 
-        if (profile) {
-          const role = profile.role as keyof typeof ROLE_ROUTES;
-          setAllowedRoutes(ROLE_ROUTES[role]);
-          setUserData({
-            name,
-            email,
-            avatar,
-            role: profile.role,
-            companyId: profile.company_id,
-          });
-        } else {
+          if (profile) {
+            const role = profile.role as keyof typeof ROLE_ROUTES;
+            setAllowedRoutes(ROLE_ROUTES[role]);
+            setUserData({
+              name,
+              email,
+              avatar,
+              role: profile.role,
+              companyId: profile.companyId,
+            });
+          }
+        } catch (error) {
+          console.error('Error fetching user profile:', error);
           setUserData({ name, email, avatar, role: '', companyId: '' });
         }
       }

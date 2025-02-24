@@ -100,6 +100,7 @@ export async function POST(request: NextRequest) {
       data: {
         route_id: validatedData.routeId,
         departure_time: new Date(`1970-01-01T${validatedData.departureTime}:00.000Z`),
+        estimated_arrival_time: new Date(`1970-01-01T${validatedData.estimatedArrivalTime}:00.000Z`),
         operating_days: validatedData.operatingDays,
         season_start: validatedData.seasonStart,
         season_end: validatedData.seasonEnd,
@@ -115,6 +116,7 @@ export async function POST(request: NextRequest) {
       id: schedule.id,
       routeId: schedule.route_id,
       departureTime: schedule.departure_time.toTimeString().slice(0, 5),
+      estimatedArrivalTime: schedule.estimated_arrival_time.toTimeString().slice(0, 5),
       operatingDays: schedule.operating_days,
       active: schedule.active,
       seasonStart: schedule.season_start,
