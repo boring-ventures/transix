@@ -4,12 +4,12 @@ import { createTripSettlementSchema } from "@/types/trip.types";
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: { scheduleId: string } }
 ) {
   try {
     const settlement = await prisma.trip_settlements.findFirst({
       where: {
-        schedule_id: params.id,
+        schedule_id: params.scheduleId,
       },
       include: {
         schedules: {
@@ -63,7 +63,7 @@ export async function GET(
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: { scheduleId: string } }
 ) {
   try {
     const body = await request.json();
@@ -81,7 +81,7 @@ export async function POST(
 
     // Verificar que el viaje existe
     const schedule = await prisma.schedules.findUnique({
-      where: { id: params.id },
+      where: { id: params.scheduleId },
     });
 
     if (!schedule) {
@@ -94,7 +94,7 @@ export async function POST(
     // Crear la liquidación
     const settlement = await prisma.trip_settlements.create({
       data: {
-        schedule_id: params.id,
+        schedule_id: params.scheduleId,
         total_income: data.totalIncome,
         total_expenses: data.totalExpenses,
         net_amount: data.totalIncome - data.totalExpenses,
@@ -143,7 +143,7 @@ export async function POST(
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: { scheduleId: string } }
 ) {
   try {
     const body = await request.json();
@@ -151,7 +151,7 @@ export async function PATCH(
     // Buscar la liquidación existente
     const existingSettlement = await prisma.trip_settlements.findFirst({
       where: {
-        schedule_id: params.id,
+        schedule_id: params.scheduleId,
       },
     });
 

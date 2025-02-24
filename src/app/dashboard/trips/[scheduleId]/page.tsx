@@ -15,7 +15,7 @@ import { Printer } from "lucide-react";
 
 export default function TripDetailsPage() {
     const params = useParams();
-    const scheduleId = params?.id as string;
+    const scheduleId = params?.scheduleId as string;
     const { data: schedules, isLoading: isLoadingSchedule } = useSchedules();
     const { data: passengers, isLoading: isLoadingPassengers } = usePassengerList(scheduleId);
 

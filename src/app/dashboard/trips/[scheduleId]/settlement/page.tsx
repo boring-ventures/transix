@@ -8,7 +8,7 @@ import type { Schedule } from "@/types/route.types";
 
 export default function TripSettlementPage() {
     const params = useParams();
-    const scheduleId = params?.id as string;
+    const scheduleId = params?.scheduleId as string;
     const { data: schedules, isLoading } = useSchedules();
     const currentSchedule = schedules?.find((s: Schedule) => s.id === scheduleId);
 
