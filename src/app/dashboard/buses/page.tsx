@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useBuses, useCreateBus, useDeleteBus } from "@/hooks/useBuses";
 import { useCompanies } from "@/hooks/useCompanies";
 import { useBusTemplates } from "@/hooks/useBusTemplates";
@@ -51,6 +51,14 @@ import { EditBusModal } from "@/components/bus/edit-bus-modal";
 export default function BusesPage() {
   const { data: companies, isLoading: companiesLoading } = useCompanies();
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  
+  // Seleccionar la primera empresa por defecto
+  useEffect(() => {
+    if (companies && companies.length > 0 && !selectedCompany) {
+      setSelectedCompany(companies[0]);
+    }
+  }, [companies, selectedCompany]);
+
   const { data: buses, isLoading: busesLoading } = useBuses(selectedCompany?.id);
   const { data: templates, isLoading: templatesLoading } = useBusTemplates();
   const createBus = useCreateBus();
@@ -273,12 +281,50 @@ export default function BusesPage() {
     },
   ];
 
-  if (busesLoading || companiesLoading || templatesLoading) {
+  if (companiesLoading || (selectedCompany && busesLoading) || templatesLoading) {
     return <LoadingTable columnCount={5} rowCount={10} />;
+  }
+
+  if (!companies || companies.length === 0) {
+    return (
+      <div className="text-center py-10">
+        <h2 className="text-2xl font-semibold mb-2">No hay empresas registradas</h2>
+        <p className="text-muted-foreground">
+          Necesita registrar al menos una empresa antes de poder gestionar buses.
+        </p>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-4">
+          <Select
+            value={selectedCompany?.id || ""}
+            onValueChange={(value) => {
+              const company = companies?.find((c) => c.id === value);
+              setSelectedCompany(company || null);
+            }}
+          >
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Seleccionar empresa" />
+            </SelectTrigger>
+            <SelectContent>
+              {companies?.map((company) => (
+                <SelectItem key={company.id} value={company.id}>
+                  {company.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+{/*           <Button onClick={() => setIsCreateOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Nuevo Bus
+          </Button> */}
+        </div>
+      </div>
+
       {/* Create Bus Dialog */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent>
@@ -501,7 +547,7 @@ export default function BusesPage() {
 
       <DataTable
         title="Buses"
-        description="Gestiona los buses del sistema."
+        description={`Gestiona los buses de ${selectedCompany?.name || 'la empresa'}.`}
         data={buses || []}
         columns={columns}
         searchable
@@ -512,6 +558,11 @@ export default function BusesPage() {
           setIsEditOpen(true);
         }}
         onDelete={(bus: BusWithRelations) => handleDelete(bus)}
+        noDataMessage={
+          !selectedCompany
+            ? "Seleccione una empresa para ver sus buses"
+            : "No hay buses registrados para esta empresa"
+        }
       />
     </div>
   );
