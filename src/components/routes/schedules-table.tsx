@@ -1,14 +1,25 @@
-import { DataTable } from "@/components/table/data-table";
-import { Column } from "@/components/table/types";
-import { Route, Schedule } from "@/types/route.types";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { Schedule } from "@/types/route.types";
+import { Route } from "@/types/route.types";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Bus, Edit, Trash2 } from "lucide-react";
+import { Edit, Eye, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { EditScheduleDialog } from "./edit-schedule-dialog";
-import { DeleteScheduleDialog } from "./delete-schedule-dialog";
-import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // Shows a table with the available schedules
 
@@ -31,218 +42,115 @@ export function SchedulesTable({
 }: SchedulesTableProps) {
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const { toast } = useToast();
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
 
   const handleEditSchedule = async (scheduleId: string, data: { departureDate: string; departureTime: string; price: number }) => {
-    try {
-      await onEditSchedule?.(scheduleId, data);
-      toast({
-        title: "Horario actualizado",
-        description: "El horario ha sido actualizado exitosamente.",
-      });
-    } catch{
-      toast({
-        title: "Error",
-        description: "No se pudo actualizar el horario. Por favor, intenta de nuevo.",
-        variant: "destructive",
-      });
+    if (onEditSchedule) {
+      await onEditSchedule(scheduleId, data);
+      setEditDialogOpen(false);
     }
   };
 
   const handleDeleteSchedule = async (scheduleId: string) => {
-    try {
-      await onDeleteSchedule?.(scheduleId);
-      toast({
-        title: "Horario eliminado",
-        description: "El horario ha sido eliminado exitosamente.",
-      });
-    } catch {
-      toast({
-        title: "Error",
-        description: "No se pudo eliminar el horario. Por favor, intenta de nuevo.",
-        variant: "destructive",
-      });
+    if (onDeleteSchedule) {
+      await onDeleteSchedule(scheduleId);
     }
   };
 
-  const scheduleColumns: Column<Schedule>[] = [
-    {
-      id: "route",
-      accessorKey: "routeId",
-      header: "Ruta",
-      cell: ({ row }) => {
-        const route = routes.find((r) => r.id === row.routeId);
-        return route ? route.name : "";
-      },
-      sortable: true,
-    },
-    {
-      id: "departureDate",
-      accessorKey: "departureDate",
-      header: "Fecha y Hora de Salida",
-      cell: ({ row }) => {
-        const date = new Date(row.departureDate);
-        return format(date, "dd/MM/yyyy HH:mm", { locale: es });
-      },
-      sortable: true,
-    },
-    {
-      id: "estimatedArrivalTime",
-      accessorKey: "estimatedArrivalTime",
-      header: "Llegada Estimada",
-      cell: ({ row }) => {
-        if (!row.estimatedArrivalTime) return "No disponible";
-        return format(new Date(row.estimatedArrivalTime), "dd/MM/yyyy HH:mm", { locale: es });
-      },
-      sortable: true,
-    },
-    {
-      id: "bus",
-      accessorKey: "busId",
-      header: "Bus Asignado",
-      cell: ({ row }) => {
-        // Check bus assignments for this schedule
-        const busAssignment = row.busAssignments?.find(assignment => 
-          assignment.status === 'active'
-        );
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "scheduled":
+        return "text-blue-600 bg-blue-100";
+      case "completed":
+        return "text-green-600 bg-green-100";
+      case "cancelled":
+        return "text-red-600 bg-red-100";
+      default:
+        return "text-gray-600 bg-gray-100";
+    }
+  };
 
-        if (!busAssignment) {
-          return (
-            <span className="text-yellow-600 font-medium">
-              No asignado
-            </span>
-          );
-        }
-
-        const bus = busAssignment.bus;
-        return (
-          <span className="text-green-600 font-medium">
-            {bus ? `${bus.plateNumber} (${bus.template?.name || 'N/A'})` : busAssignment.busId}
-          </span>
-        );
-      },
-      sortable: true,
-    },
-    {
-      id: "status",
-      accessorKey: "status",
-      header: "Estado",
-      cell: ({ row }) => {
-        const status = row.status;
-        const statusClasses = {
-          scheduled: "bg-green-100 text-green-800",
-          in_progress: "bg-blue-100 text-blue-800",
-          completed: "bg-gray-100 text-gray-800",
-          cancelled: "bg-red-100 text-red-800",
-          delayed: "bg-yellow-100 text-yellow-800"
-        };
-        
-        const statusLabels = {
-          scheduled: "Programado",
-          in_progress: "En Progreso",
-          completed: "Completado",
-          cancelled: "Cancelado",
-          delayed: "Retrasado"
-        };
-        
-        return (
-          <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusClasses[status]}`}>
-            {statusLabels[status]}
-          </span>
-        );
-      },
-      sortable: true,
-    },
-    {
-      id: "actions",
-      accessorKey: "id",
-      header: "Acciones",
-      cell: ({ row }) => {
-        const hasActiveAssignment = row.busAssignments?.some(
-          assignment => assignment.status === 'active'
-        );
-
-        return (
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={(e) => {
-                e.stopPropagation();
-                onAssignBus?.(row);
-              }}
-              disabled={row.status !== 'scheduled' || hasActiveAssignment}
-              title={
-                row.status !== 'scheduled' 
-                  ? 'Solo se pueden asignar buses a viajes programados'
-                  : hasActiveAssignment
-                  ? 'Este viaje ya tiene un bus asignado'
-                  : 'Asignar bus'
-              }
-            >
-              <Bus className="h-4 w-4" />
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedSchedule(row);
-                setEditDialogOpen(true);
-              }}
-              disabled={row.status !== 'scheduled'}
-              title={
-                row.status !== 'scheduled'
-                  ? 'Solo se pueden editar viajes programados'
-                  : 'Editar viaje'
-              }
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedSchedule(row);
-                setDeleteDialogOpen(true);
-              }}
-              disabled={row.status !== 'scheduled' || hasActiveAssignment}
-              title={
-                row.status !== 'scheduled'
-                  ? 'Solo se pueden eliminar viajes programados'
-                  : hasActiveAssignment
-                  ? 'No se puede eliminar un viaje con bus asignado'
-                  : 'Eliminar viaje'
-              }
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        );
-      },
-    },
-  ];
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case "scheduled":
+        return "Programado";
+      case "completed":
+        return "Completado";
+      case "cancelled":
+        return "Cancelado";
+      default:
+        return "Desconocido";
+    }
+  };
 
   return (
     <>
-      {schedules.length === 0 ? (
-        <div className="text-center py-4 text-muted-foreground">
-          No hay viajes programados para este horario
-        </div>
-      ) : (
-        <DataTable
-          title="Horarios"
-          data={schedules}
-          columns={scheduleColumns}
-          searchable={true}
-          searchField="routeId"
-          onRowClick={(schedule) => onScheduleSelect(schedule)}
-        />
-      )}
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Día</TableHead>
+              <TableHead>Fecha</TableHead>
+              <TableHead>Hora</TableHead>
+              <TableHead>Estado</TableHead>
+              <TableHead>Acciones</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {schedules.map((schedule) => (
+              <TableRow key={schedule.id}>
+                <TableCell>
+                  {format(new Date(schedule.departureDate), "EEEE", { locale: es })}
+                </TableCell>
+                <TableCell>
+                  {format(new Date(schedule.departureDate), "dd/MM/yyyy")}
+                </TableCell>
+                <TableCell>
+                  {format(new Date(schedule.departureDate), "HH:mm")}
+                </TableCell>
+                <TableCell>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(schedule.status)}`}>
+                    {getStatusText(schedule.status)}
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        setSelectedSchedule(schedule);
+                        setDetailsDialogOpen(true);
+                      }}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        setSelectedSchedule(schedule);
+                        setEditDialogOpen(true);
+                      }}
+                      disabled={schedule.status !== 'scheduled'}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteSchedule(schedule.id)}
+                      disabled={schedule.status !== 'scheduled'}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
 
       {selectedSchedule && (
         <>
@@ -253,12 +161,44 @@ export function SchedulesTable({
             onSubmit={handleEditSchedule}
           />
 
-          <DeleteScheduleDialog
-            open={deleteDialogOpen}
-            onOpenChange={setDeleteDialogOpen}
-            schedule={selectedSchedule}
-            onConfirm={handleDeleteSchedule}
-          />
+          <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Detalles del Viaje</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="font-medium mb-2">Bus Asignado</h4>
+                    {selectedSchedule.bus ? (
+                      <div className="text-sm">
+                        <p>Placa: {selectedSchedule.bus.plateNumber}</p>
+                        <p>Tipo: {selectedSchedule.bus.template?.type}</p>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Sin bus asignado</p>
+                    )}
+                  </div>
+                  <div>
+                    <h4 className="font-medium mb-2">Conductores</h4>
+                    <div className="text-sm">
+                      <p>Principal: {selectedSchedule.primaryDriver?.fullName || 'No asignado'}</p>
+                      <p>Secundario: {selectedSchedule.secondaryDriver?.fullName || 'No asignado'}</p>
+                    </div>
+                  </div>
+                </div>
+                {selectedSchedule.bus && (
+                  <div>
+                    <h4 className="font-medium mb-2">Detalles del Bus</h4>
+                    <div className="text-sm">
+                      <p>Asientos: {selectedSchedule.bus.seats?.length || 0}</p>
+                      <p>Modelo: {selectedSchedule.bus.template?.name || 'N/A'}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
         </>
       )}
     </>

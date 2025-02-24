@@ -21,13 +21,15 @@ import { Plus, Clock } from "lucide-react";
 import { CreateRouteDialog } from "@/components/routes/create-route-dialog";
 import { CreateRouteScheduleDialog } from "@/components/routes/create-route-schedule-dialog";
 import { useLocations } from "@/hooks/useLocations";
-import { useRoutes, useRouteSchedules } from "@/hooks/useRoutes";
+import { useRoutes, useRouteSchedules, useUpdateRouteSchedule, useCreateRouteSchedule } from "@/hooks/useRoutes";
 import { LoadingTable } from "@/components/table/loading-table";
 import { useSchedules } from "@/hooks/useSchedules";
+import { useUserRoutes } from "@/hooks/useUserRoutes";
 
-export default function Routes() {
+export default function RoutesPage() {
   const { toast } = useToast();
-  const companyId = "1"; // TODO: Get this from user context or environment
+  const { userData } = useUserRoutes();
+  const companyId = userData?.companyId || "";
   const { data: buses, isLoading: isLoadingBuses } = useBuses(companyId);
   const { data: locations = [], isLoading: isLoadingLocations } = useLocations();
   const {
@@ -57,6 +59,10 @@ export default function Routes() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isCreateScheduleDialogOpen, setIsCreateScheduleDialogOpen] =
     useState(false);
+
+  const updateRouteSchedule = useUpdateRouteSchedule();
+  const { mutate: createRouteSchedule } = useCreateRouteSchedule();
+
   // Mostrar loading mientras se cargan los datos
   if (
     isLoadingRoutes ||
@@ -119,19 +125,12 @@ export default function Routes() {
 
   const handleCreateRouteSchedule = async (data: CreateRouteScheduleInput) => {
     try {
-      const response = await fetch("/api/route-schedules", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...data, routeId: selectedRoute?.id }),
+      await createRouteSchedule({
+        ...data,
+        routeId: selectedRoute?.id || "",
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to create route schedule");
-      }
-
-      await refetch();
       setIsCreateScheduleDialogOpen(false);
-
       toast({
         title: "Horario creado",
         description: "El horario ha sido creado exitosamente.",
@@ -218,7 +217,7 @@ export default function Routes() {
           operatingDays: routeSchedule.operatingDays,
           startDate,
           endDate,
-          price: 0, // El precio se establecerá al asignar el bus
+          price: 0,
           status: "scheduled",
           busId: data.busId,
           primaryDriverId: data.primaryDriverId,
@@ -231,11 +230,11 @@ export default function Routes() {
         throw new Error(error.message || "Error al generar los horarios");
       }
 
-      const result = await response.json();
+      const createdSchedules = await response.json();
 
       toast({
-        title: "Horarios generados",
-        description: `Se han generado ${result.count} viajes exitosamente.`,
+        title: "Viajes generados",
+        description: `Se han generado ${createdSchedules.length} viajes exitosamente con ${data.busId ? 'bus asignado' : 'sin bus'} y ${data.primaryDriverId ? 'conductor principal asignado' : 'sin conductor principal'}${data.secondaryDriverId ? ' y conductor secundario asignado' : ''}.`,
       });
 
       // Actualizar la lista de schedules
@@ -363,6 +362,30 @@ export default function Routes() {
     }
   };
 
+  const handleUpdateSeasonDates = async (routeScheduleId: string, startDate: string, endDate: string) => {
+    try {
+      await updateRouteSchedule.mutateAsync({
+        id: routeScheduleId,
+        data: {
+          seasonStart: startDate,
+          seasonEnd: endDate,
+        },
+      });
+
+      toast({
+        title: "Temporada actualizada",
+        description: "Las fechas de temporada han sido actualizadas exitosamente.",
+      });
+    } catch (error) {
+      console.error("Error updating season dates:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Error al actualizar las fechas de temporada",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -421,6 +444,7 @@ export default function Routes() {
                 onRouteScheduleSelect={handleRouteScheduleSelect}
                 selectedRouteSchedule={selectedRouteSchedule}
                 onGenerateSchedules={handleGenerateSchedules}
+                onUpdateSeasonDates={handleUpdateSeasonDates}
                 companyId={companyId}
               />
             )}

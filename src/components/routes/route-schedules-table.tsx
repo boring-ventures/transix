@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, Calendar, CalendarPlus } from "lucide-react";
+import { Clock, Calendar, CalendarPlus, Edit } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import {
@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Select,
   SelectContent,
@@ -32,6 +32,8 @@ import {
 } from "@/components/ui/select";
 import { useBuses } from "@/hooks/useBuses";
 import { useDrivers } from "@/hooks/useDrivers";
+import { useToast } from "@/hooks/use-toast";
+import { useCompanies } from "@/hooks/useCompanies";
 
 interface RouteSchedulesTableProps {
   routeSchedules: RouteSchedule[];
@@ -47,7 +49,8 @@ interface RouteSchedulesTableProps {
       secondaryDriverId?: string;
     }
   ) => void;
-  companyId: string;
+  onUpdateSeasonDates?: (routeScheduleId: string, startDate: string, endDate: string) => Promise<void>;
+  companyId?: string;
 }
 
 export function RouteSchedulesTable({
@@ -55,18 +58,29 @@ export function RouteSchedulesTable({
   onRouteScheduleSelect,
   selectedRouteSchedule,
   onGenerateSchedules,
-  companyId
+  onUpdateSeasonDates,
+  companyId,
 }: RouteSchedulesTableProps) {
   const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
+  const [isEditSeasonDialogOpen, setIsEditSeasonDialogOpen] = useState(false);
   const [selectedScheduleForGeneration, setSelectedScheduleForGeneration] = useState<RouteSchedule | null>(null);
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [selectedScheduleForEdit, setSelectedScheduleForEdit] = useState<RouteSchedule | null>(null);
+  const [editStartDate, setEditStartDate] = useState("");
+  const [editEndDate, setEditEndDate] = useState("");
   const [selectedBusId, setSelectedBusId] = useState<string>("");
   const [selectedPrimaryDriverId, setSelectedPrimaryDriverId] = useState<string>("");
   const [selectedSecondaryDriverId, setSelectedSecondaryDriverId] = useState<string>("");
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
 
-  const { data: buses } = useBuses(companyId);
-  const { data: drivers } = useDrivers(companyId);
+  const { data: companies } = useCompanies();
+  const { data: buses } = useBuses(selectedCompanyId);
+  const { data: drivers } = useDrivers(selectedCompanyId);
+  const { toast } = useToast();
+
+  // Filtrar buses activos y disponibles
+  const availableBuses = useMemo(() => {
+    return buses?.filter(bus => bus.isActive && bus.maintenanceStatus === 'active') || [];
+  }, [buses]);
 
   const formatOperatingDays = (days: string[]) => {
     const dayMap: Record<string, string> = {
@@ -84,27 +98,21 @@ export function RouteSchedulesTable({
   const handleGenerateClick = (schedule: RouteSchedule) => {
     setSelectedScheduleForGeneration(schedule);
     
-    // Usar fechas de temporada si están disponibles, sino usar una semana por defecto
+    // Usar fechas de temporada si están disponibles
     if (schedule.seasonStart && schedule.seasonEnd) {
-      setStartDate(format(new Date(schedule.seasonStart), "yyyy-MM-dd"));
-      setEndDate(format(new Date(schedule.seasonEnd), "yyyy-MM-dd"));
-    } else {
-      const today = new Date();
-      const nextWeek = new Date();
-      nextWeek.setDate(today.getDate() + 7);
-      setStartDate(format(today, "yyyy-MM-dd"));
-      setEndDate(format(nextWeek, "yyyy-MM-dd"));
+      setEditStartDate(format(new Date(schedule.seasonStart), "yyyy-MM-dd"));
+      setEditEndDate(format(new Date(schedule.seasonEnd), "yyyy-MM-dd"));
     }
     
     setIsGenerateDialogOpen(true);
   };
 
   const handleGenerateConfirm = () => {
-    if (selectedScheduleForGeneration && startDate && endDate) {
+    if (selectedScheduleForGeneration && selectedScheduleForGeneration.seasonStart && selectedScheduleForGeneration.seasonEnd) {
       onGenerateSchedules?.(
         selectedScheduleForGeneration, 
-        startDate, 
-        endDate,
+        format(new Date(selectedScheduleForGeneration.seasonStart), "yyyy-MM-dd"),
+        format(new Date(selectedScheduleForGeneration.seasonEnd), "yyyy-MM-dd"),
         {
           busId: selectedBusId || undefined,
           primaryDriverId: selectedPrimaryDriverId || undefined,
@@ -116,6 +124,35 @@ export function RouteSchedulesTable({
       setSelectedBusId("");
       setSelectedPrimaryDriverId("");
       setSelectedSecondaryDriverId("");
+      setSelectedCompanyId("");
+    }
+  };
+
+  const handleEditSeasonClick = (schedule: RouteSchedule) => {
+    setSelectedScheduleForEdit(schedule);
+    if (schedule.seasonStart && schedule.seasonEnd) {
+      setEditStartDate(format(new Date(schedule.seasonStart), "yyyy-MM-dd"));
+      setEditEndDate(format(new Date(schedule.seasonEnd), "yyyy-MM-dd"));
+    }
+    setIsEditSeasonDialogOpen(true);
+  };
+
+  const handleEditSeasonConfirm = async () => {
+    if (selectedScheduleForEdit && editStartDate && editEndDate) {
+      try {
+        await onUpdateSeasonDates?.(selectedScheduleForEdit.id, editStartDate, editEndDate);
+        toast({
+          title: "Temporada actualizada",
+          description: "El rango de fechas ha sido actualizado exitosamente.",
+        });
+        setIsEditSeasonDialogOpen(false);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "No se pudo actualizar el rango de fechas. Por favor, intente de nuevo.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -192,6 +229,17 @@ export function RouteSchedulesTable({
                       >
                         <CalendarPlus className="h-4 w-4" />
                       </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditSeasonClick(schedule);
+                        }}
+                        title="Editar rango de temporada"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -215,46 +263,57 @@ export function RouteSchedulesTable({
             <DialogDescription>
               {selectedScheduleForGeneration?.seasonStart && selectedScheduleForGeneration?.seasonEnd ? (
                 <>
-                  Se usarán las fechas de temporada configuradas para generar los viajes.
-                  Los viajes se generarán para los días: {selectedScheduleForGeneration?.operatingDays.join(", ")}
+                  Los viajes se generarán para el periodo:
+                  <div className="mt-2 p-2 bg-muted rounded-md">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      <span className="font-medium">
+                        {format(new Date(selectedScheduleForGeneration.seasonStart), "dd MMM yyyy", { locale: es })} -{" "}
+                        {format(new Date(selectedScheduleForGeneration.seasonEnd), "dd MMM yyyy", { locale: es })}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-2">
+                    Días de operación: <span className="font-medium">{formatOperatingDays(selectedScheduleForGeneration.operatingDays)}</span>
+                  </div>
                 </>
               ) : (
-                <>
-                  Se usará un rango de una semana por defecto.
-                  Los viajes se generarán para los días: {selectedScheduleForGeneration?.operatingDays.join(", ")}
-                </>
+                <div className="text-yellow-600">
+                  Este horario no tiene un periodo definido. Por favor, defina un periodo en la configuración del horario.
+                </div>
               )}
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="startDate">Fecha de Inicio</Label>
-              <Input
-                id="startDate"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="endDate">Fecha de Fin</Label>
-              <Input
-                id="endDate"
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
+              <Label>Empresa</Label>
+              <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar empresa" />
+                </SelectTrigger>
+                <SelectContent>
+                  {companies?.map((company) => (
+                    <SelectItem key={company.id} value={company.id}>
+                      {company.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="grid gap-2">
               <Label>Bus</Label>
-              <Select value={selectedBusId} onValueChange={setSelectedBusId}>
+              <Select 
+                value={selectedBusId} 
+                onValueChange={setSelectedBusId}
+                disabled={!selectedCompanyId}
+              >
                 <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar bus" />
+                  <SelectValue placeholder={selectedCompanyId ? "Seleccionar bus" : "Seleccione una empresa primero"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {buses?.map((bus) => (
+                  {availableBuses.map((bus) => (
                     <SelectItem key={bus.id} value={bus.id}>
                       {bus.plateNumber} - {bus.template?.name}
                     </SelectItem>
@@ -265,9 +324,13 @@ export function RouteSchedulesTable({
 
             <div className="grid gap-2">
               <Label>Conductor Principal</Label>
-              <Select value={selectedPrimaryDriverId} onValueChange={setSelectedPrimaryDriverId}>
+              <Select 
+                value={selectedPrimaryDriverId} 
+                onValueChange={setSelectedPrimaryDriverId}
+                disabled={!selectedCompanyId}
+              >
                 <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar conductor principal" />
+                  <SelectValue placeholder={selectedCompanyId ? "Seleccionar conductor principal" : "Seleccione una empresa primero"} />
                 </SelectTrigger>
                 <SelectContent>
                   {drivers?.map((driver) => (
@@ -280,10 +343,14 @@ export function RouteSchedulesTable({
             </div>
 
             <div className="grid gap-2">
-              <Label>Conductor Secundario</Label>
-              <Select value={selectedSecondaryDriverId} onValueChange={setSelectedSecondaryDriverId}>
+              <Label>Conductor Secundario (Opcional)</Label>
+              <Select 
+                value={selectedSecondaryDriverId} 
+                onValueChange={setSelectedSecondaryDriverId}
+                disabled={!selectedCompanyId}
+              >
                 <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar conductor secundario" />
+                  <SelectValue placeholder={selectedCompanyId ? "Seleccionar conductor secundario" : "Seleccione una empresa primero"} />
                 </SelectTrigger>
                 <SelectContent>
                   {drivers?.map((driver) => (
@@ -304,15 +371,69 @@ export function RouteSchedulesTable({
                 setSelectedBusId("");
                 setSelectedPrimaryDriverId("");
                 setSelectedSecondaryDriverId("");
+                setSelectedCompanyId("");
               }}
             >
               Cancelar
             </Button>
             <Button
               onClick={handleGenerateConfirm}
-              disabled={!startDate || !endDate}
+              disabled={
+                !selectedScheduleForGeneration?.seasonStart || 
+                !selectedScheduleForGeneration?.seasonEnd ||
+                !selectedCompanyId ||
+                !selectedBusId
+              }
             >
               Generar Viajes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isEditSeasonDialogOpen} onOpenChange={setIsEditSeasonDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Rango de Temporada</DialogTitle>
+            <DialogDescription>
+              Modifique el rango de fechas para la temporada de este horario.
+              Los viajes se generarán dentro de este rango para los días: {selectedScheduleForEdit?.operatingDays && formatOperatingDays(selectedScheduleForEdit.operatingDays)}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="editStartDate">Fecha de Inicio</Label>
+              <Input
+                id="editStartDate"
+                type="date"
+                value={editStartDate}
+                onChange={(e) => setEditStartDate(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="editEndDate">Fecha de Fin</Label>
+              <Input
+                id="editEndDate"
+                type="date"
+                value={editEndDate}
+                onChange={(e) => setEditEndDate(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsEditSeasonDialogOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleEditSeasonConfirm}
+              disabled={!editStartDate || !editEndDate}
+            >
+              Guardar Cambios
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -36,20 +36,21 @@ export function useRoute(routeId: string) {
   });
 }
 
-export const useRouteSchedules = (routeId?: string) => {
-  return useQuery<RouteSchedule[]>({
+export function useRouteSchedules(routeId: string | undefined) {
+  return useQuery({
     queryKey: ["route-schedules", routeId],
     queryFn: async () => {
-      const { data } = await axios.get<RouteSchedule[]>(
-        routeId
-          ? `/api/route-schedules?routeId=${routeId}`
-          : "/api/route-schedules"
-      );
-      return data;
+      if (!routeId) return [];
+      const response = await fetch(`${ROUTE_SCHEDULES_API_URL}?routeId=${routeId}`);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Error fetching route schedules");
+      }
+      return response.json();
     },
     enabled: !!routeId,
   });
-};
+}
 
 export function useCreateRoute() {
   const queryClient = useQueryClient();
@@ -73,8 +74,10 @@ export function useCreateRouteSchedule() {
       const { data: response } = await axios.post(ROUTE_SCHEDULES_API_URL, data);
       return response;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["route-schedules", variables.routeId] });
       queryClient.invalidateQueries({ queryKey: ["route-schedules"] });
+      queryClient.invalidateQueries({ queryKey: ["routes", variables.routeId] });
       queryClient.invalidateQueries({ queryKey: ["routes"] });
     },
   });
@@ -108,22 +111,33 @@ export function useUpdateRouteSchedule() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      scheduleId,
-      data,
-    }: {
-      scheduleId: string;
-      data: UpdateRouteScheduleInput;
+    mutationFn: async ({ 
+      id, 
+      data 
+    }: { 
+      id: string; 
+      data: { 
+        seasonStart?: string; 
+        seasonEnd?: string; 
+      } 
     }) => {
-      const { data: response } = await axios.patch(
-        `${ROUTE_SCHEDULES_API_URL}/${scheduleId}`,
-        data
-      );
-      return response;
+      const response = await fetch(`/api/route-schedules/${id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Error al actualizar el horario");
+      }
+
+      return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ["route-schedules"] });
-      queryClient.invalidateQueries({ queryKey: ["routes"] });
     },
   });
 }

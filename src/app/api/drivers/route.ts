@@ -9,26 +9,27 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const companyId = searchParams.get("companyId");
 
-    const whereClause = companyId ? { company_id: companyId } : {};
-
     const drivers = await prisma.drivers.findMany({
-      where: whereClause,
+      where: {
+        ...(companyId ? { company_id: companyId } : {}),
+        active: true,
+      },
       orderBy: { created_at: "desc" },
     });
 
-    return NextResponse.json(
-      drivers.map((driver) => ({
-        id: driver.id,
-        fullName: driver.full_name,
-        documentId: driver.document_id,
-        licenseNumber: driver.license_number,
-        licenseCategory: driver.license_category,
-        active: driver.active,
-        companyId: driver.company_id,
-        createdAt: driver.created_at,
-        updatedAt: driver.updated_at,
-      }))
-    );
+    const formattedDrivers = drivers.map((driver) => ({
+      id: driver.id,
+      fullName: driver.full_name,
+      documentId: driver.document_id,
+      licenseNumber: driver.license_number,
+      licenseCategory: driver.license_category,
+      active: driver.active,
+      companyId: driver.company_id,
+      createdAt: driver.created_at,
+      updatedAt: driver.updated_at,
+    }));
+
+    return NextResponse.json(formattedDrivers);
   } catch (error) {
     console.error("Error fetching drivers:", error);
     return NextResponse.json(

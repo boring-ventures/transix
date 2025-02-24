@@ -1,42 +1,36 @@
-import { useState } from "react";
-import { Schedule } from "@/types/route.types";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
+    DialogFooter,
     DialogHeader,
     DialogTitle,
-    DialogDescription,
 } from "@/components/ui/dialog";
-import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
-} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { Label } from "@/components/ui/label";
+import { Schedule } from "@/types/route.types";
 import { format } from "date-fns";
-
-const editScheduleSchema = z.object({
-    departureDate: z.string().min(1, "La fecha de salida es requerida"),
-    departureTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, {
-        message: "La hora debe estar en formato HH:MM",
-    }),
-    price: z.number().min(0, "El precio debe ser mayor o igual a 0"),
-});
-
-type EditScheduleInput = z.infer<typeof editScheduleSchema>;
+import { useState } from "react";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { useBuses } from "@/hooks/useBuses";
+import { useDrivers } from "@/hooks/useDrivers";
+import { useUserRoutes } from "@/hooks/useUserRoutes";
 
 interface EditScheduleDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     schedule: Schedule;
-    onSubmit: (scheduleId: string, data: EditScheduleInput) => Promise<void>;
+    onSubmit: (scheduleId: string, data: { 
+        departureDate: string; 
+        departureTime: string; 
+    }) => Promise<void>;
 }
 
 export function EditScheduleDialog({
@@ -45,27 +39,27 @@ export function EditScheduleDialog({
     schedule,
     onSubmit,
 }: EditScheduleDialogProps) {
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const { userData } = useUserRoutes();
+    const companyId = userData?.companyId || "";
+    const { data: buses } = useBuses(companyId);
+    const { data: drivers } = useDrivers(companyId);
 
-    const form = useForm<EditScheduleInput>({
-        resolver: zodResolver(editScheduleSchema),
-        defaultValues: {
-            departureDate: format(new Date(schedule.departureDate), "yyyy-MM-dd"),
-            departureTime: format(new Date(schedule.departureDate), "HH:mm"),
-            price: schedule.price,
-        },
-    });
+    const [departureDate, setDepartureDate] = useState(
+        format(new Date(schedule.departureDate), "yyyy-MM-dd")
+    );
+    const [departureTime, setDepartureTime] = useState(
+        format(new Date(schedule.departureDate), "HH:mm")
+    );
+    const [selectedBusId, setSelectedBusId] = useState(schedule.busId || "");
+    const [selectedPrimaryDriverId, setSelectedPrimaryDriverId] = useState(schedule.primaryDriverId || "");
+    const [selectedSecondaryDriverId, setSelectedSecondaryDriverId] = useState(schedule.secondaryDriverId || "");
 
-    const handleSubmit = async (data: EditScheduleInput) => {
-        try {
-            setIsSubmitting(true);
-            await onSubmit(schedule.id, data);
-            onOpenChange(false);
-        } catch (error) {
-            console.error("Error updating schedule:", error);
-        } finally {
-            setIsSubmitting(false);
-        }
+    const handleSubmit = async () => {
+        await onSubmit(schedule.id, {
+            departureDate,
+            departureTime,
+        });
+        onOpenChange(false);
     };
 
     return (
@@ -74,74 +68,89 @@ export function EditScheduleDialog({
                 <DialogHeader>
                     <DialogTitle>Editar Horario</DialogTitle>
                     <DialogDescription>
-                        Modifica los detalles del horario programado
+                        Modifica los detalles del viaje programado
                     </DialogDescription>
                 </DialogHeader>
 
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-                        <FormField
-                            control={form.control}
-                            name="departureDate"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Fecha de Salida</FormLabel>
-                                    <FormControl>
-                                        <Input type="date" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        <FormField
-                            control={form.control}
-                            name="departureTime"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Hora de Salida</FormLabel>
-                                    <FormControl>
-                                        <Input type="time" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        <FormField
-                            control={form.control}
-                            name="price"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Precio</FormLabel>
-                                    <FormControl>
-                                        <Input
-                                            type="number"
-                                            min={0}
-                                            step="0.01"
-                                            onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                                            value={field.value}
-                                        />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        <div className="flex justify-end space-x-2">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => onOpenChange(false)}
-                            >
-                                Cancelar
-                            </Button>
-                            <Button type="submit" disabled={isSubmitting}>
-                                {isSubmitting ? "Guardando..." : "Guardar Cambios"}
-                            </Button>
+                <div className="space-y-4 py-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="departureDate">Fecha de Salida</Label>
+                            <Input
+                                id="departureDate"
+                                type="date"
+                                value={departureDate}
+                                onChange={(e) => setDepartureDate(e.target.value)}
+                            />
                         </div>
-                    </form>
-                </Form>
+                        <div className="space-y-2">
+                            <Label htmlFor="departureTime">Hora de Salida</Label>
+                            <Input
+                                id="departureTime"
+                                type="time"
+                                value={departureTime}
+                                onChange={(e) => setDepartureTime(e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label>Bus</Label>
+                        <Select value={selectedBusId} onValueChange={setSelectedBusId}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Seleccionar bus" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {buses?.map((bus) => (
+                                    <SelectItem key={bus.id} value={bus.id}>
+                                        {bus.plateNumber} - {bus.template?.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label>Conductor Principal</Label>
+                        <Select value={selectedPrimaryDriverId} onValueChange={setSelectedPrimaryDriverId}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Seleccionar conductor principal" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {drivers?.map((driver) => (
+                                    <SelectItem key={driver.id} value={driver.id}>
+                                        {driver.fullName} - {driver.licenseNumber}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label>Conductor Secundario (Opcional)</Label>
+                        <Select value={selectedSecondaryDriverId} onValueChange={setSelectedSecondaryDriverId}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Seleccionar conductor secundario" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {drivers?.map((driver) => (
+                                    <SelectItem key={driver.id} value={driver.id}>
+                                        {driver.fullName} - {driver.licenseNumber}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>
+                        Cancelar
+                    </Button>
+                    <Button onClick={handleSubmit}>
+                        Guardar Cambios
+                    </Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     );

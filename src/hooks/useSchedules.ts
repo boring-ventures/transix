@@ -1,21 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
 import type { Schedule } from "@/types/route.types";
 
-export function useSchedules(scheduleId?: string) {
+export function useSchedules() {
   return useQuery<Schedule[]>({
-    queryKey: ["schedules", scheduleId],
+    queryKey: ["schedules"],
     queryFn: async () => {
-      const url = scheduleId 
-        ? `/api/schedules/${scheduleId}`
-        : '/api/schedules';
-      
-      const response = await fetch(url);
+      const response = await fetch("/api/schedules");
       if (!response.ok) {
-        throw new Error("Error al obtener los horarios");
+        const error = await response.json();
+        throw new Error(error.message || "Error fetching schedules");
       }
-      return response.json();
+      const data = await response.json();
+      return data;
     },
-    enabled: true,
   });
 }
 

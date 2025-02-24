@@ -1,7 +1,20 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { addDays, format, parseISO, setHours, setMinutes } from "date-fns";
+import { addDays, format, parseISO, setHours, setMinutes, parse, eachDayOfInterval } from "date-fns";
 import { Decimal } from "@prisma/client/runtime/library";
+import { NextRequest } from "next/server";
+import { z } from "zod";
+import { schedule_status_enum } from "@prisma/client";
+import { enUS } from "date-fns/locale";
+
+const updateScheduleSchema = z.object({
+  id: z.string().uuid(),
+  departure_date: z.coerce.date(),
+  price: z.number().min(0),
+  busId: z.string().uuid().optional(),
+  primaryDriverId: z.string().uuid().optional(),
+  secondaryDriverId: z.string().uuid().optional(),
+});
 
 export async function GET(request: Request) {
   try {
@@ -61,62 +74,13 @@ export async function GET(request: Request) {
         destinationId: schedule.routes.destination_id,
         estimatedDuration: schedule.routes.estimated_duration,
       } : null,
-      busAssignments: schedule.bus_assignments.map(assignment => ({
-        id: assignment.id,
-        busId: assignment.bus_id,
-        routeId: assignment.route_id,
-        scheduleId: assignment.schedule_id,
-        status: assignment.status,
-        assignedAt: assignment.assigned_at,
-        startTime: assignment.start_time,
-        endTime: assignment.end_time,
-        createdAt: assignment.created_at,
-        updatedAt: assignment.updated_at,
-        bus: assignment.buses ? {
-          id: assignment.buses.id,
-          plateNumber: assignment.buses.plate_number,
-          isActive: assignment.buses.is_active ?? true,
-          maintenanceStatus: assignment.buses.maintenance_status_enum ?? 'OPERATIONAL',
-          template: assignment.buses.bus_type_templates ? {
-            id: assignment.buses.bus_type_templates.id,
-            name: assignment.buses.bus_type_templates.name,
-            type: assignment.buses.bus_type_templates.type,
-            seatsLayout: assignment.buses.bus_type_templates.seats_layout,
-            seatTemplateMatrix: assignment.buses.bus_type_templates.seat_template_matrix,
-          } : undefined,
-          seats: assignment.buses.bus_seats.map((seat: {
-            id: string;
-            seat_number: string;
-            status: string | null;
-            seat_tiers?: {
-              id: string;
-              name: string;
-              base_price: Decimal;
-              created_at: Date;
-              updated_at: Date;
-              company_id: string;
-              is_active: boolean | null;
-              description: string | null;
-            };
-          }) => ({
-            id: seat.id,
-            seatNumber: seat.seat_number,
-            status: seat.status ?? 'available',
-            tier: seat.seat_tiers ? {
-              id: seat.seat_tiers.id,
-              name: seat.seat_tiers.name,
-              basePrice: seat.seat_tiers.base_price,
-            } : undefined
-          }))
-        } : undefined
-      }))
     }));
 
     return NextResponse.json(transformedSchedules);
   } catch (error) {
     console.error("Error fetching schedules:", error);
     return NextResponse.json(
-      { error: "Failed to fetch schedules" },
+      { error: "Error fetching schedules" },
       { status: 500 }
     );
   }
@@ -130,22 +94,26 @@ export async function POST(request: Request) {
     const {
       routeId,
       routeScheduleId,
-      departureTime,
-      operatingDays,
       startDate,
       endDate,
       price,
-      status = 'scheduled'
+      status = 'scheduled',
+      busId,
+      primaryDriverId,
+      secondaryDriverId
     } = body;
 
-    // Get the route for estimated duration
-    const route = await prisma.routes.findUnique({
-      where: { id: routeId },
+    // Get the route schedule to get departure time and estimated arrival time
+    const routeSchedule = await prisma.route_schedules.findUnique({
+      where: { id: routeScheduleId },
+      include: {
+        routes: true
+      }
     });
 
-    if (!route) {
+    if (!routeSchedule) {
       return NextResponse.json(
-        { error: "Route not found" },
+        { error: "Route schedule not found" },
         { status: 404 }
       );
     }
@@ -153,110 +121,50 @@ export async function POST(request: Request) {
     // Parse dates
     const start = parseISO(startDate);
     const end = parseISO(endDate);
-    
-    // Parse time
-    const [hours, minutes] = departureTime.split(':').map(Number);
 
-    // Generate schedules for each day in the range
-    const schedulesToCreate = [];
-    let currentDate = start;
-
-    while (currentDate <= end) {
-      const dayOfWeek = format(currentDate, 'EEEE').toLowerCase();
-      
-      // Only create schedule if it's an operating day
-      if (operatingDays.includes(dayOfWeek)) {
-        // Set departure time
-        const departureDateTime = setMinutes(setHours(currentDate, hours), minutes);
-        
-        // Calculate estimated arrival time based on route duration
-        const estimatedArrivalTime = addDays(departureDateTime, 0);
-        estimatedArrivalTime.setMinutes(estimatedArrivalTime.getMinutes() + route.estimated_duration);
-
-        schedulesToCreate.push({
-          route_id: routeId,
-          route_schedule_id: routeScheduleId,
-          departure_date: departureDateTime,
-          estimated_arrival_time: estimatedArrivalTime,
-          price: price,
-          status: status,
-        });
-      }
-      
-      // Move to next day
-      currentDate = addDays(currentDate, 1);
-    }
-
-    console.log('Creating schedules:', schedulesToCreate);
-
-    // Create all schedules
-    const createdSchedules = await prisma.schedules.createMany({
-      data: schedulesToCreate,
-    });
-
-    return NextResponse.json({
-      message: "Schedules created successfully",
-      count: createdSchedules.count,
-    });
-
-  } catch (error) {
-    console.error("Error creating schedules:", error);
-    return NextResponse.json(
-      { 
-        error: "Failed to create schedules",
-        details: error instanceof Error ? error.message : "Unknown error"
-      },
-      { status: 500 }
+    // Get all dates between start and end that match operating days
+    const dates = eachDayOfInterval({ start, end }).filter((date) =>
+      routeSchedule.operating_days.includes(format(date, 'EEEE', { locale: enUS }).toLowerCase())
     );
-  }
-}
 
-export async function PUT(request: Request) {
-  try {
-    const body = await request.json();
-    const { id, ...updateData } = body;
+    // Create schedules for each date
+    const createdSchedules = await Promise.all(
+      dates.map(async (date) => {
+        // Combine date with departure time
+        const departureDateTime = new Date(
+          date.getFullYear(),
+          date.getMonth(),
+          date.getDate(),
+          routeSchedule.departure_time.getHours(),
+          routeSchedule.departure_time.getMinutes()
+        );
 
-    // Verify the schedule exists and can be updated
-    const existingSchedule = await prisma.schedules.findUnique({
-      where: { id },
-      include: {
-        bus_assignments: true
-      }
-    });
+        // Calculate estimated arrival time
+        const estimatedArrivalDateTime = new Date(
+          date.getFullYear(),
+          date.getMonth(),
+          date.getDate(),
+          routeSchedule.estimated_arrival_time.getHours(),
+          routeSchedule.estimated_arrival_time.getMinutes()
+        );
 
-    if (!existingSchedule) {
-      return NextResponse.json(
-        { error: "Schedule not found" },
-        { status: 404 }
-      );
-    }
-
-    if (existingSchedule.status !== 'scheduled') {
-      return NextResponse.json(
-        { error: "Only scheduled trips can be modified" },
-        { status: 400 }
-      );
-    }
-
-    // Update the schedule
-    const updatedSchedule = await prisma.schedules.update({
-      where: { id },
-      data: updateData,
-      include: {
-        routes: true,
-        route_schedules: true,
-        buses: {
+        // Create the schedule
+        const schedule = await prisma.schedules.create({
+          data: {
+            route_id: routeId,
+            route_schedule_id: routeScheduleId,
+            bus_id: busId || null,
+            primary_driver_id: primaryDriverId || null,
+            secondary_driver_id: secondaryDriverId || null,
+            departure_date: date,
+            estimated_arrival_time: estimatedArrivalDateTime,
+            actual_departure_time: null,
+            actual_arrival_time: null,
+            price: price || 0,
+            status: status,
+          },
           include: {
-            bus_type_templates: true,
-            bus_seats: {
-              include: {
-                seat_tiers: true
-              }
-            }
-          }
-        },
-        bus_assignments: {
-          include: {
+            routes: true,
             buses: {
               include: {
                 bus_type_templates: true,
@@ -266,85 +174,193 @@ export async function PUT(request: Request) {
                   }
                 }
               }
-            }
+            },
+            primary_driver: true,
+            secondary_driver: true
           }
+        });
+
+        // If a bus is assigned, create a bus assignment
+        if (busId) {
+          await prisma.bus_assignments.create({
+            data: {
+              bus_id: busId,
+              route_id: routeId,
+              schedule_id: schedule.id,
+              start_time: departureDateTime,
+              end_time: estimatedArrivalDateTime,
+              status: 'active',
+            }
+          });
         }
+
+        return schedule;
+      })
+    );
+
+    // Transform the response to match the expected format
+    const transformedSchedules = createdSchedules.map(schedule => ({
+      id: schedule.id,
+      routeId: schedule.route_id,
+      routeScheduleId: schedule.route_schedule_id,
+      busId: schedule.bus_id,
+      primaryDriverId: schedule.primary_driver_id,
+      secondaryDriverId: schedule.secondary_driver_id,
+      departureDate: schedule.departure_date,
+      estimatedArrivalTime: schedule.estimated_arrival_time,
+      actualDepartureTime: schedule.actual_departure_time,
+      actualArrivalTime: schedule.actual_arrival_time,
+      price: schedule.price,
+      status: schedule.status,
+      createdAt: schedule.created_at,
+      updatedAt: schedule.updated_at,
+      route: schedule.routes ? {
+        id: schedule.routes.id,
+        name: schedule.routes.name,
+        originId: schedule.routes.origin_id,
+        destinationId: schedule.routes.destination_id,
+        estimatedDuration: schedule.routes.estimated_duration,
+        active: schedule.routes.active,
+      } : undefined,
+      bus: schedule.buses ? {
+        id: schedule.buses.id,
+        plateNumber: schedule.buses.plate_number,
+        template: schedule.buses.bus_type_templates ? {
+          id: schedule.buses.bus_type_templates.id,
+          name: schedule.buses.bus_type_templates.name,
+          type: schedule.buses.bus_type_templates.type,
+        } : undefined,
+        seats: schedule.buses.bus_seats.map(seat => ({
+          id: seat.id,
+          seatNumber: seat.seat_number,
+          status: seat.status,
+          tier: seat.seat_tiers ? {
+            id: seat.seat_tiers.id,
+            name: seat.seat_tiers.name,
+            basePrice: seat.seat_tiers.base_price
+          } : undefined
+        }))
+      } : undefined,
+      primaryDriver: schedule.primary_driver ? {
+        id: schedule.primary_driver.id,
+        fullName: schedule.primary_driver.full_name,
+        documentId: schedule.primary_driver.document_id,
+        licenseNumber: schedule.primary_driver.license_number,
+        licenseCategory: schedule.primary_driver.license_category,
+      } : undefined,
+      secondaryDriver: schedule.secondary_driver ? {
+        id: schedule.secondary_driver.id,
+        fullName: schedule.secondary_driver.full_name,
+        documentId: schedule.secondary_driver.document_id,
+        licenseNumber: schedule.secondary_driver.license_number,
+        licenseCategory: schedule.secondary_driver.license_category,
+      } : undefined,
+    }));
+
+    return NextResponse.json(transformedSchedules);
+  } catch (error) {
+    console.error("Error creating schedules:", error);
+    return NextResponse.json(
+      { error: "Error creating schedules", details: error instanceof Error ? error.message : "Unknown error" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const validatedData = updateScheduleSchema.parse(body);
+
+    // Get the route schedule to get departure time and estimated arrival time
+    const schedule = await prisma.schedules.findUnique({
+      where: { id: validatedData.id },
+      include: {
+        route_schedules: true,
+        routes: true
       }
     });
 
-    // Transform the response
-    const transformedSchedule = {
-      id: updatedSchedule.id,
-      routeId: updatedSchedule.route_id,
-      routeScheduleId: updatedSchedule.route_schedule_id,
-      busId: updatedSchedule.bus_id,
-      departureDate: updatedSchedule.departure_date,
-      estimatedArrivalTime: updatedSchedule.estimated_arrival_time,
-      actualDepartureTime: updatedSchedule.actual_departure_time,
-      actualArrivalTime: updatedSchedule.actual_arrival_time,
-      price: updatedSchedule.price,
-      status: updatedSchedule.status,
-      createdAt: updatedSchedule.created_at,
-      updatedAt: updatedSchedule.updated_at,
-      busAssignments: updatedSchedule.bus_assignments.map(assignment => ({
-        id: assignment.id,
-        busId: assignment.bus_id,
-        routeId: assignment.route_id,
-        scheduleId: assignment.schedule_id,
-        status: assignment.status,
-        assignedAt: assignment.assigned_at,
-        startTime: assignment.start_time,
-        endTime: assignment.end_time,
-        createdAt: assignment.created_at,
-        updatedAt: assignment.updated_at,
-        bus: assignment.buses ? {
-          id: assignment.buses.id,
-          plateNumber: assignment.buses.plate_number,
-          isActive: assignment.buses.is_active ?? true,
-          maintenanceStatus: assignment.buses.maintenance_status_enum ?? 'OPERATIONAL',
-          template: assignment.buses.bus_type_templates ? {
-            id: assignment.buses.bus_type_templates.id,
-            name: assignment.buses.bus_type_templates.name,
-            type: assignment.buses.bus_type_templates.type,
-            seatsLayout: assignment.buses.bus_type_templates.seats_layout,
-            seatTemplateMatrix: assignment.buses.bus_type_templates.seat_template_matrix,
-          } : undefined,
-          seats: assignment.buses.bus_seats.map((seat: {
-            id: string;
-            seat_number: string;
-            status: string | null;
-            seat_tiers?: {
-              id: string;
-              name: string;
-              base_price: Decimal;
-              created_at: Date;
-              updated_at: Date;
-              company_id: string;
-              is_active: boolean | null;
-              description: string | null;
-            };
-          }) => ({
-            id: seat.id,
-            seatNumber: seat.seat_number,
-            status: seat.status ?? 'available',
-            tier: seat.seat_tiers ? {
-              id: seat.seat_tiers.id,
-              name: seat.seat_tiers.name,
-              basePrice: seat.seat_tiers.base_price,
-            } : undefined
-          }))
-        } : undefined
-      }))
-    };
+    if (!schedule) {
+      return NextResponse.json(
+        { error: "Schedule not found" },
+        { status: 404 }
+      );
+    }
 
-    return NextResponse.json(transformedSchedule);
+    // Get departure time from route_schedules
+    const departureTime = format(schedule.route_schedules.departure_time, 'HH:mm');
+    const [hours, minutes] = departureTime.split(':').map(Number);
+
+    // Set departure time for the new date
+    const departureDateTime = setMinutes(setHours(validatedData.departure_date, hours), minutes);
+    
+    // Calculate estimated arrival time based on route duration
+    const estimatedArrivalTime = addDays(departureDateTime, 0);
+    estimatedArrivalTime.setMinutes(estimatedArrivalTime.getMinutes() + schedule.routes.estimated_duration);
+
+    // Actualizar el horario
+    const updatedSchedule = await prisma.schedules.update({
+      where: { id: validatedData.id },
+      data: {
+        departure_date: departureDateTime,
+        estimated_arrival_time: estimatedArrivalTime,
+        price: validatedData.price,
+        bus_id: validatedData.busId,
+        primary_driver_id: validatedData.primaryDriverId,
+        secondary_driver_id: validatedData.secondaryDriverId,
+      },
+    });
+
+    // Si se asignó un bus, crear o actualizar la asignación
+    if (validatedData.busId) {
+      // Buscar asignación existente
+      const existingAssignment = await prisma.bus_assignments.findFirst({
+        where: {
+          schedule_id: validatedData.id,
+          status: "active",
+        },
+      });
+
+      if (existingAssignment) {
+        // Actualizar asignación existente
+        await prisma.bus_assignments.update({
+          where: { id: existingAssignment.id },
+          data: {
+            bus_id: validatedData.busId,
+            status: "active",
+            start_time: departureDateTime,
+            end_time: estimatedArrivalTime,
+          },
+        });
+      } else {
+        // Crear nueva asignación
+        await prisma.bus_assignments.create({
+          data: {
+            schedule_id: validatedData.id,
+            bus_id: validatedData.busId,
+            route_id: schedule.route_id,
+            status: "active",
+            start_time: departureDateTime,
+            end_time: estimatedArrivalTime,
+          },
+        });
+      }
+    }
+
+    return NextResponse.json(updatedSchedule);
   } catch (error) {
     console.error("Error updating schedule:", error);
+
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: "Datos inválidos", details: error.errors },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json(
-      { 
-        error: "Failed to update schedule",
-        details: error instanceof Error ? error.message : "Unknown error"
-      },
+      { error: "Error al actualizar el horario" },
       { status: 500 }
     );
   }

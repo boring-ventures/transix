@@ -49,23 +49,15 @@ export function AssignBusDialog({
   onAssign,
   isSubmitting = false
 }: AssignBusDialogProps) {
-  const [selectedBus, setSelectedBus] = useState<string | undefined>(undefined);
-  const [startTime, setStartTime] = useState<string>("");
-  const [endTime, setEndTime] = useState<string>("");
+  const [selectedBusId, setSelectedBusId] = useState("");
   const { toast } = useToast();
 
   // Reset form when dialog opens
   useEffect(() => {
     if (open) {
-      setSelectedBus(undefined);
-      // Set default start time to schedule departure time
-      const defaultStartTime = format(new Date(schedule.departureDate), "HH:mm");
-      setStartTime(defaultStartTime);
-      // Set default end time to estimated arrival
-      const defaultEndTime = format(new Date(schedule.estimatedArrivalTime), "HH:mm");
-      setEndTime(defaultEndTime);
+      setSelectedBusId("");
     }
-  }, [open, schedule]);
+  }, [open]);
 
   // Filter available buses
   const availableBuses = useMemo(() => {
@@ -84,18 +76,14 @@ export function AssignBusDialog({
         const scheduleDate = new Date(schedule.departureDate);
         
         // Create datetime objects for comparison
-        const newStartTime = startTime ? setMinutes(
-          setHours(scheduleDate, parseInt(startTime.split(':')[0])),
-          parseInt(startTime.split(':')[1])
+        const newStartTime = selectedBusId ? setMinutes(
+          setHours(scheduleDate, parseInt(selectedBusId.split(':')[0])),
+          parseInt(selectedBusId.split(':')[1])
         ) : scheduleDate;
 
-        const newEndTime = endTime ? setMinutes(
-          setHours(scheduleDate, parseInt(endTime.split(':')[0])),
-          parseInt(endTime.split(':')[1])
-        ) : addMinutes(
-          scheduleDate, 
-          route?.estimatedDuration || 0
-        );
+        const newEndTime = schedule.estimatedArrivalTime 
+          ? new Date(schedule.estimatedArrivalTime)
+          : new Date(scheduleDate.getTime() + 2 * 60 * 60 * 1000); // 2 hours by default
 
         // Check for overlap
         return (
@@ -107,10 +95,10 @@ export function AssignBusDialog({
 
       return !hasConflictingAssignment;
     });
-  }, [buses, schedule, startTime, endTime, route]);
+  }, [buses, schedule, selectedBusId]);
 
-  const handleAssign = async () => {
-    if (!selectedBus) {
+  const handleSubmit = async () => {
+    if (!selectedBusId) {
       toast({
         title: "Error de validación",
         description: "Debe seleccionar un bus",
@@ -119,48 +107,18 @@ export function AssignBusDialog({
       return;
     }
 
-    if (!startTime) {
-      toast({
-        title: "Error de validación",
-        description: "Debe especificar la hora de inicio",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!endTime) {
-      toast({
-        title: "Error de validación",
-        description: "Debe especificar la hora de fin",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validate time range
-    const scheduleDate = new Date(schedule.departureDate);
-    const startDateTime = new Date(scheduleDate);
-    startDateTime.setHours(parseInt(startTime.split(':')[0]), parseInt(startTime.split(':')[1]), 0);
-    
-    const endDateTime = new Date(scheduleDate);
-    endDateTime.setHours(parseInt(endTime.split(':')[0]), parseInt(endTime.split(':')[1]), 0);
-
-    if (isAfter(startDateTime, endDateTime)) {
-      toast({
-        title: "Error de validación",
-        description: "La hora de inicio debe ser anterior a la hora de fin",
-        variant: "destructive",
-      });
-      return;
-    }
+    const startTime = new Date(schedule.departureDate);
+    const endTime = schedule.estimatedArrivalTime 
+      ? new Date(schedule.estimatedArrivalTime)
+      : new Date(startTime.getTime() + 2 * 60 * 60 * 1000); // 2 hours by default
 
     try {
-      await onAssign({ 
-        busId: selectedBus,
+      await onAssign({
+        busId: selectedBusId,
         scheduleId: schedule.id,
         routeId: schedule.routeId,
-        startTime: startDateTime.toISOString(),
-        endTime: endDateTime.toISOString()
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
       });
       onOpenChange(false);
     } catch (error) {
@@ -220,8 +178,9 @@ export function AssignBusDialog({
               </Alert>
             ) : (
               <Select
-                value={selectedBus}
-                onValueChange={setSelectedBus}
+                value={selectedBusId}
+                onValueChange={setSelectedBusId}
+                disabled={isSubmitting}
               >
                 <SelectTrigger id="bus">
                   <SelectValue placeholder="Selecciona un bus" />
@@ -229,45 +188,29 @@ export function AssignBusDialog({
                 <SelectContent>
                   {availableBuses.map((bus) => (
                     <SelectItem key={bus.id} value={bus.id}>
-                      {bus.plateNumber} ({bus.template?.name || 'N/A'})
+                      {bus.plateNumber} - {bus.template?.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             )}
           </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="startTime">Hora de Inicio</Label>
-            <Input
-              id="startTime"
-              type="time"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-            />
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="endTime">Hora de Fin</Label>
-            <Input
-              id="endTime"
-              type="time"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-            />
-          </div>
         </div>
 
         <DialogFooter>
           <Button
             variant="outline"
-            onClick={() => onOpenChange(false)}
+            onClick={() => {
+              onOpenChange(false);
+              setSelectedBusId("");
+            }}
+            disabled={isSubmitting}
           >
             Cancelar
           </Button>
           <Button
-            onClick={handleAssign}
-            disabled={!selectedBus || !startTime || !endTime || isSubmitting || availableBuses.length === 0}
+            onClick={handleSubmit}
+            disabled={!selectedBusId || isSubmitting || availableBuses.length === 0}
           >
             {isSubmitting ? "Asignando..." : "Asignar"}
           </Button>

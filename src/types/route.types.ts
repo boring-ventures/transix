@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { schedule_status_enum, passenger_status_enum } from "@prisma/client";
+import { Bus } from "@/types/bus.types";
 
 /**
  * Base Schemas
@@ -76,7 +77,7 @@ export const updateRouteScheduleSchema = z.object({
 /**
  * Export Types
  */
-export type Route = {
+export interface Route {
   id: string;
   name: string;
   originId: string;
@@ -86,10 +87,15 @@ export type Route = {
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
-  company?: Company;
-  origin?: Location;
-  destination?: Location;
-};
+}
+
+export interface RouteWithRelations extends Route {
+  origin: Location;
+  destination: Location;
+  buses: Bus[];
+  schedules: Schedule[];
+  routeSchedules?: RouteSchedule[];
+}
 
 export type RouteSchedule = {
   id: string;
@@ -172,20 +178,6 @@ export type BusSeat = {
   };
 };
 
-export type Bus = {
-  id: string;
-  plateNumber: string;
-  template?: {
-    id: string;
-    name: string;
-    type: string;
-    seatsLayout: string;
-  };
-  seats: BusSeat[];
-  active: boolean;
-  companyId: string;
-};
-
 export type BusAssignment = {
   id: string;
   busId: string;
@@ -239,12 +231,6 @@ export type Schedule = {
   route?: Route;
   primaryDriver?: Driver;
   secondaryDriver?: Driver;
-};
-
-export type RouteWithRelations = Route & {
-  origin?: Location;
-  destination?: Location;
-  routeSchedules?: RouteSchedule[];
 };
 
 export type RouteScheduleWithRelations = RouteSchedule & {

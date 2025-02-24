@@ -5,18 +5,15 @@ export function useDrivers(companyId?: string) {
   return useQuery<Driver[]>({
     queryKey: ["drivers", companyId],
     queryFn: async () => {
-      const url = companyId 
-        ? `/api/drivers?companyId=${encodeURIComponent(companyId)}`
-        : '/api/drivers';
-      
+      const url = companyId ? `/api/drivers?companyId=${companyId}` : "/api/drivers";
       const response = await fetch(url);
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "Error al obtener los conductores");
+        throw new Error(error.error || "Error fetching drivers");
       }
       return response.json();
     },
-    enabled: !!companyId,
+    enabled: true,
   });
 }
 
@@ -43,28 +40,23 @@ export function useCreateDriver() {
       console.log("Creating driver with data:", data);
       const response = await fetch("/api/drivers", {
         method: "POST",
-        headers: { 
-          "Content-Type": "application/json"
+        headers: {
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "Error al crear el conductor");
+        throw new Error(error.error || "Error creating driver");
       }
 
       const result = await response.json();
-      console.log("Driver created:", result);
+      console.log("Driver created successfully:", result);
       return result;
     },
-    onSuccess: (data) => {
-      console.log("Mutation succeeded, invalidating queries");
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["drivers"] });
-      queryClient.invalidateQueries({ queryKey: ["drivers", data.companyId] });
-    },
-    onError: (error) => {
-      console.error("Mutation failed:", error);
     },
   });
 }
@@ -76,22 +68,21 @@ export function useUpdateDriver() {
     mutationFn: async ({ id, data }: { id: string; data: UpdateDriverInput }) => {
       const response = await fetch(`/api/drivers?id=${id}`, {
         method: "PUT",
-        headers: { 
-          "Content-Type": "application/json"
+        headers: {
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "Error al actualizar el conductor");
+        throw new Error(error.error || "Error updating driver");
       }
 
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["drivers"] });
-      queryClient.invalidateQueries({ queryKey: ["drivers", data.companyId] });
     },
   });
 }
@@ -100,21 +91,20 @@ export function useDeleteDriver() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (driverId: string) => {
-      const response = await fetch(`/api/drivers?id=${driverId}`, {
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/drivers?id=${id}`, {
         method: "DELETE",
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "Error al eliminar el conductor");
+        throw new Error(error.error || "Error deleting driver");
       }
 
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["drivers"] });
-      queryClient.invalidateQueries({ queryKey: ["drivers", data.companyId] });
     },
   });
 } 
