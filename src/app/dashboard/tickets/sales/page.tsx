@@ -36,6 +36,36 @@ type Passenger = {
   price: number;
 };
 
+type TicketWithCustomerData = {
+  schedule_id: string;
+  customer_id: string;
+  bus_seat_id: string;
+  status: string;
+  price: number;
+  customerData: {
+    fullName: string;
+    documentId: string;
+    phone: string;
+    email: string;
+    seatNumber: string;
+  };
+  notes: string;
+  purchased_by: string | null;
+  purchased_at: Date;
+};
+
+type ConfirmedReservation = {
+  reservationId: string;
+  tickets: TicketWithCustomerData[];
+  totalAmount: number;
+  schedule: {
+    departureDate: string;
+    departureTime: string;
+    route: string;
+  };
+  purchaseTime?: string;
+};
+
 export default function TicketSales() {
   const { toast } = useToast();
   const { data: routes = [], isLoading: isLoadingRoutes } = useRoutes();
@@ -82,26 +112,7 @@ export default function TicketSales() {
   } = useSchedulesByRouteSchedule(selectedRouteSchedule?.id);
 
   // In the TicketSales component, add this state
-  const [confirmedReservation, setConfirmedReservation] = useState<{
-    reservationId: string;
-    tickets: {
-      schedule_id: string;
-      customer_id: string | null;
-      bus_seat_id: string;
-      status: string;
-      price: number;
-      notes: string;
-      purchased_by: string | null;
-      purchased_at: Date;
-    }[];
-    totalAmount: number;
-    schedule: {
-      departureDate: string;
-      departureTime: string;
-      route: string;
-    };
-    purchaseTime?: string;
-  } | null>(null);
+  const [confirmedReservation, setConfirmedReservation] = useState<ConfirmedReservation | null>(null);
 
   // Add this state
   const [showPDF, setShowPDF] = useState(false);
@@ -256,14 +267,11 @@ export default function TicketSales() {
 
   const handleSubmit = async () => {
     try {
-      // Registrar el cliente si no existe antes de crear los tickets
       let effectiveCustomer = customerData;
       if (!effectiveCustomer) {
         effectiveCustomer = await registerCustomer();
       }
 
-      // Si no se han registrado tickets individualmente (es decir, no se ha llamado a handleRegisterTickets),
-      // se autocompletan usando los datos comunes y cada asiento seleccionado.
       let filledPassengers = passengers;
       if (selectedSeats.length > 0 && Object.keys(filledPassengers).length === 0) {
         const currentBus = selectedSchedule!.busAssignments?.[0]?.bus;
@@ -281,16 +289,24 @@ export default function TicketSales() {
           };
         });
         filledPassengers = newPassengers;
+        setPassengers(newPassengers);
       }
-
+      
       const ticketsToCreate = Object.entries(filledPassengers).map(
         ([seatId, passenger]) => ({
           schedule_id: selectedSchedule!.id,
-          customer_id: effectiveCustomer.id, // Usar el id del cliente registrado
+          customer_id: effectiveCustomer.id,
           bus_seat_id: seatId,
           status: "active" as const,
           price: passenger.price,
-          notes: `Pasajero: ${passenger.name}, Documento: ${passenger.document_id}`,
+          customerData: {
+            fullName: commonPassengerName,
+            documentId: commonDocumentId,
+            phone: commonPhone,
+            email: commonEmail,
+            seatNumber: passenger.seatLabel,
+          },
+          notes: `Ticket para el asiento ${passenger.seatLabel}`,
           purchased_by: null,
           purchased_at: new Date(),
         })
@@ -310,9 +326,21 @@ export default function TicketSales() {
 
       const createdTickets = await response.json();
       
+      // Asegurarnos que los tickets tengan la información del cliente
+      const ticketsWithCustomerData = createdTickets.map((ticket: any) => ({
+        ...ticket,
+        customerData: {
+          fullName: commonPassengerName,
+          documentId: commonDocumentId,
+          phone: commonPhone,
+          email: commonEmail,
+          seatNumber: filledPassengers[ticket.bus_seat_id].seatLabel,
+        }
+      }));
+
       setConfirmedReservation({
         reservationId: `RES-${Math.random().toString(36).substr(2, 9)}`,
-        tickets: createdTickets,
+        tickets: ticketsWithCustomerData, // Usar los tickets con customerData
         totalAmount: Object.values(filledPassengers).reduce(
           (sum, p) => sum + p.price,
           0
@@ -820,20 +848,31 @@ export default function TicketSales() {
                   <h4 className="text-lg font-semibold p-4 border-b">Tickets</h4>
                   <div className="divide-y">
                     {confirmedReservation.tickets.map((ticket) => {
-                      const ticketData = passengers[ticket.bus_seat_id] || {};
                       return (
-                        <div key={ticket.bus_seat_id} className="p-4 grid grid-cols-4 gap-4">
+                        <div key={ticket.bus_seat_id} className="p-4 grid grid-cols-5 gap-4">
                           <div>
                             <p className="text-sm text-muted-foreground">Asiento</p>
-                            <p className="font-medium">{ticketData.seatLabel || ticket.bus_seat_id}</p>
+                            <p className="font-medium">{ticket.customerData.seatNumber}</p>
                           </div>
                           <div>
                             <p className="text-sm text-muted-foreground">Pasajero</p>
-                            <p className="font-medium">{ticketData.name ?? ticket.customer_id ?? ""}</p>
+                            <p className="font-medium">{ticket.customerData.fullName}</p>
                           </div>
                           <div>
                             <p className="text-sm text-muted-foreground">Documento</p>
-                            <p className="font-medium">{ticketData.document_id || "N/A"}</p>
+                            <p className="font-medium">{ticket.customerData.documentId}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Categoría</p>
+                            <p className="font-medium">
+                              {!isNaN(Number(ticket.customerData.seatNumber))
+                                ? Number(ticket.customerData.seatNumber) <= 4
+                                  ? "VIP"
+                                  : Number(ticket.customerData.seatNumber) <= 8
+                                  ? "Ejecutivo"
+                                  : "Económico"
+                                : "Económico"}
+                            </p>
                           </div>
                           <div>
                             <p className="text-sm text-muted-foreground">Precio</p>
@@ -882,15 +921,12 @@ export default function TicketSales() {
                     <ReservationPDF 
                       reservation={{
                         ...confirmedReservation,
-                        tickets: confirmedReservation.tickets.map(ticket => {
-                          const ticketData = passengers[ticket.bus_seat_id] || {};
-                          return {
-                            seatNumber: ticketData.seatLabel || ticket.bus_seat_id,
-                            passengerName: ticketData.name ?? ticket.customer_id ?? "",
-                            documentId: ticketData.document_id || "N/A",
-                            price: ticket.price
-                          };
-                        })
+                        tickets: confirmedReservation.tickets.map(ticket => ({
+                          seatNumber: ticket.customerData.seatNumber,
+                          passengerName: ticket.customerData.fullName,
+                          documentId: ticket.customerData.documentId,
+                          price: ticket.price
+                        }))
                       }} 
                     />
                   </div>

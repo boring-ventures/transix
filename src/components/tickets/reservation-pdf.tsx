@@ -136,10 +136,8 @@ export function ReservationPDF({ reservation }: ReservationPDFProps) {
             <View style={styles.ticketHeader}>
               <Text style={[styles.ticketCol, { fontSize: 10 }]}>Asiento</Text>
               <Text style={[styles.ticketCol, { fontSize: 10 }]}>Pasajero</Text>
-              <Text style={[styles.ticketCol, { fontSize: 10 }]}>
-                Documento
-              </Text>
-              <Text style={[styles.ticketCol, { fontSize: 10 }]}>Tipo</Text>
+              <Text style={[styles.ticketCol, { fontSize: 10 }]}>Documento</Text>
+              <Text style={[styles.ticketCol, { fontSize: 10 }]}>Categoría</Text>
               <Text style={[styles.ticketCol, { fontSize: 10 }]}>Precio</Text>
             </View>
             {reservation.tickets.map((ticket) => (
@@ -148,10 +146,12 @@ export function ReservationPDF({ reservation }: ReservationPDFProps) {
                 <Text style={styles.ticketCol}>{ticket.passengerName}</Text>
                 <Text style={styles.ticketCol}>{ticket.documentId}</Text>
                 <Text style={styles.ticketCol}>
-                  {Number(ticket.seatNumber) <= 4
-                    ? "VIP"
-                    : Number(ticket.seatNumber) <= 8
-                    ? "Ejecutivo"
+                  {!isNaN(Number(ticket.seatNumber))
+                    ? Number(ticket.seatNumber) <= 4
+                      ? "VIP"
+                      : Number(ticket.seatNumber) <= 8
+                      ? "Ejecutivo"
+                      : "Económico"
                     : "Económico"}
                 </Text>
                 <Text style={styles.ticketCol}>${ticket.price}</Text>

@@ -13,6 +13,7 @@ const createTicketSchema = z.object({
     documentId: z.string().optional(),
     phone: z.string().optional(),
     email: z.string().email().optional(),
+    seatNumber: z.string(),
   }),
   notes: z.string().optional(),
 });
@@ -22,29 +23,28 @@ const prismaClient = new PrismaClient();
 export async function POST(request: NextRequest) {
   try {
     const { tickets } = await request.json();
+    console.log(tickets);
     
     const createdTickets = await prismaClient.$transaction(async (prisma) => {
-      // Crear los tickets
+      // Crear los tickets sin la propiedad customerData
       const ticketsCreated = await Promise.all(
-        tickets.map((ticket: any) =>
-          prisma.tickets.create({
-            data: ticket
-          })
-        )
+        tickets.map((ticket: any) => {
+          const { customerData, ...ticketData } = ticket;
+          return prisma.tickets.create({
+            data: ticketData
+          });
+        })
       );
-
-      // Extraer información de pasajeros de las notas
-      const passengerData = tickets.map((ticket: any) => {
-        const noteMatch = ticket.notes.match(/Pasajero: (.*?), Documento: (.*?)$/);
-        return {
-          schedule_id: ticket.schedule_id,
-          full_name: noteMatch ? noteMatch[1] : "Sin nombre",
-          document_id: noteMatch ? noteMatch[2] : null,
-          seat_number: ticket.bus_seat_id,
-          status: "confirmed"
-        };
-      });
-
+      
+      // Extraer información de pasajeros usando exclusivamente customerData
+      const passengerData = tickets.map((ticket: any) => ({
+        schedule_id: ticket.schedule_id,
+        full_name: ticket.customerData.fullName,
+        document_id: ticket.customerData.documentId,
+        seat_number: ticket.customerData.seatNumber,
+        status: "confirmed"
+      }));
+      
       // Crear registros en passenger_lists
       await Promise.all(
         passengerData.map((passenger: any) =>
@@ -53,12 +53,13 @@ export async function POST(request: NextRequest) {
           })
         )
       );
-
+      
       return ticketsCreated;
     });
-
+    
     return NextResponse.json(createdTickets);
   } catch (error: any) {
+    console.log('El error es: ', error);
     console.error("Error creating tickets:", error);
     return NextResponse.json(
       { error: "Error creating tickets", details: error.message },
