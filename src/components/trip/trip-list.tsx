@@ -17,8 +17,8 @@ import { useSchedules, usePassengerList } from "@/hooks/useTrips";
 import { Schedule } from "@/types/route.types";
 import { Eye } from "lucide-react";
 import { schedule_status_enum } from "@prisma/client";
-import { 
-    Dialog, 
+import {
+    Dialog,
     DialogContent,
     DialogHeader,
     DialogTitle,
@@ -115,16 +115,10 @@ export function TripList() {
                                     </Badge>
                                 </TableCell>
                                 <TableCell>
-                                    {schedule.busAssignments && schedule.busAssignments.length > 0 ? (
-                                        <div className="flex flex-col gap-1">
-                                            <span>{schedule.busAssignments[0]?.bus?.plateNumber}</span>
-                                            {schedule.busAssignments[0]?.bus?.template && (
-                                                <Badge variant="outline" className="w-fit">
-                                                    {schedule.busAssignments[0]?.bus?.template?.name}
-                                                </Badge>
-                                            )}
-                                        </div>
+                                    {schedule.bus ? (
+                                        <Badge>{schedule.bus.plateNumber}</Badge>
                                     ) : (
+                                        console.log(schedule),
                                         <span className="text-gray-400 italic">No asignado</span>
                                     )}
                                 </TableCell>
