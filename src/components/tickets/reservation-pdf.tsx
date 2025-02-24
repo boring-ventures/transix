@@ -9,67 +9,80 @@ import {
 
 const styles = StyleSheet.create({
   page: {
-    padding: 30,
+    padding: 40,
+    fontSize: 12,
   },
   header: {
-    marginBottom: 20,
+    marginBottom: 30,
     borderBottom: 1,
-    paddingBottom: 10,
+    paddingBottom: 15,
   },
   title: {
-    fontSize: 20,
-    marginBottom: 10,
+    fontSize: 24,
+    marginBottom: 15,
+    textAlign: 'center',
   },
   reservationId: {
-    fontSize: 12,
+    fontSize: 14,
     color: "#666",
+    marginBottom: 5,
   },
   section: {
-    marginBottom: 15,
+    marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 14,
-    marginBottom: 5,
+    fontSize: 16,
+    marginBottom: 10,
     color: "#333",
+    borderBottom: 1,
+    paddingBottom: 5,
   },
   grid: {
     display: "flex",
     flexDirection: "row",
     flexWrap: "wrap",
-    marginBottom: 10,
+    marginBottom: 15,
   },
   gridItem: {
     width: "50%",
-    marginBottom: 8,
+    marginBottom: 10,
   },
   label: {
-    fontSize: 10,
+    fontSize: 11,
     color: "#666",
+    marginBottom: 2,
   },
   value: {
-    fontSize: 12,
+    fontSize: 13,
+    fontWeight: 'bold',
   },
   ticketHeader: {
     backgroundColor: "#f3f4f6",
-    padding: 8,
+    padding: 10,
     flexDirection: "row",
-    marginBottom: 5,
+    marginBottom: 8,
   },
   ticket: {
-    padding: 8,
+    padding: 10,
     borderBottom: 1,
     borderColor: "#e5e7eb",
     flexDirection: "row",
+    minHeight: 30,
   },
   ticketCol: {
     flex: 1,
+    justifyContent: 'center',
   },
   total: {
-    marginTop: 10,
-    padding: 8,
+    marginTop: 15,
+    padding: 10,
     flexDirection: "row",
     justifyContent: "space-between",
     backgroundColor: "#f3f4f6",
+  },
+  totalText: {
+    fontSize: 14,
+    fontWeight: 'bold',
   },
 });
 
@@ -94,7 +107,7 @@ interface ReservationPDFProps {
 
 export function ReservationPDF({ reservation }: ReservationPDFProps) {
   return (
-    <PDFViewer style={{ width: "100%", height: "600px" }}>
+    <PDFViewer style={{ width: "100%", height: "800px", border: "none" }}>
       <Document>
         <Page size="A4" style={styles.page}>
           <View style={styles.header}>
@@ -134,11 +147,11 @@ export function ReservationPDF({ reservation }: ReservationPDFProps) {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Tickets</Text>
             <View style={styles.ticketHeader}>
-              <Text style={[styles.ticketCol, { fontSize: 10 }]}>Asiento</Text>
-              <Text style={[styles.ticketCol, { fontSize: 10 }]}>Pasajero</Text>
-              <Text style={[styles.ticketCol, { fontSize: 10 }]}>Documento</Text>
-              <Text style={[styles.ticketCol, { fontSize: 10 }]}>Categoría</Text>
-              <Text style={[styles.ticketCol, { fontSize: 10 }]}>Precio</Text>
+              <Text style={[styles.ticketCol, { fontSize: 11 }]}>Asiento</Text>
+              <Text style={[styles.ticketCol, { fontSize: 11 }]}>Pasajero</Text>
+              <Text style={[styles.ticketCol, { fontSize: 11 }]}>Documento</Text>
+              <Text style={[styles.ticketCol, { fontSize: 11 }]}>Categoría</Text>
+              <Text style={[styles.ticketCol, { fontSize: 11 }]}>Precio</Text>
             </View>
             {reservation.tickets.map((ticket) => (
               <View key={ticket.seatNumber} style={styles.ticket}>
@@ -158,8 +171,8 @@ export function ReservationPDF({ reservation }: ReservationPDFProps) {
               </View>
             ))}
             <View style={styles.total}>
-              <Text style={{ fontSize: 12, fontWeight: "bold" }}>Total</Text>
-              <Text style={{ fontSize: 12, fontWeight: "bold" }}>
+              <Text style={styles.totalText}>Total</Text>
+              <Text style={styles.totalText}>
                 ${reservation.totalAmount}
               </Text>
             </View>

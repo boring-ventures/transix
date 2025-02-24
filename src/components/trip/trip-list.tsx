@@ -17,7 +17,12 @@ import { useSchedules, usePassengerList } from "@/hooks/useTrips";
 import { Schedule } from "@/types/route.types";
 import { Eye } from "lucide-react";
 import { schedule_status_enum } from "@prisma/client";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { 
+    Dialog, 
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PassengerList } from "./passenger-list";
 import { TripSettlementForm } from "./trip-settlement-form";
@@ -138,16 +143,16 @@ export function TripList() {
                 </Table>
             </div>
 
-            <Sheet open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-                <SheetContent side="right" className="w-[90%] sm:w-[600px]">
-                    <SheetHeader>
-                        <SheetTitle>
+            <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+                <DialogContent className="max-w-[90%] max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>
                             Viaje: {selectedSchedule?.route?.name}
-                        </SheetTitle>
-                    </SheetHeader>
+                        </DialogTitle>
+                    </DialogHeader>
 
                     {selectedSchedule && (
-                        <Tabs defaultValue="details" className="w-full mt-6">
+                        <Tabs defaultValue="details" className="w-full">
                             <TabsList className="w-full">
                                 <TabsTrigger value="details" className="flex-1">Detalles del Viaje</TabsTrigger>
                                 <TabsTrigger value="settlement" className="flex-1">Liquidación</TabsTrigger>
@@ -172,8 +177,8 @@ export function TripList() {
                             </TabsContent>
                         </Tabs>
                     )}
-                </SheetContent>
-            </Sheet>
+                </DialogContent>
+            </Dialog>
         </>
     );
 } 

@@ -57,10 +57,7 @@ export function PassengerList({ passengers, schedule }: PassengerListProps) {
         schedule: {
             departureDate: format(new Date(schedule.departureDate), "dd/MM/yyyy"),
             departureTime: format(new Date(schedule.departureDate), "HH:mm"),
-            route:
-                schedule.route?.origin?.name && schedule.route?.destination?.name
-                    ? `${schedule.route.origin.name} - ${schedule.route.destination.name}`
-                    : schedule.route?.company?.name || "Flota",
+            route: schedule.route?.name || "Flota",
         },
         tickets: passengers.map((passenger) => ({
             seatNumber: passenger.seatNumber || "-",
@@ -78,13 +75,13 @@ export function PassengerList({ passengers, schedule }: PassengerListProps) {
             <div className="hidden print:block space-y-4">
                 <div className="text-center uppercase">
                     <h1 className="text-xl font-bold">
-                        {schedule.route?.company?.name || "Flota"}
+                        {schedule.route?.name || "Flota"}
                     </h1>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                        <p><strong>SALIDA:</strong> {schedule.route?.origin?.name} - {schedule.route?.destination?.name}</p>
+                        <p><strong>SALIDA:</strong> {schedule.route?.name}</p>
                         <p><strong>HORA:</strong> {format(new Date(schedule.departureDate), "HH:mm")}</p>
                         <p><strong>CARRIL:</strong> {schedule.route?.departureLane}</p>
                         <p><strong>BUS MARCA:</strong> {schedule.bus?.template?.name}</p>
@@ -130,34 +127,35 @@ export function PassengerList({ passengers, schedule }: PassengerListProps) {
             <div className="print:hidden">
                 <Card>
                     <CardContent className="pt-6">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Asiento</TableHead>
-                                    <TableHead>Nombre</TableHead>
-                                    <TableHead>Documento</TableHead>
-                                    <TableHead>Estado</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {passengers.map((passenger) => (
-                                    console.log(passenger),
-                                    <TableRow key={passenger.id}>
-                                        <TableCell>{passenger.seatNumber}</TableCell>
-                                        <TableCell>{passenger.fullName}</TableCell>
-                                        <TableCell>{passenger.documentId || "-"}</TableCell>
-                                        <TableCell>
-                                            <Badge
-                                                className={getStatusColor(passenger.status)}
-                                                variant="secondary"
-                                            >
-                                                {getStatusText(passenger.status)}
-                                            </Badge>
-                                        </TableCell>
+                        <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Asiento</TableHead>
+                                        <TableHead>Nombre</TableHead>
+                                        <TableHead>Documento</TableHead>
+                                        <TableHead>Estado</TableHead>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                                </TableHeader>
+                                <TableBody>
+                                    {passengers.map((passenger) => (
+                                        <TableRow key={passenger.id}>
+                                            <TableCell>{passenger.seatNumber}</TableCell>
+                                            <TableCell>{passenger.fullName}</TableCell>
+                                            <TableCell>{passenger.documentId || "-"}</TableCell>
+                                            <TableCell>
+                                                <Badge
+                                                    className={getStatusColor(passenger.status)}
+                                                    variant="secondary"
+                                                >
+                                                    {getStatusText(passenger.status)}
+                                                </Badge>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
                     </CardContent>
                 </Card>
             </div>
@@ -165,7 +163,7 @@ export function PassengerList({ passengers, schedule }: PassengerListProps) {
             <div className="text-center print:hidden">
                 <button
                     onClick={() => setShowPDF(!showPDF)}
-                    className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
+                    className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
                 >
                     {showPDF ? "Ocultar PDF" : "Generar PDF"}
                 </button>
