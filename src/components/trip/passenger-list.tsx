@@ -1,7 +1,6 @@
 "use client";
 
 import { format } from "date-fns";
-import { es } from "date-fns/locale";
 import { Card, CardContent } from "@/components/ui/card";
 import {
     Table,
@@ -14,7 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import type { PassengerList as PassengerListType } from "@/types/trip.types";
 import type { Schedule } from "@/types/route.types";
-import { passenger_status_enum } from "@prisma/client";
+import type { passenger_status_enum } from "@prisma/client";
 import { useState } from "react";
 import { ReservationPDF } from "@/components/tickets/reservation-pdf";
 
@@ -162,6 +161,7 @@ export function PassengerList({ passengers, schedule }: PassengerListProps) {
 
             <div className="text-center print:hidden">
                 <button
+                    type="button"
                     onClick={() => setShowPDF(!showPDF)}
                     className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
                 >

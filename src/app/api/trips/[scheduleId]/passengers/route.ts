@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+
 export async function GET(
   request: NextRequest,
-  { params }: { params: { scheduleId: string } }
+  { params }: { params: Promise<{ scheduleId: string }> }
 ) {
   try {
-    const scheduleId = params.scheduleId;
+    const { scheduleId } = await params;
 
     const passengers = await prisma.passenger_lists.findMany({
       where: {
@@ -18,7 +19,16 @@ export async function GET(
     });
 
     // Transform the data to match the expected format
-    const transformedPassengers = passengers.map(passenger => ({
+    const transformedPassengers = passengers.map((passenger: {
+      id: string;
+      schedule_id: string;
+      document_id: string | null;
+      full_name: string;
+      seat_number: string;
+      status: string;
+      created_at: Date;
+      updated_at: Date;
+    }) => ({
       id: passenger.id,
       scheduleId: passenger.schedule_id,
       documentId: passenger.document_id,

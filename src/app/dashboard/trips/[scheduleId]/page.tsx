@@ -1,13 +1,11 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
 import { PageHeader } from "@/components/ui/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSchedules } from "@/hooks/useSchedules";
 import { usePassengerList } from "@/hooks/useTrips";
-import { Schedule } from "@/types/route.types";
+import type { Schedule } from "@/types/route.types";
 import { PassengerList } from "@/components/trip/passenger-list";
 import { TripSettlementForm } from "@/components/trip/trip-settlement-form";
 import { Button } from "@/components/ui/button";
@@ -37,7 +35,7 @@ export default function TripDetailsPage() {
         <div className="flex flex-col gap-8">
             <PageHeader
                 title={`Viaje: ${currentSchedule.route?.name}`}
-                description={`Detalles del viaje y liquidación`}
+                description={'Detalles del viaje y liquidación'}
             />
 
             <Tabs defaultValue="details" className="w-full">

@@ -1,4 +1,4 @@
-import { RouteSchedule } from "@/types/route.types";
+import type { RouteSchedule } from "@/types/route.types";
 import {
   Table,
   TableBody,
@@ -59,7 +59,6 @@ export function RouteSchedulesTable({
   selectedRouteSchedule,
   onGenerateSchedules,
   onUpdateSeasonDates,
-  companyId,
 }: RouteSchedulesTableProps) {
   const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
   const [isEditSeasonDialogOpen, setIsEditSeasonDialogOpen] = useState(false);
@@ -108,7 +107,7 @@ export function RouteSchedulesTable({
   };
 
   const handleGenerateConfirm = () => {
-    if (selectedScheduleForGeneration && selectedScheduleForGeneration.seasonStart && selectedScheduleForGeneration.seasonEnd) {
+    if (selectedScheduleForGeneration?.seasonStart && selectedScheduleForGeneration?.seasonEnd) {
       onGenerateSchedules?.(
         selectedScheduleForGeneration, 
         format(new Date(selectedScheduleForGeneration.seasonStart), "yyyy-MM-dd"),
@@ -146,7 +145,7 @@ export function RouteSchedulesTable({
           description: "El rango de fechas ha sido actualizado exitosamente.",
         });
         setIsEditSeasonDialogOpen(false);
-      } catch (error) {
+      } catch {
         toast({
           title: "Error",
           description: "No se pudo actualizar el rango de fechas. Por favor, intente de nuevo.",

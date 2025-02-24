@@ -1,11 +1,10 @@
 import { useState } from "react";
-import { Location, CreateRouteInput } from "@/types/route.types";
+import type { Location, CreateRouteInput } from "@/types/route.types";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -186,7 +185,7 @@ export function CreateRouteDialog({
                     <Input
                       type="number"
                       min={1}
-                      onChange={(e) => field.onChange(parseInt(e.target.value))}
+                      onChange={(e) => field.onChange(Number.parseInt(e.target.value))}
                       value={field.value}
                     />
                   </FormControl>

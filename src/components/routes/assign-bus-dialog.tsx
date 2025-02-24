@@ -17,12 +17,11 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
-import { Bus } from "@/types/bus.types";
-import { Route, Schedule } from "@/types/route.types";
+import type { Bus } from "@/types/bus.types";
+import type { Route, Schedule } from "@/types/route.types";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { addMinutes, format, isAfter, isBefore, setHours, setMinutes } from "date-fns";
+import { isAfter, isBefore, setHours, setMinutes } from "date-fns";
 
 interface AssignBusDialogProps {
   open: boolean;
@@ -77,8 +76,8 @@ export function AssignBusDialog({
         
         // Create datetime objects for comparison
         const newStartTime = selectedBusId ? setMinutes(
-          setHours(scheduleDate, parseInt(selectedBusId.split(':')[0])),
-          parseInt(selectedBusId.split(':')[1])
+          setHours(scheduleDate, Number.parseInt(selectedBusId.split(':')[0])),
+          Number.parseInt(selectedBusId.split(':')[1])
         ) : scheduleDate;
 
         const newEndTime = schedule.estimatedArrivalTime 

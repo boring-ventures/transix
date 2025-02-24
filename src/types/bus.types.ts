@@ -54,7 +54,7 @@ export interface Bus {
     };
   }>;
   bus_type_templates: {
-    seat_template_matrix: string | any;
+    seat_template_matrix: string;
   };
 }
 

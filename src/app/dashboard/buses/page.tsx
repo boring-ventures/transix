@@ -7,7 +7,7 @@ import { useBusTemplates } from "@/hooks/useBusTemplates";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTable } from "@/components/table/data-table";
-import { Column } from "@/components/table/types";
+import type { Column } from "@/components/table/types";
 import {
   Dialog,
   DialogContent,
@@ -25,10 +25,10 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import {
-  BusWithRelations,
-  CreateBusInput,
+  type BusWithRelations,
+  type CreateBusInput,
   createBusSchema,
-  MaintenanceStatusLabel,
+  type MaintenanceStatusLabel,
 } from "@/types/bus.types";
 import { maintenance_status_enum } from "@prisma/client";
 import { useForm } from "react-hook-form";
@@ -51,7 +51,7 @@ import { EditBusModal } from "@/components/bus/edit-bus-modal";
 export default function BusesPage() {
   const { data: companies, isLoading: companiesLoading } = useCompanies();
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
-  
+
   // Seleccionar la primera empresa por defecto
   useEffect(() => {
     if (companies && companies.length > 0 && !selectedCompany) {
@@ -59,7 +59,9 @@ export default function BusesPage() {
     }
   }, [companies, selectedCompany]);
 
-  const { data: buses, isLoading: busesLoading } = useBuses(selectedCompany?.id);
+  const { data: buses, isLoading: busesLoading } = useBuses(
+    selectedCompany?.id
+  );
   const { data: templates, isLoading: templatesLoading } = useBusTemplates();
   const createBus = useCreateBus();
   const deleteBus = useDeleteBus();
@@ -132,7 +134,11 @@ export default function BusesPage() {
   const onCreateSubmit = async (formData: CreateBusInput) => {
     try {
       // Validación adicional antes de enviar
-      if (!formData.companyId || !formData.templateId || !formData.plateNumber) {
+      if (
+        !formData.companyId ||
+        !formData.templateId ||
+        !formData.plateNumber
+      ) {
         toast({
           title: "Error de validación",
           description: "Todos los campos son requeridos",
@@ -142,7 +148,8 @@ export default function BusesPage() {
       }
 
       // Validar formato de UUID
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const uuidRegex =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       if (!uuidRegex.test(formData.companyId)) {
         toast({
           title: "Error de validación",
@@ -177,7 +184,8 @@ export default function BusesPage() {
       if (!plateRegex.test(trimmedPlateNumber)) {
         toast({
           title: "Error de validación",
-          description: "Formato de placa inválido. Use solo letras mayúsculas, números y guiones",
+          description:
+            "Formato de placa inválido. Use solo letras mayúsculas, números y guiones",
           variant: "destructive",
         });
         return;
@@ -198,7 +206,10 @@ export default function BusesPage() {
       });
     } catch (error) {
       console.error("Error creating bus:", error);
-      const errorMessage = error instanceof Error ? error.message : "Hubo un error al crear el bus";
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Hubo un error al crear el bus";
       toast({
         title: "Error",
         description: errorMessage,
@@ -271,6 +282,7 @@ export default function BusesPage() {
         const company: Company = row.company;
         return (
           <button
+            type="button"
             className="cursor-pointer underline text-pink-600"
             onClick={() => handleOpenCompanyModal(company)}
           >
@@ -281,16 +293,23 @@ export default function BusesPage() {
     },
   ];
 
-  if (companiesLoading || (selectedCompany && busesLoading) || templatesLoading) {
+  if (
+    companiesLoading ||
+    (selectedCompany && busesLoading) ||
+    templatesLoading
+  ) {
     return <LoadingTable columnCount={5} rowCount={10} />;
   }
 
   if (!companies || companies.length === 0) {
     return (
       <div className="text-center py-10">
-        <h2 className="text-2xl font-semibold mb-2">No hay empresas registradas</h2>
+        <h2 className="text-2xl font-semibold mb-2">
+          No hay empresas registradas
+        </h2>
         <p className="text-muted-foreground">
-          Necesita registrar al menos una empresa antes de poder gestionar buses.
+          Necesita registrar al menos una empresa antes de poder gestionar
+          buses.
         </p>
       </div>
     );
@@ -318,7 +337,7 @@ export default function BusesPage() {
               ))}
             </SelectContent>
           </Select>
-{/*           <Button onClick={() => setIsCreateOpen(true)}>
+          {/*           <Button onClick={() => setIsCreateOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Nuevo Bus
           </Button> */}
@@ -354,12 +373,14 @@ export default function BusesPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Empresa</FormLabel>
-                    <Select 
+                    <Select
                       onValueChange={(value) => {
                         field.onChange(value);
                         // Limpiar la plantilla seleccionada cuando se cambia de empresa
-                        createForm.setValue('templateId', '', { shouldValidate: true });
-                      }} 
+                        createForm.setValue("templateId", "", {
+                          shouldValidate: true,
+                        });
+                      }}
                       value={field.value}
                     >
                       <SelectTrigger>
@@ -394,15 +415,18 @@ export default function BusesPage() {
                 control={createForm.control}
                 name="templateId"
                 render={({ field }) => {
-                  const selectedCompanyId = createForm.getValues('companyId');
+                  const selectedCompanyId = createForm.getValues("companyId");
                   const companyTemplates = templates?.filter(
-                    template => template.companyId === selectedCompanyId
+                    (template) => template.companyId === selectedCompanyId
                   );
-                  const hasTemplates = companyTemplates && companyTemplates.length > 0;
+                  const hasTemplates =
+                    companyTemplates && companyTemplates.length > 0;
 
                   // Si no hay plantillas para la empresa seleccionada, asegurarse de que no haya ninguna plantilla seleccionada
                   if (!hasTemplates && field.value) {
-                    createForm.setValue('templateId', '', { shouldValidate: true });
+                    createForm.setValue("templateId", "", {
+                      shouldValidate: true,
+                    });
                   }
 
                   return (
@@ -424,9 +448,9 @@ export default function BusesPage() {
                           )}
                         </div>
                       </div>
-                      <Select 
+                      <Select
                         key={selectedCompanyId} // Forzar re-render cuando cambia la empresa
-                        onValueChange={field.onChange} 
+                        onValueChange={field.onChange}
                         value={hasTemplates ? field.value : ""}
                         disabled={!hasTemplates}
                       >
@@ -436,7 +460,8 @@ export default function BusesPage() {
                         <SelectContent>
                           {companyTemplates?.map((template) => (
                             <SelectItem key={template.id} value={template.id}>
-                              {template.name} ({template.totalCapacity} asientos)
+                              {template.name} ({template.totalCapacity}{" "}
+                              asientos)
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -460,11 +485,13 @@ export default function BusesPage() {
                         <SelectValue placeholder="Seleccionar estado" />
                       </SelectTrigger>
                       <SelectContent>
-                        {Object.values(maintenance_status_enum).map((status: maintenance_status_enum) => (
-                          <SelectItem key={status} value={status}>
-                            {maintenanceStatusLabels[status]}
-                          </SelectItem>
-                        ))}
+                        {Object.values(maintenance_status_enum).map(
+                          (status: maintenance_status_enum) => (
+                            <SelectItem key={status} value={status}>
+                              {maintenanceStatusLabels[status]}
+                            </SelectItem>
+                          )
+                        )}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -547,7 +574,9 @@ export default function BusesPage() {
 
       <DataTable
         title="Buses"
-        description={`Gestiona los buses de ${selectedCompany?.name || 'la empresa'}.`}
+        description={`Gestiona los buses de ${
+          selectedCompany?.name || "la empresa"
+        }.`}
         data={buses || []}
         columns={columns}
         searchable
@@ -558,11 +587,6 @@ export default function BusesPage() {
           setIsEditOpen(true);
         }}
         onDelete={(bus: BusWithRelations) => handleDelete(bus)}
-        noDataMessage={
-          !selectedCompany
-            ? "Seleccione una empresa para ver sus buses"
-            : "No hay buses registrados para esta empresa"
-        }
       />
     </div>
   );

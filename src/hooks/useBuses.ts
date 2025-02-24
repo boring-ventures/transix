@@ -1,12 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import type { Bus, CreateBusInput, UpdateBusInput } from "@/types/bus.types";
-import type { Bus as RouteBus } from "@/types/route.types";
+import type { Bus, BusWithRelations, CreateBusInput, UpdateBusInput } from "@/types/bus.types";
 
 const API_URL = "/api/buses";
 
 export function useBuses(companyId?: string) {
-  return useQuery<RouteBus[]>({
+  return useQuery<BusWithRelations[]>({
     queryKey: ["buses", companyId],
     queryFn: async () => {
       const url = companyId 

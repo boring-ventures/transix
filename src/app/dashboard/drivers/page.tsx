@@ -1,8 +1,7 @@
 "use client";
 
-import { useUserRoutes } from "@/hooks/useUserRoutes";
 import { useState } from "react";
-import { Driver, CreateDriverInput } from "@/types/driver.types";
+import type { Driver, CreateDriverInput } from "@/types/driver.types";
 import { DriversTable } from "@/components/drivers/drivers-table";
 import { DriverDialog } from "@/components/drivers/driver-dialog";
 import { useDrivers, useCreateDriver, useUpdateDriver, useDeleteDriver } from "@/hooks/useDrivers";
@@ -23,7 +22,6 @@ import {
 
 export default function Drivers() {
     const { toast } = useToast();
-    const { userData } = useUserRoutes();
     const { data: companies = [], isLoading: companiesLoading } = useCompanies();
     const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
     const { data: drivers = [], isLoading: driversLoading } = useDrivers(selectedCompany?.id);

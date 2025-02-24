@@ -33,7 +33,9 @@ export const createRouteScheduleSchema = z.object({
   departureTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, {
     message: "La hora debe estar en formato HH:MM",
   }),
-  estimatedArrivalTime: z.string(),
+  estimatedArrivalTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, {
+    message: "La hora debe estar en formato HH:MM",
+  }),
   operatingDays: z.array(z.enum(operatingDaysEnum)).min(1, {
     message: "Debe seleccionar al menos un día de operación",
   }),
@@ -115,6 +117,22 @@ export type RouteSchedule = {
       id: string;
       type: string;
       seatsLayout: string;
+      seatTemplateMatrix?: {
+        firstFloor: {
+          dimensions: {
+            rows: number;
+            seatsPerRow: number;
+          };
+          seats: {
+            id: string;
+            name: string;
+            tierId: string;
+            row: number;
+            column: number;
+            isEmpty: boolean;
+          }[];
+        };
+      };
     };
     seats: {
       id: string;
@@ -137,20 +155,6 @@ export type BusTemplate = {
   seatsLayout: string;
   seatTemplateMatrix: {
     firstFloor: {
-      dimensions: {
-        rows: number;
-        seatsPerRow: number;
-      };
-      seats: {
-        id: string;
-        name: string;
-        tierId: string;
-        row: number;
-        column: number;
-        isEmpty: boolean;
-      }[];
-    };
-    secondFloor?: {
       dimensions: {
         rows: number;
         seatsPerRow: number;
@@ -216,6 +220,22 @@ export type Schedule = {
       name: string;
       type: string;
       seatsLayout: string;
+      seatTemplateMatrix?: {
+        firstFloor: {
+          dimensions: {
+            rows: number;
+            seatsPerRow: number;
+          };
+          seats: {
+            id: string;
+            name: string;
+            tierId: string;
+            row: number;
+            column: number;
+            isEmpty: boolean;
+          }[];
+        };
+      };
     };
     seats: {
       id: string;

@@ -154,8 +154,8 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
               <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Subtotal</Text>
             </View>
 
-            {invoiceData.tickets.map((ticket, index) => (
-              <View key={index} style={styles.tableRow}>
+            {invoiceData.tickets.map((ticket) => (
+              <View key={ticket.seatNumber} style={styles.tableRow}>
                 <Text style={[styles.tableCell, { flex: 0.5 }]}>1</Text>
                 <Text style={[styles.tableCell, { flex: 2 }]}>
                   Pasaje {invoiceData.route} - Asiento {ticket.seatNumber}
@@ -179,7 +179,7 @@ export function InvoicePDF({ invoiceData }: InvoicePDFProps) {
 
           <View style={styles.footer}>
             <Text>ESTA FACTURA CONTRIBUYE AL DESARROLLO DEL PAÍS, EL USO ILÍCITO SERÁ SANCIONADO PENALMENTE</Text>
-            <Text>Ley N° 453: "El proveedor debe brindar atención sin discriminación"</Text>
+            <Text>Ley N° 453: &quot;El proveedor debe brindar atención sin discriminación&quot;</Text>
           </View>
         </Page>
       </Document>

@@ -4,12 +4,13 @@ import { createTripSettlementSchema } from "@/types/trip.types";
 
 export async function GET(
   request: Request,
-  { params }: { params: { scheduleId: string } }
+  { params }: { params: Promise<{ scheduleId: string }> }
 ) {
   try {
+    const { scheduleId } = await params;
     const settlement = await prisma.trip_settlements.findFirst({
       where: {
-        schedule_id: params.scheduleId,
+        schedule_id: scheduleId,
       },
       include: {
         schedules: {
@@ -63,9 +64,10 @@ export async function GET(
 
 export async function POST(
   request: Request,
-  { params }: { params: { scheduleId: string } }
+  { params }: { params: Promise<{ scheduleId: string }> }
 ) {
   try {
+    const { scheduleId } = await params;
     const body = await request.json();
     
     // Validar los datos de entrada
@@ -79,9 +81,9 @@ export async function POST(
 
     const data = validationResult.data;
 
-    // Verificar que el viaje existe
+    // Verificar que el viaje existe  
     const schedule = await prisma.schedules.findUnique({
-      where: { id: params.scheduleId },
+      where: { id: scheduleId },
     });
 
     if (!schedule) {
@@ -94,7 +96,7 @@ export async function POST(
     // Crear la liquidación
     const settlement = await prisma.trip_settlements.create({
       data: {
-        schedule_id: params.scheduleId,
+        schedule_id: scheduleId,
         total_income: data.totalIncome,
         total_expenses: data.totalExpenses,
         net_amount: data.totalIncome - data.totalExpenses,
@@ -143,15 +145,16 @@ export async function POST(
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { scheduleId: string } }
+  { params }: { params: Promise<{ scheduleId: string }> }
 ) {
   try {
+    const { scheduleId } = await params;
     const body = await request.json();
 
     // Buscar la liquidación existente
     const existingSettlement = await prisma.trip_settlements.findFirst({
       where: {
-        schedule_id: params.scheduleId,
+        schedule_id: scheduleId,
       },
     });
 

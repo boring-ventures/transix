@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { CreateRouteInput, CreateRouteScheduleInput } from "@/types/route.types";
+import type { CreateRouteInput, CreateRouteScheduleInput } from "@/types/route.types";
 
 /**
  * Creates a new route
@@ -26,6 +26,7 @@ export async function createRouteSchedule(input: CreateRouteScheduleInput) {
     data: {
       route_id: input.routeId,
       departure_time: new Date(`1970-01-01T${input.departureTime}:00.000Z`),
+      estimated_arrival_time: new Date(`1970-01-01T${input.estimatedArrivalTime}:00.000Z`),
       operating_days: input.operatingDays,
       active: true,
       season_start: input.seasonStart,

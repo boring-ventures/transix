@@ -1,6 +1,5 @@
 "use client";
 
-import { Metadata } from "next";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {

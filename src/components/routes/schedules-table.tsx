@@ -1,7 +1,7 @@
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Schedule } from "@/types/route.types";
-import { Route } from "@/types/route.types";
+import type { PassengerList, Schedule } from "@/types/route.types";
+import type { Route } from "@/types/route.types";
 import {
   Table,
   TableBody,
@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Edit, Eye, Trash2, Users } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { EditScheduleDialog } from "./edit-schedule-dialog";
 import {
   Dialog,
@@ -35,9 +35,6 @@ interface SchedulesTableProps {
 
 export function SchedulesTable({ 
   schedules, 
-  routes, 
-  onScheduleSelect,
-  onAssignBus,
   onEditSchedule,
   onDeleteSchedule
 }: SchedulesTableProps) {
@@ -60,7 +57,7 @@ export function SchedulesTable({
   });
 
   const hasPassengerList = (scheduleId: string) => {
-    return passengerLists?.some((list: any) => list.schedule_id === scheduleId) ?? false;
+    return passengerLists?.some((list: PassengerList) => list.scheduleId === scheduleId) ?? false;
   };
 
   const handleEditSchedule = async (scheduleId: string, data: { departureDate: string; departureTime: string; }) => {

@@ -1,18 +1,32 @@
-import type { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { PrismaClient } from "@prisma/client";
+import type { ticket_status_enum } from "@prisma/client";
+
+interface TicketInput {
+  schedule_id: string;
+  customer_id: string;
+  bus_seat_id: string;
+  price: number;
+  status: ticket_status_enum;
+  customerData: {
+    fullName: string;
+    documentId: string;
+    seatNumber: string;
+  };
+}
 
 const prismaClient = new PrismaClient();
 
 export async function POST(request: NextRequest) {
   try {
-    const { tickets } = await request.json();
-    console.log(tickets);
+    const { tickets } = await request.json() as { tickets: TicketInput[] };
     
-    const createdTickets = await prismaClient.$transaction(async (prisma) => {
-      // Crear los tickets sin la propiedad customerData
+    const createdTickets = await prismaClient.$transaction(async (tx) => {
+      // Create tickets
       const ticketsCreated = await Promise.all(
-        tickets.map((ticket: any) => {
-          return prisma.tickets.create({
+        tickets.map((ticket) => {
+          return tx.tickets.create({
             data: {
               schedule_id: ticket.schedule_id,
               customer_id: ticket.customer_id,
@@ -24,40 +38,39 @@ export async function POST(request: NextRequest) {
         })
       );
       
-      // Extraer información de pasajeros usando exclusivamente customerData
-      const passengerData = tickets.map((ticket: any) => ({
-        schedule_id: ticket.schedule_id,
-        full_name: ticket.customerData.fullName,
-        document_id: ticket.customerData.documentId,
-        seat_number: ticket.customerData.seatNumber,
-        status: "confirmed"
-      }));
-      
-      // Crear registros en passenger_lists
-      await Promise.all(
-        passengerData.map((passenger: any) =>
-          prisma.passenger_lists.create({
-            data: passenger
-          })
-        )
-      );
+      // Create passenger records separately
+      for (const ticket of tickets) {
+        await tx.$queryRaw`
+          INSERT INTO passenger_lists (
+            schedule_id, 
+            full_name, 
+            document_id, 
+            seat_number, 
+            status
+          ) VALUES (
+            ${ticket.schedule_id},
+            ${ticket.customerData.fullName},
+            ${ticket.customerData.documentId},
+            ${ticket.customerData.seatNumber},
+            'confirmed'
+          )
+        `;
+      }
       
       return ticketsCreated;
     });
     
     return NextResponse.json(createdTickets);
-  } catch (error: any) {
-    console.log('El error es: ', error);
+  } catch (error) {
     console.error("Error creating tickets:", error);
     return NextResponse.json(
-      { error: "Error creating tickets", details: error.message },
+      { error: "Error creating tickets", details: error instanceof Error ? error.message : "Error desconocido" },
       { status: 500 }
     );
   }
 }
 
-export async function GET(request: Request) {
-  // Se consulta la tabla de tickets uniendo las relaciones necesarias
+export async function GET() {
   const tickets = await prismaClient.tickets.findMany({
     include: {
       schedules: {

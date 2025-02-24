@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Route, CreateRouteScheduleInput } from "@/types/route.types";
+import type { Route, CreateRouteScheduleInput } from "@/types/route.types";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -83,7 +83,7 @@ export function CreateRouteScheduleDialog({
         <DialogHeader>
           <DialogTitle>Crear Nuevo Horario</DialogTitle>
           <DialogDescription>
-            Añade un nuevo horario para la ruta "{route.name}"
+            Añade un nuevo horario para la ruta &quot;{route.name}&quot;
           </DialogDescription>
         </DialogHeader>
 
