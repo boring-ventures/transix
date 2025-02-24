@@ -69,11 +69,11 @@ const data = {
           url: "/dashboard/trips",
           icon: List,
         },
-        {
+/*         {
           title: "Liquidaciones",
           url: "/dashboard/trips/settlements",
           icon: CreditCard,
-        },
+        }, */
       ],
     },
     {
