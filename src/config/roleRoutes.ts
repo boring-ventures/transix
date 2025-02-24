@@ -11,6 +11,7 @@ export const ROLE_ROUTES = {
     '/dashboard/locations', // Borrar luego
     '/dashboard/trips', // Borrar luego
     '/dashboard/trips/settlements', // Borrar luego
+    '/dashboard/drivers', // Borrar luego
     '/dashboard/routes',
     '/dashboard/tickets',
     '/dashboard/parcels'

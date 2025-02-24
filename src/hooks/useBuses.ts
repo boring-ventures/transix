@@ -1,32 +1,25 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import type { Bus, CreateBusInput, UpdateBusInput } from "@/types/bus.types";
+import type { Bus as RouteBus } from "@/types/route.types";
 
 const API_URL = "/api/buses";
 
 export function useBuses(companyId?: string) {
-  return useQuery({
+  return useQuery<RouteBus[]>({
     queryKey: ["buses", companyId],
     queryFn: async () => {
-      try {
-        const url = companyId && companyId !== "1"
-          ? `/api/buses?companyId=${encodeURIComponent(companyId)}`
-          : '/api/buses';
-
-        const response = await fetch(url);
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || "Error fetching buses");
-        }
-
-        return data;
-      } catch (error) {
-        console.error("Error in useBuses:", error);
-        throw error;
+      const url = companyId 
+        ? `/api/buses?companyId=${encodeURIComponent(companyId)}`
+        : '/api/buses';
+      
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error("Error al obtener los buses");
       }
+      return response.json();
     },
-    enabled: true,
+    enabled: !!companyId,
   });
 }
 

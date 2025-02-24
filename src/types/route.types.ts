@@ -175,8 +175,15 @@ export type BusSeat = {
 export type Bus = {
   id: string;
   plateNumber: string;
-  template?: BusTemplate;
+  template?: {
+    id: string;
+    name: string;
+    type: string;
+    seatsLayout: string;
+  };
   seats: BusSeat[];
+  active: boolean;
+  companyId: string;
 };
 
 export type BusAssignment = {
@@ -270,6 +277,8 @@ export interface Driver {
     licenseCategory: string;
     active: boolean;
     companyId: string;
+    createdAt: Date;
+    updatedAt: Date;
 }
 
 export interface PassengerList {

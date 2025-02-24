@@ -195,7 +195,16 @@ export default function Routes() {
     }
   };
 
-  const handleGenerateSchedules = async (routeSchedule: RouteSchedule, startDate: string, endDate: string) => {
+  const handleGenerateSchedules = async (
+    routeSchedule: RouteSchedule, 
+    startDate: string, 
+    endDate: string,
+    data: {
+      busId?: string;
+      primaryDriverId?: string;
+      secondaryDriverId?: string;
+    }
+  ) => {
     try {
       const response = await fetch("/api/schedules", {
         method: "POST",
@@ -211,6 +220,9 @@ export default function Routes() {
           endDate,
           price: 0, // El precio se establecerá al asignar el bus
           status: "scheduled",
+          busId: data.busId,
+          primaryDriverId: data.primaryDriverId,
+          secondaryDriverId: data.secondaryDriverId,
         }),
       });
 
@@ -408,12 +420,8 @@ export default function Routes() {
                 routeSchedules={routeSchedules}
                 onRouteScheduleSelect={handleRouteScheduleSelect}
                 selectedRouteSchedule={selectedRouteSchedule}
-                onGenerateSchedules={(routeSchedule) => {
-                  const today = new Date();
-                  const nextWeek = new Date();
-                  nextWeek.setDate(today.getDate() + 7);
-                  handleGenerateSchedules(routeSchedule, today.toISOString().split('T')[0], nextWeek.toISOString().split('T')[0]);
-                }}
+                onGenerateSchedules={handleGenerateSchedules}
+                companyId={companyId}
               />
             )}
           </div>

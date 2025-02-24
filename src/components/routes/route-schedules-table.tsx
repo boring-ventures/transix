@@ -23,24 +23,50 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useBuses } from "@/hooks/useBuses";
+import { useDrivers } from "@/hooks/useDrivers";
 
 interface RouteSchedulesTableProps {
   routeSchedules: RouteSchedule[];
   onRouteScheduleSelect: (routeSchedule: RouteSchedule) => void;
   selectedRouteSchedule: RouteSchedule | null;
-  onGenerateSchedules?: (routeSchedule: RouteSchedule, startDate: string, endDate: string) => void;
+  onGenerateSchedules?: (
+    routeSchedule: RouteSchedule, 
+    startDate: string, 
+    endDate: string,
+    data: {
+      busId?: string;
+      primaryDriverId?: string;
+      secondaryDriverId?: string;
+    }
+  ) => void;
+  companyId: string;
 }
 
 export function RouteSchedulesTable({
   routeSchedules,
   onRouteScheduleSelect,
   selectedRouteSchedule,
-  onGenerateSchedules
+  onGenerateSchedules,
+  companyId
 }: RouteSchedulesTableProps) {
   const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
   const [selectedScheduleForGeneration, setSelectedScheduleForGeneration] = useState<RouteSchedule | null>(null);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [selectedBusId, setSelectedBusId] = useState<string>("");
+  const [selectedPrimaryDriverId, setSelectedPrimaryDriverId] = useState<string>("");
+  const [selectedSecondaryDriverId, setSelectedSecondaryDriverId] = useState<string>("");
+
+  const { data: buses } = useBuses(companyId);
+  const { data: drivers } = useDrivers(companyId);
 
   const formatOperatingDays = (days: string[]) => {
     const dayMap: Record<string, string> = {
@@ -57,21 +83,39 @@ export function RouteSchedulesTable({
 
   const handleGenerateClick = (schedule: RouteSchedule) => {
     setSelectedScheduleForGeneration(schedule);
-    // Establecer fechas por defecto (una semana)
-    const today = new Date();
-    const nextWeek = new Date();
-    nextWeek.setDate(today.getDate() + 7);
     
-    setStartDate(format(today, "yyyy-MM-dd"));
-    setEndDate(format(nextWeek, "yyyy-MM-dd"));
+    // Usar fechas de temporada si están disponibles, sino usar una semana por defecto
+    if (schedule.seasonStart && schedule.seasonEnd) {
+      setStartDate(format(new Date(schedule.seasonStart), "yyyy-MM-dd"));
+      setEndDate(format(new Date(schedule.seasonEnd), "yyyy-MM-dd"));
+    } else {
+      const today = new Date();
+      const nextWeek = new Date();
+      nextWeek.setDate(today.getDate() + 7);
+      setStartDate(format(today, "yyyy-MM-dd"));
+      setEndDate(format(nextWeek, "yyyy-MM-dd"));
+    }
+    
     setIsGenerateDialogOpen(true);
   };
 
   const handleGenerateConfirm = () => {
     if (selectedScheduleForGeneration && startDate && endDate) {
-      onGenerateSchedules?.(selectedScheduleForGeneration, startDate, endDate);
+      onGenerateSchedules?.(
+        selectedScheduleForGeneration, 
+        startDate, 
+        endDate,
+        {
+          busId: selectedBusId || undefined,
+          primaryDriverId: selectedPrimaryDriverId || undefined,
+          secondaryDriverId: selectedSecondaryDriverId || undefined,
+        }
+      );
       setIsGenerateDialogOpen(false);
       setSelectedScheduleForGeneration(null);
+      setSelectedBusId("");
+      setSelectedPrimaryDriverId("");
+      setSelectedSecondaryDriverId("");
     }
   };
 
@@ -155,7 +199,7 @@ export function RouteSchedulesTable({
             })}
             {routeSchedules.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground">
+                <TableCell colSpan={6} className="text-center text-muted-foreground">
                   No hay horarios configurados para esta ruta
                 </TableCell>
               </TableRow>
@@ -169,8 +213,17 @@ export function RouteSchedulesTable({
           <DialogHeader>
             <DialogTitle>Generar Viajes</DialogTitle>
             <DialogDescription>
-              Selecciona el rango de fechas para generar los viajes de este horario.
-              Se generarán viajes solo para los días: {selectedScheduleForGeneration?.operatingDays.join(", ")}
+              {selectedScheduleForGeneration?.seasonStart && selectedScheduleForGeneration?.seasonEnd ? (
+                <>
+                  Se usarán las fechas de temporada configuradas para generar los viajes.
+                  Los viajes se generarán para los días: {selectedScheduleForGeneration?.operatingDays.join(", ")}
+                </>
+              ) : (
+                <>
+                  Se usará un rango de una semana por defecto.
+                  Los viajes se generarán para los días: {selectedScheduleForGeneration?.operatingDays.join(", ")}
+                </>
+              )}
             </DialogDescription>
           </DialogHeader>
 
@@ -193,12 +246,65 @@ export function RouteSchedulesTable({
                 onChange={(e) => setEndDate(e.target.value)}
               />
             </div>
+
+            <div className="grid gap-2">
+              <Label>Bus</Label>
+              <Select value={selectedBusId} onValueChange={setSelectedBusId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar bus" />
+                </SelectTrigger>
+                <SelectContent>
+                  {buses?.map((bus) => (
+                    <SelectItem key={bus.id} value={bus.id}>
+                      {bus.plateNumber} - {bus.template?.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Conductor Principal</Label>
+              <Select value={selectedPrimaryDriverId} onValueChange={setSelectedPrimaryDriverId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar conductor principal" />
+                </SelectTrigger>
+                <SelectContent>
+                  {drivers?.map((driver) => (
+                    <SelectItem key={driver.id} value={driver.id}>
+                      {driver.fullName} - {driver.licenseNumber}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Conductor Secundario</Label>
+              <Select value={selectedSecondaryDriverId} onValueChange={setSelectedSecondaryDriverId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar conductor secundario" />
+                </SelectTrigger>
+                <SelectContent>
+                  {drivers?.map((driver) => (
+                    <SelectItem key={driver.id} value={driver.id}>
+                      {driver.fullName} - {driver.licenseNumber}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setIsGenerateDialogOpen(false)}
+              onClick={() => {
+                setIsGenerateDialogOpen(false);
+                setSelectedBusId("");
+                setSelectedPrimaryDriverId("");
+                setSelectedSecondaryDriverId("");
+              }}
             >
               Cancelar
             </Button>

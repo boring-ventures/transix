@@ -11,6 +11,8 @@ import {
   ChevronDown,
   List,
   Building,
+  Route,
+  UserCog,
 } from "lucide-react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -60,7 +62,7 @@ const data = {
     },
     {
       title: "Viajes",
-      icon: Bus,
+      icon: Map,
       items: [
         {
           title: "Lista de Viajes",
@@ -76,7 +78,7 @@ const data = {
     },
     {
       title: "Rutas",
-      icon: Map,
+      icon: Route,
       items: [
         {
           title: "Lista de Rutas",
@@ -88,11 +90,6 @@ const data = {
           url: "/dashboard/locations",
           icon: Map,
         },
-        /* {
-          title: "Horarios",
-          url: "/dashboard/routes/schedules",
-          icon: Clock,
-        }, */
       ],
     },
     /* {
@@ -116,6 +113,11 @@ const data = {
           icon: Bus,
         },
       ],
+    },
+    {
+      title: "Conductores",
+      url: "/dashboard/drivers",
+      icon: UserCog,
     },
     {
       title: "Usuarios",
